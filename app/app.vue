@@ -70,6 +70,48 @@ const categories = ref([
           { name: "Maionese", price: 0.4 },
         ],
       },
+      {
+        id: 15,
+        name: "Cheese Burger 2",
+        description:
+          "Pão de brioche, 150g de carne, queijo prato fatiado, alface americano, cebola roxa, tomate e maionese da casa",
+        price: 28.0,
+        image:
+          "https://imagedelivery.net/KWx2kLZVCnquS_91k5JjHA/29c11710-9052-4526-9838-92d7f05ca0ec/689d0e68e8158.jpg/small",
+        complements: [
+          { name: "Ketchup", price: 2.0 },
+          { name: "Mostarda", price: 2.0 },
+          { name: "Maionese", price: 0.4 },
+        ],
+      },
+      {
+        id: 16,
+        name: "Bacon Burger 2",
+        description:
+          "Pão de brioche, 150g de carne, queijo prato fatiado, alface americano, cebola roxa, tomate e maionese da casa",
+        price: 28.0,
+        image:
+          "https://imagedelivery.net/KWx2kLZVCnquS_91k5JjHA/29c11710-9052-4526-9838-92d7f05ca0ec/689d0e68e8158.jpg/small",
+        complements: [
+          { name: "Ketchup", price: 2.0 },
+          { name: "Mostarda", price: 2.0 },
+          { name: "Maionese", price: 0.4 },
+        ],
+      },
+      {
+        id: 17,
+        name: "Burger",
+        description:
+          "Pão de brioche, 150g de carne, queijo prato fatiado, alface americano, cebola roxa, tomate e maionese da casa",
+        price: 28.0,
+        image:
+          "https://imagedelivery.net/KWx2kLZVCnquS_91k5JjHA/29c11710-9052-4526-9838-92d7f05ca0ec/689d0e68e8158.jpg/small",
+        complements: [
+          { name: "Ketchup", price: 2.0 },
+          { name: "Mostarda", price: 2.0 },
+          { name: "Maionese", price: 0.4 },
+        ],
+      },
     ],
   },
   {
@@ -81,6 +123,30 @@ const categories = ref([
         name: "Batata Frita",
         description: "150g de batata frita crocante",
         price: 12.0,
+        image:
+          "https://imagedelivery.net/KWx2kLZVCnquS_91k5JjHA/29c11710-9052-4526-9838-92d7f05ca0ec/6894114d6f833.jpg/small",
+        complements: [
+          { name: "Sal extra", price: 1.0 },
+          { name: "Pimenta", price: 0.4 },
+        ],
+      },
+      {
+        id: 10,
+        name: "Batata Frita 2",
+        description: "350g de batata frita crocante",
+        price: 22.0,
+        image:
+          "https://imagedelivery.net/KWx2kLZVCnquS_91k5JjHA/29c11710-9052-4526-9838-92d7f05ca0ec/6894114d6f833.jpg/small",
+        complements: [
+          { name: "Sal extra", price: 1.0 },
+          { name: "Pimenta", price: 0.4 },
+        ],
+      },
+      {
+        id: 11,
+        name: "Batata Frita 3",
+        description: "1kg de batata frita crocante",
+        price: 44.0,
         image:
           "https://imagedelivery.net/KWx2kLZVCnquS_91k5JjHA/29c11710-9052-4526-9838-92d7f05ca0ec/6894114d6f833.jpg/small",
         complements: [
@@ -1446,14 +1512,14 @@ body {
 .observation textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid #d1d5db; /* Border mais escura para melhor visibilidade */
+  border: 1px solid #d1d5db; /* Border mais escura para melhor visibilidade */
   border-radius: 0.5rem;
   resize: vertical;
   font-size: 1rem; /* Aumentado para melhor legibilidade */
   min-height: 100px; /* Aumentado para mais espaço visível */
   max-height: 150px;
   font-family: inherit;
-  background-color: #fafafa; /* Fundo levemente cinza para destaque */
+  /* background-color: #fafafa; Fundo levemente cinza para destaque */
   color: #374151; /* Cor de texto mais escura */
   outline: none;
   overflow-y: auto; /* Adiciona scroll vertical se o texto ultrapassar a max-height */
@@ -1691,10 +1757,10 @@ body {
   }
 
   .observation textarea {
-    padding: 0.5rem;
+    /* padding: 0.5rem; */
     font-size: 0.875rem;
-    min-height: 80px;
-    max-height: 120px;
+    /* min-height: 80px; */
+    /* max-height: 120px; */
   }
 
   .modal-footer {
@@ -1741,8 +1807,8 @@ body {
   }
 
   .cart-item-image {
-    width: 45px;
-    height: 45px;
+    width: 50px;
+    height: 50px;
   }
 
   .cart-item {
@@ -1774,8 +1840,8 @@ body {
   }
 
   .qty-btn {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     font-size: 0.875rem;
   }
 
@@ -1854,7 +1920,7 @@ body {
   }
 
   .description p {
-    -webkit-line-clamp: 1; /* Limita a 1 linha em telas muito pequenas */
+    /* -webkit-line-clamp: 1; Limita a 1 linha em telas muito pequenas */
     font-size: 0.75rem;
   }
 
@@ -1867,10 +1933,10 @@ body {
   }
 
   .observation textarea {
-    padding: 0.4rem;
+    /* padding: 0.4rem; */
     font-size: 0.8rem;
-    min-height: 60px;
-    max-height: 100px;
+    /* min-height: 60px; */
+    /* max-height: 100px; */
   }
 
   .footer {
@@ -1889,8 +1955,8 @@ body {
   }
 
   .cart-item-image {
-    width: 40px;
-    height: 40px;
+    width: 45px;
+    height: 45px;
   }
 
   .cart-item {
@@ -1911,8 +1977,8 @@ body {
   }
 
   .qty-btn {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     font-size: 0.8rem;
   }
 
