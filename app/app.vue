@@ -626,7 +626,7 @@ onUnmounted(() => {
     <p>
       © Desenvolvido por
       <a
-        href="https://www.instagram.com/g2tecnologia/"
+        href="https://www.instagram.com/g2genesys/"
         target="_blank"
         rel="noopener noreferrer"
         >G2</a
