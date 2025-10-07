@@ -500,7 +500,7 @@ useHead({
   <div class="alert">
     <p>
       USE O CUPOM <span class="code">DESCONTO10</span> E GANHE 10% DE DESCONTO
-      NA PRIMEIRA COMPRA!
+      NO PRIMEIRO PEDIDO!
     </p>
   </div>
   <div class="container">

@@ -73,3 +73,11 @@ bun run preview
 ```
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+
+# REFERENCES
+
+- https://madomburguer.menudino.com/
+- https://www.ifood.com.br/delivery/itaquaquecetuba-sp/super-combo-lanches-e-acai-jardim-sao-jeronimo/37806f9c-3c61-466e-bef3-8414b0d0348c
+- https://queirozhamburgueria.wabiz.delivery/
+- https://cardapio.ai/
+- https://cardapio.ai/online/pizzaria-schuelter
