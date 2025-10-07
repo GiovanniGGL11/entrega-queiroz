@@ -399,6 +399,10 @@ onUnmounted(() => {
   document.body.style.overflow = "";
   document.removeEventListener("keydown", handleKeydown);
 });
+
+useHead({
+  title: () => `Queiroz Hamburgueria`,
+});
 </script>
 
 <template>
@@ -816,7 +820,7 @@ body {
 
 .search input {
   flex: 1;
-  padding: 1.5rem;
+  padding: 1rem;
   border: none;
   outline: none;
   font-size: 1rem;
@@ -1021,7 +1025,7 @@ body {
   top: 0;
   right: 0;
   width: 350px;
-  height: 100vh;
+  height: 100dvh;
   background: #fff;
   z-index: 1000;
   transform: translateX(100%);
@@ -1073,6 +1077,7 @@ body {
   overflow-y: auto;
   padding: 1rem;
   overflow-x: hidden; /* Evita quebra horizontal na sidebar */
+  -webkit-overflow-scrolling: touch;
 }
 
 .cart-item {
@@ -1592,6 +1597,11 @@ body {
     align-items: flex-start;
   }
 
+  .profile img {
+    width: 75px;
+    height: 75px;
+  }
+
   .items {
     grid-template-columns: 1fr;
   }
@@ -1602,8 +1612,8 @@ body {
   }
 
   .item img {
-    width: 120px;
-    height: 120px;
+    width: 110px;
+    height: 110px;
     flex-shrink: 0;
   }
 
@@ -1612,9 +1622,31 @@ body {
     min-width: 0;
   }
 
+  .description h4 {
+    font-size: 1rem;
+  }
+
   .description p {
     -webkit-line-clamp: 2;
     font-size: 0.8rem; /* Reduz fonte no mobile para melhor ajuste */
+  }
+
+  .search {
+    padding: 0 1rem;
+  }
+
+  .search input {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .tab {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .category h3 {
+    font-size: 1.25rem;
   }
 
   .modal-card {
@@ -1626,19 +1658,62 @@ body {
   }
 
   .modal-image {
-    height: 300px;
+    height: 250px;
   }
 
   .modal-body {
-    padding: 1.5rem;
+    padding: 1rem;
+  }
+
+  .modal-content h4 {
+    font-size: 1.25rem;
   }
 
   .modal-content p {
     -webkit-line-clamp: 3; /* Ajusta limite no mobile */
+    font-size: 0.875rem;
+  }
+
+  .complement-item {
+    padding: 0.5rem;
+  }
+
+  .comp-name {
+    font-size: 0.875rem;
+  }
+
+  .comp-price {
+    font-size: 0.8rem;
   }
 
   .observation {
     margin-top: 1rem;
+  }
+
+  .observation textarea {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+    min-height: 80px;
+    max-height: 120px;
+  }
+
+  .modal-footer {
+    padding: 1rem;
+  }
+
+  .qty-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
+  }
+
+  .qty-value {
+    font-size: 1rem;
+  }
+
+  .add-to-cart {
+    padding: 0.75rem;
+    font-size: 0.875rem;
   }
 
   .footer {
@@ -1653,6 +1728,95 @@ body {
     width: 100%;
   }
 
+  .sidebar-header {
+    padding: 0.75rem;
+  }
+
+  .sidebar-header h3 {
+    font-size: 1.125rem;
+  }
+
+  .sidebar-body {
+    padding: 0.75rem;
+  }
+
+  .cart-item-image {
+    width: 45px;
+    height: 45px;
+  }
+
+  .cart-item {
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .cart-item-info h4 {
+    font-size: 0.9rem;
+  }
+
+  .observation {
+    font-size: 0.75rem;
+    -webkit-line-clamp: 1;
+  }
+
+  .complement {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .item-total {
+    font-size: 0.875rem;
+  }
+
+  .quantity-controls {
+    gap: 0.3rem;
+  }
+
+  .qty-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 0.875rem;
+  }
+
+  .qty-value {
+    font-size: 0.875rem;
+    min-width: 24px;
+  }
+
+  .sidebar-footer {
+    padding: 0.75rem;
+  }
+
+  .coupon-section {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .coupon-section input {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .apply-coupon-btn {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .total {
+    font-size: 1.125rem;
+  }
+
+  .total-value {
+    font-size: 1.125rem;
+  }
+
+  .finalize-btn {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+
   .floating-cart-btn {
     bottom: 10px;
     padding: 10px 16px;
@@ -1661,25 +1825,12 @@ body {
     width: 90%;
   }
 
-  .cart-item-image {
-    width: 50px;
-    height: 50px;
+  .left-side {
+    gap: 6px;
   }
 
-  .cart-item {
-    gap: 0.5rem;
-  }
-
-  .coupon-section {
-    flex-direction: column;
-  }
-
-  .apply-coupon-btn {
-    width: 100%;
-  }
-
-  .observation {
-    /* -webkit-line-clamp: 1; Limita mais no mobile para sidebar */
+  .cart-price {
+    font-size: 0.875rem;
   }
 }
 
@@ -1693,25 +1844,33 @@ body {
   }
 
   .profile img {
-    width: 60px;
-    height: 60px;
+    width: 65px;
+    height: 65px;
   }
 
   .item img {
-    width: 100px;
-    height: 100px;
+    width: 90px;
+    height: 90px;
+  }
+
+  .description p {
+    -webkit-line-clamp: 1; /* Limita a 1 linha em telas muito pequenas */
+    font-size: 0.75rem;
   }
 
   .modal-body {
-    padding: 1rem;
+    padding: 0.75rem;
   }
 
   .modal-footer {
-    padding: 1rem;
+    padding: 0.75rem;
   }
 
   .observation textarea {
-    padding: 0.75rem;
+    padding: 0.4rem;
+    font-size: 0.8rem;
+    min-height: 60px;
+    max-height: 100px;
   }
 
   .footer {
@@ -1729,13 +1888,61 @@ body {
     width: 95%;
   }
 
-  .description p {
-    -webkit-line-clamp: 1; /* Limita a 1 linha em telas muito pequenas */
+  .cart-item-image {
+    width: 40px;
+    height: 40px;
+  }
+
+  .cart-item {
+    gap: 0.4rem;
+  }
+
+  .cart-item-info h4 {
+    font-size: 0.85rem;
+  }
+
+  .observation {
+    font-size: 0.7rem;
+  }
+
+  .complement {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .qty-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 0.8rem;
+  }
+
+  .qty-value {
+    font-size: 0.8rem;
+    min-width: 22px;
+  }
+
+  .coupon-section input {
+    padding: 0.4rem;
     font-size: 0.75rem;
+  }
+
+  .apply-coupon-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .total {
+    font-size: 1rem;
+  }
+
+  .finalize-btn {
+    padding: 0.6rem;
+    font-size: 0.8rem;
   }
 
   .modal-content p {
     -webkit-line-clamp: 2;
+    font-size: 0.8rem;
   }
 }
 </style>
