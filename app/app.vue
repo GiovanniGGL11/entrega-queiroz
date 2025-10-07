@@ -1433,7 +1433,7 @@ body {
 }
 
 .observation {
-  margin-top: 1rem;
+  /* margin-top: 1rem; */
 }
 
 .observation label {
@@ -1687,7 +1687,7 @@ body {
   }
 
   .observation {
-    margin-top: 1rem;
+    /* margin-top: 1rem; */
   }
 
   .observation textarea {
@@ -1757,7 +1757,7 @@ body {
 
   .observation {
     font-size: 0.75rem;
-    -webkit-line-clamp: 1;
+    /* -webkit-line-clamp: 1; */
   }
 
   .complement {
