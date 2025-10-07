@@ -1,0 +1,21 @@
+@import url("https://fonts.googleapis.com/css2?family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap");
+
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
+input,
+button,
+textarea {
+  outline: none;
+  font-family: "Urbanist", sans-serif;
+}
+
+body {
+  background-color: #fdfdfd;
+  font-family: "Urbanist", sans-serif !important;
+}
