@@ -472,6 +472,12 @@ useHead({
 </script>
 
 <template>
+  <div class="alert">
+    <p>
+      USE O CUPOM <span class="code">DESCONTO10</span> E GANHE 10% DE DESCONTO
+      NA PRIMEIRA COMPRA!
+    </p>
+  </div>
   <div class="container">
     <!-- Hero Section -->
     <div class="hero">
@@ -796,6 +802,26 @@ useHead({
 
 body {
   overflow-x: hidden; /* Previne scroll horizontal global */
+}
+
+.alert {
+  background-color: #e67e22;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  /* position: fixed; */
+  /* top: 0; */
+
+  padding: 0.5rem;
+  z-index: 999;
+  color: #fff;
+  font-weight: 600;
+}
+
+.alert p .code {
+  font-weight: 900;
 }
 
 .container {
