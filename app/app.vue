@@ -22,6 +22,10 @@ const discountAmount = ref(0);
 // Estado mobile
 const isMobile = ref(false);
 
+// Estado do overlay de imagem
+const showImageOverlay = ref(false);
+const currentImageUrl = ref("");
+
 // Dados das categorias
 const categories = ref([
   {
@@ -289,6 +293,18 @@ const closeModal = () => {
   observation.value = "";
 };
 
+// Overlay de Imagem
+const openImageOverlay = (url) => {
+  currentImageUrl.value = url;
+  showImageOverlay.value = true;
+  document.body.style.overflow = "hidden";
+};
+
+const closeImageOverlay = () => {
+  showImageOverlay.value = false;
+  // Não reseta o overflow aqui, pois o modal ainda pode estar aberto
+};
+
 // Controles de quantidade
 const updateQuantity = (delta) => {
   quantity.value = Math.max(1, quantity.value + delta);
@@ -391,7 +407,9 @@ const applyCoupon = () => {
 // Keyboard shortcut handler
 const handleKeydown = (event) => {
   if (event.key === "Escape") {
-    if (selectedItem.value) {
+    if (showImageOverlay.value) {
+      closeImageOverlay();
+    } else if (selectedItem.value) {
       closeModal();
     } else if (showSidebar.value) {
       closeSidebar();
@@ -434,6 +452,13 @@ watch(selectedItem, (newVal) => {
 
 watch(showSidebar, (newVal) => {
   document.body.style.overflow = newVal ? "hidden" : "";
+});
+
+watch(showImageOverlay, (newVal) => {
+  // Ajusta o overflow apenas se o modal não estiver aberto
+  if (!selectedItem.value) {
+    document.body.style.overflow = newVal ? "hidden" : "";
+  }
 });
 
 watch(
@@ -563,7 +588,9 @@ useHead({
             class="item"
             @click="selectItem(item)"
           >
-            <img :src="item.image" :alt="item.name" />
+            <div class="image-wrapper">
+              <img :src="item.image" :alt="item.name" class="item-image" />
+            </div>
             <div class="description">
               <h4>{{ item.name }}</h4>
               <p>{{ item.description }}</p>
@@ -694,20 +721,20 @@ useHead({
     </div>
   </div>
 
-  <!-- Divider -->
-  <div class="divider"></div>
-
-  <!-- Footer -->
+  <!-- Footer Melhorado -->
   <footer class="footer">
-    <p>
-      © Desenvolvido por
-      <a
-        href="https://www.instagram.com/g2genesys/"
-        target="_blank"
-        rel="noopener noreferrer"
-        >G2</a
-      >
-    </p>
+    <div class="footer-bottom">
+      <p>
+        &copy; {{ new Date().getFullYear() }} Queiroz Hamburgueria. Desenvolvido
+        por
+        <a
+          href="https://www.instagram.com/g2genesys/"
+          target="_blank"
+          rel="noopener noreferrer"
+          >G2 Genesys</a
+        >.
+      </p>
+    </div>
   </footer>
 
   <!-- Modal -->
@@ -721,6 +748,7 @@ useHead({
                 :src="selectedItem.image"
                 :alt="selectedItem.name"
                 class="modal-image"
+                @click="openImageOverlay(selectedItem.image)"
               />
               <button class="close-btn" @click="closeModal" aria-label="Fechar">
                 ×
@@ -789,6 +817,32 @@ useHead({
             </div>
             <button class="add-to-cart" @click="addToCart">Adicionar</button>
           </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- Image Overlay -->
+  <Teleport to="body">
+    <Transition name="image-overlay">
+      <div
+        v-if="showImageOverlay"
+        class="image-overlay"
+        @click="closeImageOverlay"
+      >
+        <div class="image-overlay-content" @click.stop>
+          <button
+            class="image-close-btn"
+            @click="closeImageOverlay"
+            aria-label="Fechar"
+          >
+            ×
+          </button>
+          <img
+            :src="currentImageUrl"
+            :alt="selectedItem?.name || 'Imagem do item'"
+            class="overlay-image"
+          />
         </div>
       </div>
     </Transition>
@@ -991,11 +1045,21 @@ body {
   transform: translateY(-2px);
 }
 
-.item img {
+.image-wrapper {
+  position: relative;
+  cursor: pointer;
+}
+
+.item-image {
   width: 100%;
   height: 200px;
   object-fit: cover;
   border-radius: 0.5rem;
+  transition: transform 0.2s ease;
+}
+
+.item-image:hover {
+  transform: scale(1.02);
 }
 
 .description {
@@ -1036,26 +1100,78 @@ body {
   margin-top: auto; /* Empurra o preço para o final do card */
 }
 
-.divider {
-  border-top: 1px solid #efefef;
-  margin: 1rem 0;
-}
-
+/* Footer Melhorado */
 .footer {
   width: 100%;
-  padding: 2rem 0 2rem;
-  text-align: center;
+  /* background: #f8f9fa; */
+  padding: 2rem 0 1.5rem;
   color: #666;
   font-size: 0.875rem;
 }
 
-.footer a {
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  padding: 0 2rem;
+}
+
+.footer-section h4 {
+  color: #323232;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.footer-section p {
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+}
+
+.social-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.social-links a {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ff8e24;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.social-links a:hover {
+  color: #e67e22;
+}
+
+.social-links svg {
+  flex-shrink: 0;
+}
+
+.footer-bottom {
+  border-top: 1px solid #efefef;
+  padding-top: 1rem;
+  text-align: center;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+.footer-bottom a {
   color: #ff8e24;
   text-decoration: none;
   font-weight: 500;
 }
 
-.footer a:hover {
+.footer-bottom a:hover {
   text-decoration: underline;
 }
 
@@ -1420,6 +1536,7 @@ body {
 
 .image-container {
   position: relative;
+  cursor: zoom-in;
 }
 
 .modal-image {
@@ -1427,6 +1544,11 @@ body {
   height: 400px;
   object-fit: cover;
   display: block;
+  transition: transform 0.2s ease;
+}
+
+.modal-image:hover {
+  transform: scale(1.02);
 }
 
 .close-btn {
@@ -1639,6 +1761,57 @@ body {
   background: #e67e22;
 }
 
+/* Image Overlay */
+.image-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  backdrop-filter: blur(4px);
+}
+
+.image-overlay-content {
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlay-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 0.5rem;
+}
+
+.image-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  z-index: 1;
+}
+
+.image-close-btn:hover {
+  color: #ccc;
+}
+
 /* Modal Transition */
 .modal-enter-active,
 .modal-leave-active {
@@ -1660,6 +1833,26 @@ body {
   transform: scale(0.9);
 }
 
+.image-overlay-enter-active,
+.image-overlay-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.image-overlay-enter-from,
+.image-overlay-leave-to {
+  opacity: 0;
+}
+
+.image-overlay-enter-active .image-overlay-content,
+.image-overlay-leave-active .image-overlay-content {
+  transition: transform 0.3s ease;
+}
+
+.image-overlay-enter-from .image-overlay-content,
+.image-overlay-leave-to .image-overlay-content {
+  transform: scale(0.9);
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .container {
@@ -1672,6 +1865,21 @@ body {
 
   .modal-content p {
     -webkit-line-clamp: 3;
+  }
+
+  .footer {
+    padding: 1.5rem 0 1rem;
+  }
+
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 0 1rem;
+  }
+
+  .footer-bottom {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }
 
@@ -1703,10 +1911,13 @@ body {
     gap: 1rem;
   }
 
-  .item img {
+  .image-wrapper {
+    flex-shrink: 0;
+  }
+
+  .item-image {
     width: 110px;
     height: 110px;
-    flex-shrink: 0;
   }
 
   .description {
@@ -1809,11 +2020,31 @@ body {
   }
 
   .footer {
-    padding: 1rem 0 2rem;
+    padding: 1.5rem 0 1rem;
   }
 
-  .divider {
-    margin: 1rem 0;
+  .footer-content {
+    margin-bottom: 1rem;
+    padding: 0 0.5rem;
+    gap: 1.5rem;
+  }
+
+  .footer-section h4 {
+    font-size: 1rem;
+  }
+
+  .footer-section p {
+    font-size: 0.8rem;
+  }
+
+  .social-links a {
+    font-size: 0.8rem;
+  }
+
+  .footer-bottom {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    font-size: 0.8rem;
   }
 
   .sidebar {
@@ -1924,6 +2155,12 @@ body {
   .cart-price {
     font-size: 0.875rem;
   }
+
+  .image-close-btn {
+    top: 0.75rem;
+    right: 0.75rem;
+    font-size: 1.75rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1940,7 +2177,7 @@ body {
     height: 65px;
   }
 
-  .item img {
+  .item-image {
     width: 90px;
     height: 90px;
   }
@@ -1966,11 +2203,34 @@ body {
   }
 
   .footer {
-    padding: 0.5rem 0 1rem;
+    padding: 1rem 0 0.75rem;
   }
 
-  .divider {
-    margin: 0.5rem 0;
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 0;
+    margin-bottom: 0.75rem;
+  }
+
+  .footer-section p {
+    font-size: 0.75rem;
+  }
+
+  .social-links a {
+    font-size: 0.75rem;
+    gap: 0.25rem;
+  }
+
+  .social-links svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .footer-bottom {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    font-size: 0.75rem;
   }
 
   .floating-cart-btn {
@@ -2035,6 +2295,17 @@ body {
   .modal-content p {
     -webkit-line-clamp: 2;
     font-size: 0.8rem;
+  }
+
+  .image-overlay-content {
+    max-width: 95%;
+    max-height: 95%;
+  }
+
+  .image-close-btn {
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 1.5rem;
   }
 }
 </style>
