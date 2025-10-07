@@ -6,7 +6,28 @@
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
   scroll-behavior: smooth;
+  /* scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1; */
 }
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  /* border-radius: 10px; */
+  /* border: 2px solid #f1f1f1; */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+/* ::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+} */
 
 input,
 button,
