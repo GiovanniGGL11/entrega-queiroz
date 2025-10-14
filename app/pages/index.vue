@@ -395,7 +395,7 @@ const calculateDelivery = async () => {
     }
     
     if (!geocodeData) {
-      deliveryError.value = "Endereço não encontrado. Tente incluir: Cidade - Estado (Ex: Rua Cambará, 776 - São Paulo - SP)"
+      deliveryError.value = "Endereço não encontrado. Tente incluir: Cidade - Estado (Ex: Rua, Número - São Paulo - SP)"
       deliveryFee.value = 0
       deliveryDistance.value = 0
       return
@@ -854,7 +854,7 @@ useHead({
           </div>
         </div>
         <small v-if="!deliveryError && !calculatingDelivery" class="delivery-hint">
-          Ex: Rua Cambará, 776 - Bairro - São Paulo - SP
+          Ex: Rua, Número - Bairro - São Paulo - SP
         </small>
         
         <!-- Campo de Complemento (opcional) -->
@@ -1029,7 +1029,7 @@ useHead({
           </div>
         </div>
         <small v-if="!deliveryError && !calculatingDelivery" class="delivery-hint">
-          Ex: Rua Cambará, 776 - Bairro - São Paulo - SP
+          Ex: Rua, Número - Bairro - São Paulo - SP
         </small>
         
         <!-- Campo de Complemento (opcional) -->
