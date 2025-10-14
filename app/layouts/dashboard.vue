@@ -354,6 +354,7 @@ onMounted(() => {
 .sidebar-nav {
   flex: 1;
   padding: 1rem 0;
+  overflow-y: auto; /* Permite scroll interno na sidebar */
 }
 
 .sidebar-nav ul {
@@ -625,6 +626,15 @@ onMounted(() => {
   
   .sidebar-footer {
     padding: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .sidebar-footer {
+      position: sticky;
+      bottom: 0;
+      background: white; /* Garante visibilidade no mobile */
+      z-index: 1;
+    }
   }
 }
 
