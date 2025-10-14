@@ -1,5 +1,7 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
+import ImageOverlay from '~/components/ImageOverlay.vue'
+import { useImageOverlay } from '~/composables/useImageOverlay'
 
 // Estado do carrinho e modal
 const selectedItem = ref(null);
@@ -31,8 +33,7 @@ const deliveryError = ref("");
 const isMobile = ref(false);
 
 // Estado do overlay de imagem
-const showImageOverlay = ref(false);
-const currentImageUrl = ref("");
+const { showImageOverlay, currentImageUrl, openImageOverlay, closeImageOverlay } = useImageOverlay()
 
 // Dados das categorias
 const categories = ref([])
@@ -217,18 +218,6 @@ const closeModal = () => {
   selectedItem.value = null;
   complementsQty.value = {};
   observation.value = "";
-};
-
-// Overlay de Imagem
-const openImageOverlay = (url) => {
-  currentImageUrl.value = url;
-  showImageOverlay.value = true;
-  document.body.style.overflow = "hidden";
-};
-
-const closeImageOverlay = () => {
-  showImageOverlay.value = false;
-  // Não reseta o overflow aqui, pois o modal ainda pode estar aberto
 };
 
 // Controles de quantidade
@@ -569,9 +558,9 @@ useHead({
 <template>
   <!-- Loading Screen -->
   <div v-if="initialLoading" class="page-wrapper">
-    <div class="initial-loading">
+    <div class="loading-overlay">
       <div class="loading-content">
-        <div class="loading-spinner-large"></div>
+        <div class="loading-spinner"></div>
         <p>Carregando cardápio...</p>
       </div>
     </div>
@@ -587,17 +576,18 @@ useHead({
         alt="Banner da loja"
         class="banner"
       />
+      
       <div class="profile">
         <img :src="storeSettings.logo" :alt="`Logo da ${storeSettings.storeName}`" />
         <div class="profile-info">
-          <div class="store-name-row">
-            <h2>{{ storeSettings.storeName }}</h2>
-            <span :class="['status', storeSettings.isOpen ? 'open' : 'closed']">
-              {{ storeSettings.isOpen ? 'Aberto' : 'Fechado' }}
-            </span>
-          </div>
-          
-          <!-- Tempo de Entrega -->
+            <div class="store-name-row">
+              <h2>{{ storeSettings.storeName }}</h2>
+              <span :class="['status', storeSettings.isOpen ? 'open' : 'closed']">
+                {{ storeSettings.isOpen ? 'Aberto' : 'Fechado' }}
+              </span>
+            </div>
+            
+            <!-- Tempo de Entrega -->
           <div class="info-row">
             <svg
               class="info-icon"
@@ -703,10 +693,7 @@ useHead({
       </button>
     </div>
     
-    <div v-if="loadingCategories" class="loading-categories">
-      <div class="loading-spinner"></div>
-      <p>Carregando categorias...</p>
-    </div>
+    
 
     <!-- Categories -->
     <div class="categories" v-if="filteredCategories.length">
@@ -736,6 +723,14 @@ useHead({
         </div>
       </div>
     </div>
+
+    <!-- Empty State - Nenhum resultado -->
+    <div v-else-if="!loadingCategories && searchQuery" class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <h3>Nenhum produto encontrado</h3>
+      <p>Não encontramos produtos com "{{ searchQuery }}"</p>
+      <p class="empty-hint">Tente buscar por outro nome ou categoria</p>
+    </div>
   </div>
 
   <!-- Floating Cart Button -->
@@ -757,11 +752,29 @@ useHead({
     <span v-if="!isMobile" class="cart-text">VER CARRINHO</span>
   </button>
 
-  <!-- Sidebar Overlay -->
-  <div v-if="showSidebar" class="sidebar-overlay" @click="closeSidebar"></div>
+  <!-- Footer Melhorado -->
+  <footer class="footer">
+    <div class="footer-bottom">
+      <p>
+        &copy; {{ new Date().getFullYear() }} Queiroz Hamburgueria. Desenvolvido
+        por
+        <a
+          href="https://www.instagram.com/g2genesys/"
+          target="_blank"
+          rel="noopener noreferrer"
+          >G2 Genesys</a
+        >.
+      </p>
+    </div>
+  </footer>
+  </div>
+
+  <!-- Sidebar Overlay + Sidebar (teleportados para body) -->
+  <Teleport to="body">
+  <div v-if="showSidebar && !initialLoading" class="sidebar-overlay" @click="closeSidebar"></div>
 
   <!-- Sidebar -->
-  <div class="sidebar" :class="{ open: showSidebar }">
+  <div v-if="showSidebar && !initialLoading" class="sidebar open">
     <div class="sidebar-header">
       <h3>Seu Carrinho</h3>
       <button class="close-sidebar-btn" @click="closeSidebar">×</button>
@@ -914,172 +927,7 @@ useHead({
       </button>
     </div>
   </div>
-
-  <!-- Footer Melhorado -->
-  <footer class="footer">
-    <div class="footer-bottom">
-      <p>
-        &copy; {{ new Date().getFullYear() }} Queiroz Hamburgueria. Desenvolvido
-        por
-        <a
-          href="https://www.instagram.com/g2genesys/"
-          target="_blank"
-          rel="noopener noreferrer"
-          >G2 Genesys</a
-        >.
-      </p>
-    </div>
-  </footer>
-  </div>
-
-  <!-- Sidebar Overlay -->
-  <div v-if="showSidebar" class="sidebar-overlay" @click="closeSidebar"></div>
-
-  <!-- Sidebar -->
-  <div class="sidebar" :class="{ open: showSidebar }">
-    <div class="sidebar-header">
-      <h3>Seu Carrinho</h3>
-      <button class="close-sidebar-btn" @click="closeSidebar">×</button>
-    </div>
-
-    <div class="sidebar-body">
-      <div v-for="item in cart" :key="item.variantKey" class="cart-item">
-        <img :src="item.image" :alt="item.name" class="cart-item-image" />
-        <div class="cart-item-info">
-          <h4>{{ item.name }}</h4>
-          <p v-if="item.observation" class="observation">
-            {{ item.observation }}
-          </p>
-          <div
-            v-if="item.complements && item.complements.length > 0"
-            class="complements"
-          >
-            <span
-              v-for="comp in item.complements"
-              :key="comp.name"
-              class="complement"
-            >
-              <b>{{ comp.qty }}x</b> {{ comp.name }}
-            </span>
-          </div>
-        </div>
-        <div class="cart-item-right">
-          <button
-            class="delete-btn"
-            @click="removeFromCart(item.variantKey)"
-            aria-label="Remover item"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <polyline points="3,6 5,6 21,6"></polyline>
-              <path
-                d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"
-              ></path>
-            </svg>
-          </button>
-          <div class="quantity-controls">
-            <button
-              class="qty-btn"
-              @click="updateCartQuantity(item.variantKey, -1)"
-              :disabled="item.quantity <= 1"
-            >
-              −
-            </button>
-            <span class="qty-value">{{ item.quantity }}</span>
-            <button
-              class="qty-btn"
-              @click="updateCartQuantity(item.variantKey, 1)"
-            >
-              +
-            </button>
-          </div>
-          <span class="item-total">{{ formatPrice(item.totalPrice) }}</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="sidebar-footer">
-      <!-- Campo de Endereço de Entrega -->
-      <div class="delivery-address-section">
-        <label for="deliveryAddress" class="delivery-label">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-            <circle cx="12" cy="10" r="3"></circle>
-          </svg>
-          Endereço de Entrega
-        </label>
-        <div class="delivery-input-wrapper">
-          <input
-            id="deliveryAddress"
-            type="text"
-            v-model="deliveryAddress"
-            @input="onDeliveryAddressChange"
-            placeholder="Rua, Número - Bairro, Cidade - Estado"
-            class="delivery-input"
-          />
-          <div v-if="calculatingDelivery" class="calculating-spinner">
-            <div class="spinner-small"></div>
-          </div>
-        </div>
-        <small v-if="!deliveryError && !calculatingDelivery" class="delivery-hint">
-          Ex: Rua, Número - Bairro - São Paulo - SP
-        </small>
-        
-        <!-- Campo de Complemento (opcional) -->
-        <div class="complement-wrapper">
-          <input
-            type="text"
-            v-model="deliveryComplement"
-            placeholder="Complemento (opcional): Casa, Apto, Bloco..."
-            class="complement-input"
-          />
-        </div>
-        
-        <div v-if="deliveryError" class="delivery-error">
-          ⚠️ {{ deliveryError }}
-        </div>
-        <div v-if="deliveryDistance > 0 && !deliveryError" class="delivery-success">
-          ✅ Distância: {{ deliveryDistance.toFixed(1) }}km
-          <span v-if="deliveryComplement" class="complement-display">• {{ deliveryComplement }}</span>
-        </div>
-      </div>
-
-      <!-- Subtotal -->
-      <div class="subtotal">
-        <span class="subtotal-label">Subtotal</span>
-        <span class="subtotal-value">{{ formatPrice(cartSubtotal) }}</span>
-      </div>
-      
-      <!-- Desconto -->
-      <div v-if="discountAmount > 0" class="discount">
-        <span class="discount-label">Desconto</span>
-        <span class="discount-value">-{{ formatPrice(discountAmount) }}</span>
-      </div>
-      
-      <!-- Taxa de Entrega -->
-      <div v-if="deliveryAddress" class="delivery-fee-line">
-        <span class="delivery-label">Taxa de Entrega</span>
-        <span class="delivery-value" :class="{ free: deliveryFee === 0 }">
-          {{ deliveryFee === 0 ? 'Grátis' : formatPrice(deliveryFee) }}
-        </span>
-      </div>
-      
-      <div class="total">
-        <span class="total-label">Total</span>
-        <span class="total-value">{{ formatPrice(cartTotal) }}</span>
-      </div>
-      <button class="finalize-btn" @click="finalizeOrder" :disabled="!deliveryAddress || deliveryError || calculatingDelivery">
-        {{ deliveryAddress && !deliveryError ? 'Finalizar Pedido' : 'Informe o endereço de entrega' }}
-      </button>
-    </div>
-  </div>
+  </Teleport>
 
   <!-- Modal -->
   <Teleport to="body">
@@ -1167,30 +1015,12 @@ useHead({
   </Teleport>
 
   <!-- Image Overlay -->
-  <Teleport to="body">
-    <Transition name="image-overlay">
-      <div
-        v-if="showImageOverlay"
-        class="image-overlay"
-        @click="closeImageOverlay"
-      >
-        <div class="image-overlay-content" @click.stop>
-          <button
-            class="image-close-btn"
-            @click="closeImageOverlay"
-            aria-label="Fechar"
-          >
-            ×
-          </button>
-          <img
-            :src="currentImageUrl"
-            :alt="selectedItem?.name || 'Imagem do item'"
-            class="overlay-image"
-          />
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
+  <ImageOverlay
+    :show="showImageOverlay"
+    :imageUrl="currentImageUrl"
+    :alt="selectedItem?.name || 'Imagem do item'"
+    @close="closeImageOverlay"
+  />
 </template>
 
 <style scoped>
@@ -1198,58 +1028,22 @@ useHead({
   box-sizing: border-box;
 }
 
+/* Previne flash de conteúdo não estilizado */
+[v-cloak] {
+  display: none !important;
+}
+
 /* Page Wrapper */
 .page-wrapper {
   min-height: 100vh;
   width: 100%;
+  max-width: 100vw;
   position: relative;
-}
-
-/* Loading Screen */
-.initial-loading {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: #ffffff;
+  overflow-x: hidden;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
+  flex-direction: column;
 }
 
-.loading-content {
-  text-align: center;
-  color: #FF6B35;
-}
-
-.loading-spinner-large {
-  width: 60px;
-  height: 60px;
-  border: 4px solid rgba(255, 107, 53, 0.3);
-  border-top-color: #FF6B35;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin: 0 auto 1.5rem;
-}
-
-.loading-content p {
-  font-size: 1.125rem;
-  font-weight: 500;
-  margin: 0;
-  color: #FF6B35;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
 
 body {
   overflow-x: hidden; /* Previne scroll horizontal global */
@@ -1277,29 +1071,18 @@ body {
 
 .container {
   width: 100%;
-  max-width: 100vw;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 4rem 12rem 0;
+  padding: 4rem 2rem 0;
   display: flex;
   flex-direction: column;
   gap: 2rem;
-}
-
-@media (max-width: 1400px) {
-  .container {
-    padding: 3rem 6rem 0;
-  }
-}
-
-@media (max-width: 1024px) {
-  .container {
-    padding: 2rem 2rem 0;
-  }
+  flex: 1;
 }
 
 @media (max-width: 768px) {
   .container {
-    padding: 1.5rem 1rem 0;
+    padding: 2rem 1rem 0;
   }
 }
 
@@ -1449,37 +1232,14 @@ body {
   display: flex;
   gap: 1rem;
   overflow-x: auto;
-  padding: 1rem 12rem;
-  margin: 0 -12rem;
+  padding: 1rem 0;
   position: sticky;
   top: 0;
   z-index: 100;
   background: #f8fafc;
   scrollbar-width: none;
-  /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); */
   margin-bottom: 0.5rem;
   transition: box-shadow 0.3s ease;
-}
-
-@media (max-width: 1400px) {
-  .category-tabs {
-    padding: 1rem 6rem;
-    margin: 0 -6rem;
-  }
-}
-
-@media (max-width: 1024px) {
-  .category-tabs {
-    padding: 1rem 2rem;
-    margin: 0 -2rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .category-tabs {
-    padding: 1rem 1rem;
-    margin: 0 -1rem;
-  }
 }
 
 .category-tabs::-webkit-scrollbar {
@@ -1621,6 +1381,91 @@ body {
   margin-top: auto; /* Empurra o preço para o final do card */
 }
 
+/* Loading Overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #FF6B35;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-content p {
+  font-size: 1.125rem;
+  color: #666;
+  margin: 0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Skeleton removido da home */
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  margin: 2rem auto;
+  max-width: 500px;
+}
+
+.empty-icon {
+  font-size: 5rem;
+  margin-bottom: 1.5rem;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+.empty-state h3 {
+  font-size: 1.5rem;
+  color: #2c3e50;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.empty-state p {
+  font-size: 1rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.empty-hint {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
 /* Footer Melhorado */
 .footer {
   width: 100%;
@@ -1628,6 +1473,7 @@ body {
   padding: 2rem 0 1.5rem;
   color: #666;
   font-size: 0.875rem;
+  margin-top: auto;
 }
 
 .footer-content {
@@ -1760,6 +1606,7 @@ body {
   transform: translateX(100%);
   transition: transform 0.3s ease;
   display: flex;
+  visibility: hidden; /* escondida por padrão */
   flex-direction: column;
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
   overflow: hidden; /* Evita quebra da sidebar por conteúdo largo */
@@ -1767,6 +1614,7 @@ body {
 
 .sidebar.open {
   transform: translateX(0);
+  visibility: visible; /* visível quando aberta */
 }
 
 .sidebar-header {
@@ -2284,57 +2132,6 @@ body {
 
 .add-to-cart:hover {
   background: #e67e22;
-}
-
-/* Image Overlay */
-.image-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-  backdrop-filter: blur(4px);
-}
-
-.image-overlay-content {
-  position: relative;
-  max-width: 90%;
-  max-height: 90%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.overlay-image {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  border-radius: 0.5rem;
-}
-
-.image-close-btn {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  width: auto;
-  height: auto;
-  border-radius: 0;
-  background: none;
-  border: none;
-  font-size: 2rem;
-  cursor: pointer;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
-  z-index: 1;
-}
-
-.image-close-btn:hover {
-  color: #ccc;
 }
 
 /* Modal Transition */
