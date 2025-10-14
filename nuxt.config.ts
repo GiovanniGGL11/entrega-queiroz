@@ -36,7 +36,5 @@ export default defineNuxtConfig({
     },
     // Remove o array plugins - middlewares .global.ts são auto-detectados
   },
-  routeRules: {
-    "/dashboard/**": { middleware: "auth" },
-  },
+  // routeRules removido - o middleware auth.global.ts já protege as rotas automaticamente
 });

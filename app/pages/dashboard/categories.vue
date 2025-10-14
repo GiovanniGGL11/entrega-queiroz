@@ -629,12 +629,25 @@ const updateCategoryOrder = async (oldIndex, newIndex) => {
 }
 
 // Lifecycle
+// Fechar modal com ESC
+const handleEscKey = (event) => {
+  if (event.key === 'Escape') {
+    if (showDeleteModal.value) {
+      showDeleteModal.value = false
+    } else if (showCreateModal.value || showEditModal.value) {
+      closeModal()
+    }
+  }
+}
+
 onMounted(() => {
   loadCategories()
+  window.addEventListener('keydown', handleEscKey)
 })
 
 onUnmounted(() => {
   destroySortable()
+  window.removeEventListener('keydown', handleEscKey)
 })
 </script>
 

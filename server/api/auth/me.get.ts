@@ -1,16 +1,14 @@
-import jwt from 'jsonwebtoken'
+import { readTokenFromEvent, verifyUserToken } from '../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Obter token do cookie - tentar ambos os nomes
-    let token = getCookie(event, 'auth_token')
+    console.log('🔍 Verificando autenticação (/api/auth/me)')
     
-    // Fallback para authToken (sistema antigo)
-    if (!token) {
-      token = getCookie(event, 'authToken')
-    }
+    // Obter token do cookie
+    const token = readTokenFromEvent(event)
     
     if (!token) {
+      console.log('❌ Nenhum token encontrado nos cookies')
       throw createError({
         statusCode: 401,
         statusMessage: 'No token provided'
@@ -18,10 +16,9 @@ export default defineEventHandler(async (event) => {
     }
 
     // Verificar token
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
-    
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string }
+      const decoded = verifyUserToken(token)
+      console.log('✅ Token válido, usuário:', decoded.email)
       
       // Retornar dados do usuário
       return {
@@ -31,6 +28,7 @@ export default defineEventHandler(async (event) => {
       }
     } catch (jwtError) {
       // Token inválido ou expirado
+      console.log('❌ Token inválido ou expirado:', jwtError)
       throw createError({
         statusCode: 401,
         statusMessage: 'Invalid or expired token'
@@ -43,6 +41,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // Erro inesperado
+    console.error('❌ Erro inesperado na autenticação:', error)
     throw createError({
       statusCode: 500,
       statusMessage: 'Authentication error'

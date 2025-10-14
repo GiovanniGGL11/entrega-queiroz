@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
 import { connectDB } from '../../utils/db'
+import { setAuthCookie, signUserToken } from '../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -38,25 +38,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Gerar token JWT
-    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
-    const token = jwt.sign(
-      { 
-        userId: user._id.toString(), 
-        email: user.email 
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    )
-
-    // Salvar token em cookie httpOnly
-    setCookie(event, 'auth_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 7, // 7 dias
-      path: '/'
-    })
+    // Gerar token JWT e salvar no cookie httpOnly
+    const token = signUserToken({ userId: user._id.toString(), email: user.email })
+    setAuthCookie(event, token)
 
     return {
       success: true,
