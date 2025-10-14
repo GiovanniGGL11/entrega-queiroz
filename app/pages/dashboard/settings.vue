@@ -1,0 +1,1668 @@
+<template>
+  <div class="settings-page">
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <h1>Configurações da Loja</h1>
+        <p class="page-description">Gerencie as informações e configurações gerais da sua loja</p>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div v-if="loading" class="loading">
+      <div class="loading-spinner"></div>
+      <p>Carregando configurações...</p>
+    </div>
+
+    <!-- Form -->
+    <div v-else class="settings-content">
+      <!-- Informações Básicas -->
+      <div class="settings-section card">
+        <div class="section-header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+          <h2>Informações Básicas</h2>
+        </div>
+        
+        <div class="form-group">
+          <label for="storeName">Nome da Loja *</label>
+          <input
+            id="storeName"
+            v-model="form.storeName"
+            type="text"
+            placeholder="Ex: Restaurante Sabor da Casa"
+            required
+            maxlength="100"
+          />
+          <span class="char-count">{{ form.storeName?.length || 0 }}/100</span>
+        </div>
+      </div>
+
+      <!-- Horário de Funcionamento -->
+      <div class="settings-section card">
+        <div class="section-header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <h2>Horário de Funcionamento</h2>
+        </div>
+
+        <div class="status-display">
+          <span :class="['status-indicator', computedIsOpen ? 'open' : 'closed']">
+            {{ computedIsOpen ? '● Aberta agora' : '● Fechada' }}
+          </span>
+          <p class="status-text">{{ getStatusText() }}</p>
+        </div>
+
+        <div class="opening-hours">
+          <div v-for="schedule in form.openingHours" :key="schedule.day" class="day-schedule">
+            <div class="day-header">
+              <label class="toggle">
+                <input
+                  v-model="schedule.enabled"
+                  type="checkbox"
+                />
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="day-name">{{ getDayName(schedule.day) }}</span>
+            </div>
+            <div v-if="schedule.enabled" class="time-inputs">
+              <input
+                v-model="schedule.open"
+                type="time"
+                class="time-input"
+              />
+              <span>até</span>
+              <input
+                v-model="schedule.close"
+                type="time"
+                class="time-input"
+              />
+            </div>
+            <div v-else class="closed-label">
+              Fechado
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Imagens da Loja -->
+      <div class="settings-section card">
+        <div class="section-header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+          <h2>Imagens da Loja</h2>
+        </div>
+
+        <div class="images-grid">
+          <div class="form-group">
+            <label for="logo">Logo da Loja</label>
+            <div class="image-preview-wrapper">
+              <img :src="form.logo || '/logo.jpg'" alt="Logo" class="image-preview logo-preview" />
+              <div class="image-info">
+                <p>Recomendado: 150x150px</p>
+                <p>Formato: JPG, PNG, WEBP</p>
+                <p>Máximo: 5MB</p>
+              </div>
+            </div>
+            <div class="upload-buttons">
+              <label class="btn-upload">
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="handleFileUpload($event, 'logo')"
+                  :disabled="uploadingLogo"
+                  style="display: none"
+                />
+                <span v-if="uploadingLogo" class="loading-spinner-inline"></span>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                {{ uploadingLogo ? 'Enviando...' : 'Fazer Upload' }}
+              </label>
+              <span class="or-divider">ou</span>
+              <input
+                v-model="form.logo"
+                type="url"
+                placeholder="Cole uma URL"
+                class="url-input"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="banner">Banner Principal</label>
+            <div class="image-preview-wrapper">
+              <img :src="form.banner || '/not_found.jpg'" alt="Banner" class="image-preview banner-preview" />
+              <div class="image-info">
+                <p>Recomendado: 1200x400px</p>
+                <p>Formato: JPG, PNG, WEBP</p>
+                <p>Máximo: 5MB</p>
+              </div>
+            </div>
+            <div class="upload-buttons">
+              <label class="btn-upload">
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="handleFileUpload($event, 'banner')"
+                  :disabled="uploadingBanner"
+                  style="display: none"
+                />
+                <span v-if="uploadingBanner" class="loading-spinner-inline"></span>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                {{ uploadingBanner ? 'Enviando...' : 'Fazer Upload' }}
+              </label>
+              <span class="or-divider">ou</span>
+              <input
+                v-model="form.banner"
+                type="url"
+                placeholder="Cole uma URL"
+                class="url-input"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Configurações de Entrega -->
+      <div class="settings-section card">
+        <div class="section-header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="3" width="15" height="13"></rect>
+            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+            <circle cx="5.5" cy="18.5" r="2.5"></circle>
+            <circle cx="18.5" cy="18.5" r="2.5"></circle>
+          </svg>
+          <h2>Configurações de Entrega</h2>
+        </div>
+
+        <div class="delivery-grid">
+          <div class="form-group">
+            <label for="deliveryMinTime">Tempo Mínimo (min)</label>
+            <input
+              id="deliveryMinTime"
+              v-model.number="form.deliveryMinTime"
+              type="number"
+              min="0"
+              step="5"
+              placeholder="30"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="deliveryMaxTime">Tempo Máximo (min)</label>
+            <input
+              id="deliveryMaxTime"
+              v-model.number="form.deliveryMaxTime"
+              type="number"
+              min="0"
+              step="5"
+              placeholder="60"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="minimumOrder">Pedido Mínimo (R$)</label>
+            <input
+              id="minimumOrder"
+              v-model.number="form.minimumOrder"
+              type="number"
+              min="0"
+              step="1.00"
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Localização da Loja -->
+      <div class="settings-section card">
+        <div class="section-header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          <h2>Localização da Loja</h2>
+        </div>
+
+        <div class="form-group">
+          <label for="storeAddress">Endereço Completo *</label>
+          <div class="address-input-wrapper">
+            <input
+              id="storeAddress"
+              v-model="form.location.address"
+              type="text"
+              placeholder="Ex: Avenida Paulista, 1578 - Bela Vista, São Paulo - SP"
+              @blur="geocodeAddress"
+            />
+            <button 
+              v-if="form.location.address" 
+              @click="geocodeAddress" 
+              type="button"
+              class="btn-geocode"
+              :disabled="geocoding"
+            >
+              <svg v-if="!geocoding" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+              <div v-else class="loading-spinner-inline"></div>
+              {{ geocoding ? 'Localizando...' : 'Localizar no Mapa' }}
+            </button>
+          </div>
+          <small>Digite o endereço completo da loja (Rua, Número, Bairro, Cidade, Estado)</small>
+        </div>
+
+        <div v-if="form.location.latitude && form.location.longitude" class="info-banner success">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <div>
+            <strong>Endereço localizado!</strong>
+            <span>A loja foi posicionada no mapa. Arraste o marcador se necessário ajustar.</span>
+          </div>
+        </div>
+
+        <!-- Mapa de Visualização -->
+        <div class="map-container">
+          <div id="delivery-map" class="delivery-map"></div>
+          <div class="map-legend">
+            <h4>Zonas de Entrega:</h4>
+            <div class="legend-items">
+              <div class="legend-item">
+                <div class="legend-marker store"></div>
+                <span>Localização da Loja</span>
+              </div>
+              <div v-for="(zone, index) in form.deliveryZones" :key="index" class="legend-item">
+                <div class="legend-circle" :style="{ borderColor: getZoneColor(index) }"></div>
+                <span>{{ zone.label }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zonas de Entrega -->
+      <div class="settings-section card">
+        <div class="section-header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+          </svg>
+          <h2>Zonas de Entrega por Distância</h2>
+        </div>
+
+        <div class="zones-list">
+          <div v-for="(zone, index) in form.deliveryZones" :key="index" class="zone-item">
+            <div class="zone-number">{{ index + 1 }}</div>
+            <div class="zone-fields">
+              <div class="form-group">
+                <label>Até quantos km?</label>
+                <input
+                  v-model.number="zone.maxDistance"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  placeholder="5"
+                  @input="updateZoneLabel(index)"
+                />
+              </div>
+              <div class="form-group">
+                <label>Taxa de Entrega (R$)</label>
+                <input
+                  v-model.number="zone.fee"
+                  type="number"
+                  min="0"
+                  step="0.50"
+                  placeholder="5.00"
+                  @input="updateZoneLabel(index)"
+                />
+              </div>
+            </div>
+            <button 
+              v-if="form.deliveryZones.length > 1"
+              @click="removeZone(index)" 
+              class="btn-remove-zone"
+              type="button"
+              title="Remover zona"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button @click="addZone" type="button" class="btn-add-zone">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Adicionar Zona
+        </button>
+
+        <div class="info-banner" style="margin-top: 1rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <div>
+            <strong>Como funciona:</strong>
+            <span>A taxa de entrega será calculada automaticamente baseada na distância do cliente até a loja. Configure zonas crescentes (ex: 0-3km, 3-5km, 5-10km)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botões de Ação -->
+      <div class="actions-fixed">
+        <div class="actions-container">
+          <button @click="saveSettings" class="btn-primary" :disabled="submitting">
+            <span v-if="submitting" class="loading-spinner-inline"></span>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            <span v-if="submitting">Salvando...</span>
+            <span v-else>Salvar Alterações</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert -->
+    <div v-if="alert.show" :class="['alert', alert.type]">
+      <span>{{ alert.message }}</span>
+      <button @click="alert.show = false" class="alert-close">×</button>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, computed } from 'vue'
+
+definePageMeta({
+  layout: 'dashboard'
+})
+
+const loading = ref(true)
+const submitting = ref(false)
+const geocoding = ref(false)
+const originalForm = ref(null)
+const uploadingLogo = ref(false)
+const uploadingBanner = ref(false)
+let map = null
+let mapCircles = []
+let storeMarker = null
+
+const form = ref({
+  storeName: '',
+  logo: '',
+  banner: '',
+  location: {
+    address: '',
+    latitude: -23.550520,
+    longitude: -46.633308
+  },
+  deliveryZones: [
+    { maxDistance: 3, fee: 0, label: "Até 3km - Grátis" },
+    { maxDistance: 5, fee: 5.00, label: "3-5km - R$ 5,00" },
+    { maxDistance: 10, fee: 10.00, label: "5-10km - R$ 10,00" },
+    { maxDistance: 15, fee: 15.00, label: "10-15km - R$ 15,00" }
+  ],
+  openingHours: [
+    { day: 0, open: "11:00", close: "22:00", enabled: false },
+    { day: 1, open: "11:00", close: "22:00", enabled: true },
+    { day: 2, open: "11:00", close: "22:00", enabled: true },
+    { day: 3, open: "11:00", close: "22:00", enabled: true },
+    { day: 4, open: "11:00", close: "22:00", enabled: true },
+    { day: 5, open: "11:00", close: "22:00", enabled: true },
+    { day: 6, open: "11:00", close: "23:00", enabled: true },
+  ],
+  deliveryMinTime: 30,
+  deliveryMaxTime: 60,
+  deliveryFee: 5.00,
+  minimumOrder: 0
+})
+
+const alert = ref({
+  show: false,
+  type: 'success',
+  message: ''
+})
+
+const getDayName = (day) => {
+  const days = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
+  return days[day]
+}
+
+// Cores para os raios de entrega
+const zoneColors = [
+  '#10b981', // Verde (grátis)
+  '#3b82f6', // Azul
+  '#f59e0b', // Laranja
+  '#ef4444', // Vermelho
+  '#8b5cf6', // Roxo
+  '#ec4899', // Rosa
+]
+
+const getZoneColor = (index) => {
+  return zoneColors[index % zoneColors.length]
+}
+
+// Função para geocodificar endereço usando Nominatim (OpenStreetMap)
+const geocodeAddress = async () => {
+  if (!form.value.location.address || form.value.location.address.trim() === '') {
+    showAlert('Por favor, insira um endereço', 'error')
+    return
+  }
+  
+  geocoding.value = true
+  
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(form.value.location.address)}&limit=1&countrycodes=br`
+    )
+    
+    const data = await response.json()
+    
+    if (data && data.length > 0) {
+      form.value.location.latitude = parseFloat(data[0].lat)
+      form.value.location.longitude = parseFloat(data[0].lon)
+      
+      showAlert('Endereço localizado com sucesso!', 'success')
+      
+      // Atualizar mapa
+      await nextTick()
+      if (map) {
+        updateStoreMarker()
+      } else {
+        initMap()
+      }
+    } else {
+      showAlert('Endereço não encontrado. Tente ser mais específico (adicione cidade e estado)', 'error')
+    }
+  } catch (error) {
+    console.error('Erro ao geocodificar:', error)
+    showAlert('Erro ao localizar endereço', 'error')
+  } finally {
+    geocoding.value = false
+  }
+}
+
+// Atualizar label da zona automaticamente
+const updateZoneLabel = (index) => {
+  const zone = form.value.deliveryZones[index]
+  if (zone.fee === 0) {
+    zone.label = `Até ${zone.maxDistance}km - Grátis`
+  } else {
+    zone.label = `Até ${zone.maxDistance}km - R$ ${zone.fee.toFixed(2)}`
+  }
+}
+
+// Inicializar mapa
+const initMap = () => {
+  if (typeof window === 'undefined' || !window.L) return
+  
+  // Remover mapa existente se houver
+  if (map) {
+    map.remove()
+  }
+  
+  const lat = form.value.location.latitude
+  const lng = form.value.location.longitude
+  
+  // Criar mapa
+  map = window.L.map('delivery-map').setView([lat, lng], 13)
+  
+  // Adicionar tiles do OpenStreetMap
+  window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(map)
+  
+  // Adicionar marcador da loja (arrastável)
+  const storeIcon = window.L.divIcon({
+    className: 'custom-store-marker',
+    html: `<div class="store-marker-pin">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+          </div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 32]
+  })
+  
+  storeMarker = window.L.marker([lat, lng], { 
+    icon: storeIcon,
+    draggable: true // Tornar arrastável
+  }).addTo(map)
+  
+  storeMarker.bindPopup('<strong>Sua Loja</strong><br>' + (form.value.location.address || 'Arraste para ajustar a posição'))
+  
+  // Atualizar coordenadas quando arrastar o marcador
+  storeMarker.on('dragend', function() {
+    const position = storeMarker.getLatLng()
+    form.value.location.latitude = position.lat
+    form.value.location.longitude = position.lng
+    updateMapCircles()
+  })
+  
+  // Desenhar círculos de entrega
+  updateMapCircles()
+}
+
+// Atualizar círculos no mapa
+const updateMapCircles = () => {
+  if (!map) return
+  
+  // Remover círculos antigos
+  mapCircles.forEach(circle => map.removeLayer(circle))
+  mapCircles = []
+  
+  const lat = form.value.location.latitude
+  const lng = form.value.location.longitude
+  
+  // Ordenar zonas por distância (maior para menor para desenhar do maior para o menor)
+  const sortedZones = [...form.value.deliveryZones].sort((a, b) => b.maxDistance - a.maxDistance)
+  
+  // Adicionar círculos para cada zona
+  sortedZones.forEach((zone, index) => {
+    const originalIndex = form.value.deliveryZones.findIndex(z => z === zone)
+    const color = getZoneColor(originalIndex)
+    
+    const circle = window.L.circle([lat, lng], {
+      radius: zone.maxDistance * 1000, // Converter km para metros
+      color: color,
+      fillColor: color,
+      fillOpacity: 0.1,
+      weight: 2
+    }).addTo(map)
+    
+    circle.bindPopup(`<strong>${zone.label}</strong><br>Raio: ${zone.maxDistance}km`)
+    mapCircles.push(circle)
+  })
+  
+  // Ajustar zoom para mostrar todos os círculos
+  if (sortedZones.length > 0) {
+    const maxDistance = sortedZones[0].maxDistance
+    const bounds = window.L.latLng(lat, lng).toBounds(maxDistance * 2000)
+    map.fitBounds(bounds, { padding: [50, 50] })
+  }
+}
+
+// Atualizar posição do marcador
+const updateStoreMarker = () => {
+  if (!map || !storeMarker) return
+  
+  const lat = form.value.location.latitude
+  const lng = form.value.location.longitude
+  
+  storeMarker.setLatLng([lat, lng])
+  map.setView([lat, lng], map.getZoom())
+  updateMapCircles()
+}
+
+const computedIsOpen = computed(() => {
+  const now = new Date()
+  const currentDay = now.getDay()
+  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+  
+  const todaySchedule = form.value.openingHours?.find(h => h.day === currentDay)
+  
+  if (!todaySchedule || !todaySchedule.enabled) {
+    return false
+  }
+  
+  return currentTime >= todaySchedule.open && currentTime <= todaySchedule.close
+})
+
+const getStatusText = () => {
+  const now = new Date()
+  const currentDay = now.getDay()
+  const todaySchedule = form.value.openingHours?.find(h => h.day === currentDay)
+  
+  if (!todaySchedule || !todaySchedule.enabled) {
+    // Encontrar próximo dia aberto
+    for (let i = 1; i <= 7; i++) {
+      const nextDay = (currentDay + i) % 7
+      const nextSchedule = form.value.openingHours?.find(h => h.day === nextDay)
+      if (nextSchedule && nextSchedule.enabled) {
+        return `Abre ${getDayName(nextDay)} às ${nextSchedule.open}`
+      }
+    }
+    return 'Sem horários configurados'
+  }
+  
+  if (computedIsOpen.value) {
+    return `Fecha hoje às ${todaySchedule.close}`
+  } else {
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    if (currentTime < todaySchedule.open) {
+      return `Abre hoje às ${todaySchedule.open}`
+    } else {
+      // Já fechou hoje, procurar próximo dia
+      for (let i = 1; i <= 7; i++) {
+        const nextDay = (currentDay + i) % 7
+        const nextSchedule = form.value.openingHours?.find(h => h.day === nextDay)
+        if (nextSchedule && nextSchedule.enabled) {
+          return `Abre ${getDayName(nextDay)} às ${nextSchedule.open}`
+        }
+      }
+    }
+  }
+  
+  return ''
+}
+
+const showAlert = (message, type) => {
+  alert.value = { show: true, message, type }
+  setTimeout(() => {
+    alert.value.show = false
+  }, 3000)
+}
+
+const loadSettings = async () => {
+  try {
+    loading.value = true
+    const response = await $fetch('/api/settings')
+    form.value = {
+      storeName: response.storeName || '',
+      logo: response.logo || '',
+      banner: response.banner || '',
+      location: response.location || form.value.location,
+      deliveryZones: response.deliveryZones || form.value.deliveryZones,
+      openingHours: response.openingHours || form.value.openingHours,
+      deliveryMinTime: response.deliveryMinTime || 30,
+      deliveryMaxTime: response.deliveryMaxTime || 60,
+      deliveryFee: response.deliveryFee || 0,
+      minimumOrder: response.minimumOrder || 0
+    }
+    originalForm.value = JSON.parse(JSON.stringify(form.value))
+  } catch (error) {
+    showAlert('Erro ao carregar configurações', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+const saveSettings = async () => {
+  try {
+    submitting.value = true
+    await $fetch('/api/settings', {
+      method: 'PUT',
+      body: form.value
+    })
+    originalForm.value = JSON.parse(JSON.stringify(form.value))
+    showAlert('Configurações salvas com sucesso!', 'success')
+  } catch (error) {
+    showAlert(error.data?.message || 'Erro ao salvar configurações', 'error')
+  } finally {
+    submitting.value = false
+  }
+}
+
+const resetForm = () => {
+  if (originalForm.value) {
+    form.value = JSON.parse(JSON.stringify(originalForm.value))
+    showAlert('Formulário redefinido', 'info')
+  }
+}
+
+const addZone = () => {
+  const lastZone = form.value.deliveryZones[form.value.deliveryZones.length - 1]
+  const newMaxDistance = lastZone ? lastZone.maxDistance + 5 : 5
+  const newFee = lastZone ? lastZone.fee + 5 : 5
+  
+  const newLabel = newFee === 0 
+    ? `Até ${newMaxDistance}km - Grátis` 
+    : `Até ${newMaxDistance}km - R$ ${newFee.toFixed(2)}`
+  
+  form.value.deliveryZones.push({
+    maxDistance: newMaxDistance,
+    fee: newFee,
+    label: newLabel
+  })
+  
+  // Atualizar mapa
+  nextTick(() => {
+    updateMapCircles()
+  })
+}
+
+const removeZone = (index) => {
+  if (form.value.deliveryZones.length > 1) {
+    form.value.deliveryZones.splice(index, 1)
+    // Atualizar mapa
+    nextTick(() => {
+      updateMapCircles()
+    })
+  }
+}
+
+const handleFileUpload = async (event, type) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  // Validar tipo de arquivo
+  if (!file.type.startsWith('image/')) {
+    showAlert('Por favor, selecione uma imagem válida', 'error')
+    return
+  }
+  
+  // Validar tamanho (máx 5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    showAlert('Imagem muito grande. Máximo 5MB', 'error')
+    return
+  }
+  
+  try {
+    if (type === 'logo') {
+      uploadingLogo.value = true
+    } else {
+      uploadingBanner.value = true
+    }
+    
+    // Converter para base64
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      try {
+        const base64 = e.target.result
+        
+        // Fazer upload
+        const response = await $fetch('/api/upload-image', {
+          method: 'POST',
+          body: {
+            image: base64,
+            filename: file.name,
+            type: type
+          }
+        })
+        
+        // Atualizar formulário com a imagem
+        if (type === 'logo') {
+          form.value.logo = response.imageUrl
+        } else {
+          form.value.banner = response.imageUrl
+        }
+        
+        showAlert('Imagem carregada com sucesso!', 'success')
+      } catch (error) {
+        showAlert(error.data?.message || 'Erro ao fazer upload', 'error')
+      } finally {
+        if (type === 'logo') {
+          uploadingLogo.value = false
+        } else {
+          uploadingBanner.value = false
+        }
+      }
+    }
+    
+    reader.onerror = () => {
+      showAlert('Erro ao ler o arquivo', 'error')
+      if (type === 'logo') {
+        uploadingLogo.value = false
+      } else {
+        uploadingBanner.value = false
+      }
+    }
+    
+    reader.readAsDataURL(file)
+  } catch (error) {
+    showAlert('Erro ao processar imagem', 'error')
+    if (type === 'logo') {
+      uploadingLogo.value = false
+    } else {
+      uploadingBanner.value = false
+    }
+  }
+}
+
+onMounted(async () => {
+  await loadSettings()
+  
+  // Aguardar o Leaflet carregar
+  const checkLeaflet = setInterval(() => {
+    if (typeof window !== 'undefined' && window.L) {
+      clearInterval(checkLeaflet)
+      nextTick(() => {
+        // Só inicializar mapa se tiver coordenadas
+        if (form.value.location.latitude && form.value.location.longitude) {
+          initMap()
+        }
+      })
+    }
+  }, 100)
+  
+  // Timeout de segurança
+  setTimeout(() => clearInterval(checkLeaflet), 5000)
+})
+
+// Watcher para atualizar círculos quando zonas mudarem
+watch(() => form.value.deliveryZones, () => {
+  if (map) {
+    nextTick(() => {
+      updateMapCircles()
+    })
+  }
+}, { deep: true })
+
+onUnmounted(() => {
+  if (map) {
+    map.remove()
+  }
+})
+</script>
+
+<style scoped>
+.settings-page {
+  padding: var(--spacing-2xl);
+  padding-bottom: 120px; /* Espaço para o botão fixo */
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2xl);
+}
+
+.settings-section {
+  padding: var(--spacing-2xl);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-2xl);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 2px solid var(--color-border-light);
+}
+
+.section-header svg {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.section-header h2 {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.form-group {
+  margin-bottom: var(--spacing-xl);
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.form-group small {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.char-count {
+  display: block;
+  text-align: right;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--spacing-xs);
+}
+
+/* Toggle Switch */
+.toggle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: var(--transition-base);
+  border-radius: var(--radius-full);
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: var(--transition-base);
+  border-radius: 50%;
+}
+
+.toggle input:checked + .toggle-slider {
+  background-color: var(--color-primary);
+}
+
+.toggle input:checked + .toggle-slider:before {
+  transform: translateX(24px);
+}
+
+.toggle-label {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.status-badge {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.status-badge.open {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.status-badge.closed {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+/* Status Display */
+.status-display {
+  margin-bottom: var(--spacing-xl);
+  padding: var(--spacing-lg);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--color-info);
+}
+
+.status-indicator {
+  display: inline-block;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+}
+
+.status-indicator.open {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.status-indicator.closed {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.status-text {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* Opening Hours */
+.opening-hours {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.day-schedule {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-lg);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-md);
+  background: white;
+  gap: var(--spacing-lg);
+}
+
+.day-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  min-width: 180px;
+}
+
+.day-name {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.time-inputs {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.time-input {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  width: 100px;
+}
+
+.closed-label {
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-sm) 0;
+}
+
+/* Images Grid */
+.images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-2xl);
+}
+
+.image-preview-wrapper {
+  margin-bottom: var(--spacing-lg);
+  border: 2px dashed var(--color-border-medium);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  background: var(--color-bg-secondary);
+  text-align: center;
+}
+
+.image-preview {
+  width: 100%;
+  max-width: 200px;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.logo-preview {
+  max-width: 150px;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.banner-preview {
+  max-width: 100%;
+  aspect-ratio: 3/1;
+  object-fit: cover;
+}
+
+.image-info {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.image-info p {
+  margin: var(--spacing-xs) 0;
+}
+
+/* Upload Buttons */
+.upload-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-lg);
+}
+
+.btn-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  white-space: nowrap;
+}
+
+.btn-upload:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+}
+
+.btn-upload:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.or-divider {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.url-input {
+  flex: 1;
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+/* Delivery Grid */
+.delivery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+}
+
+/* Address Input */
+.address-input-wrapper {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: flex-start;
+}
+
+.address-input-wrapper input {
+  flex: 1;
+}
+
+.btn-geocode {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  white-space: nowrap;
+  min-height: 45px;
+}
+
+.btn-geocode:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-geocode:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.info-banner.success {
+  background: linear-gradient(135deg, #10b98120, #10b98110);
+  border-color: var(--color-success);
+}
+
+.info-banner.success svg {
+  color: var(--color-success);
+}
+
+.delivery-preview {
+  margin-top: var(--spacing-xl);
+}
+
+.delivery-preview div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.delivery-preview strong {
+  font-weight: 600;
+}
+
+/* Actions */
+.actions-fixed {
+  position: fixed;
+  bottom: 0;
+  left: 280px; /* sidebar width */
+  right: 0;
+  background: white;
+  border-top: 2px solid var(--color-border-light);
+  z-index: 1000;
+  transition: left 0.3s ease;
+}
+
+.actions-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-lg) var(--spacing-2xl);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-lg);
+}
+
+.settings-content {
+  padding-bottom: 80px; /* Espaço para o botão fixo */
+}
+
+/* Loading */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-3xl);
+  gap: var(--spacing-lg);
+  color: var(--color-text-muted);
+}
+
+.loading-spinner-inline {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .settings-page {
+    padding: var(--spacing-lg);
+  }
+  
+  .settings-section {
+    padding: var(--spacing-lg);
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+  
+  .images-grid,
+  .delivery-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .actions {
+    flex-direction: column;
+  }
+  
+  .actions button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .toggle-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+  
+  .day-schedule {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .day-header {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .time-inputs {
+    justify-content: flex-start;
+  }
+  
+  .time-input {
+    flex: 1;
+  }
+  
+  .actions-fixed {
+    left: 0;
+  }
+  
+  .actions-container {
+    padding: var(--spacing-lg);
+    flex-direction: column;
+  }
+  
+  .actions-container button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .upload-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .btn-upload {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .or-divider {
+    text-align: center;
+  }
+}
+
+/* Mapa de Entrega */
+.map-container {
+  margin-top: var(--spacing-2xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+.delivery-map {
+  width: 100%;
+  height: 500px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  border: 2px solid var(--color-border-light);
+  position: relative;
+  z-index: 1;
+}
+
+/* Marcador customizado da loja */
+:global(.custom-store-marker) {
+  background: transparent;
+  border: none;
+}
+
+:global(.store-marker-pin) {
+  color: var(--color-primary);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Legenda do Mapa */
+.map-legend {
+  background: white;
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.map-legend h4 {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.legend-marker.store {
+  width: 24px;
+  height: 24px;
+  background: var(--color-primary);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  position: relative;
+}
+
+.legend-marker.store::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 50%;
+}
+
+.legend-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+/* Zonas de Entrega */
+.zones-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.zone-item {
+  display: flex;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-xl);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--color-border-light);
+  transition: all var(--transition-base);
+  position: relative;
+}
+
+.zone-item:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.zone-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+  color: white;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: var(--font-size-lg);
+  flex-shrink: 0;
+  box-shadow: var(--shadow-md);
+}
+
+.zone-fields {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+}
+
+.zone-fields .form-group {
+  margin-bottom: 0;
+}
+
+.zone-fields label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+}
+
+.zone-fields input {
+  width: 100%;
+}
+
+.btn-remove-zone {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-danger);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  opacity: 0.7;
+}
+
+.btn-remove-zone:hover {
+  opacity: 1;
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-add-zone {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: var(--color-success);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.btn-add-zone:hover {
+  background: var(--color-success-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-add-zone svg {
+  transition: transform var(--transition-base);
+}
+
+.btn-add-zone:hover svg {
+  transform: rotate(90deg);
+}
+
+/* Responsividade adicional para mapa */
+@media (max-width: 768px) {
+  .settings-page {
+    padding: var(--spacing-lg);
+    padding-bottom: 140px;
+  }
+  
+  .delivery-map {
+    height: 350px;
+  }
+  
+  .address-input-wrapper {
+    flex-direction: column;
+  }
+  
+  .btn-geocode {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .zone-fields {
+    grid-template-columns: 1fr;
+  }
+  
+  .zone-item {
+    flex-direction: column;
+  }
+  
+  .btn-remove-zone {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+    border-radius: var(--radius-md);
+    height: 40px;
+  }
+  
+  .btn-remove-zone:hover {
+    transform: scale(1.02);
+  }
+  
+  .map-legend {
+    padding: var(--spacing-lg);
+  }
+  
+  .legend-items {
+    gap: var(--spacing-sm);
+  }
+}
+</style>
+
+

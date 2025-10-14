@@ -1,0 +1,73 @@
+import { getDB } from "../utils/db";
+
+export default defineEventHandler(async (event) => {
+  try {
+    const db = await getDB();
+    const settings = db.collection("settings");
+    
+    // Buscar as configurações (sempre haverá apenas um documento)
+    let config = await settings.findOne({ _id: "store-config" });
+    
+    // Se não existir, criar com valores padrão
+    if (!config) {
+      config = {
+        _id: "store-config",
+        storeName: "Minha Loja",
+        logo: "/logo.jpg",
+        banner: "/not_found.jpg",
+        location: {
+          address: "",
+          latitude: -23.550520, // São Paulo como padrão
+          longitude: -46.633308
+        },
+        deliveryZones: [
+          { maxDistance: 3, fee: 0, label: "Até 3km - Grátis" },
+          { maxDistance: 5, fee: 5.00, label: "3-5km - R$ 5,00" },
+          { maxDistance: 10, fee: 10.00, label: "5-10km - R$ 10,00" },
+          { maxDistance: 15, fee: 15.00, label: "10-15km - R$ 15,00" }
+        ],
+        openingHours: [
+          { day: 0, open: "11:00", close: "22:00", enabled: false }, // Domingo
+          { day: 1, open: "11:00", close: "22:00", enabled: true },  // Segunda
+          { day: 2, open: "11:00", close: "22:00", enabled: true },  // Terça
+          { day: 3, open: "11:00", close: "22:00", enabled: true },  // Quarta
+          { day: 4, open: "11:00", close: "22:00", enabled: true },  // Quinta
+          { day: 5, open: "11:00", close: "22:00", enabled: true },  // Sexta
+          { day: 6, open: "11:00", close: "23:00", enabled: true },  // Sábado
+        ],
+        deliveryMinTime: 30,
+        deliveryMaxTime: 60,
+        deliveryFee: 5.00, // Taxa padrão (será calculada por distância)
+        minimumOrder: 0,
+        updatedAt: new Date(),
+        createdAt: new Date()
+      };
+      
+      await settings.insertOne(config);
+    }
+    
+    // Calcular se está aberto agora
+    const now = new Date();
+    const currentDay = now.getDay();
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    const todaySchedule = config.openingHours?.find((h: any) => h.day === currentDay);
+    let isOpen = false;
+    
+    if (todaySchedule && todaySchedule.enabled) {
+      isOpen = currentTime >= todaySchedule.open && currentTime <= todaySchedule.close;
+    }
+    
+    return {
+      ...config,
+      isOpen
+    };
+  } catch (error) {
+    console.error("Erro ao buscar configurações:", error);
+    throw createError({ 
+      statusCode: 500, 
+      message: "Erro ao buscar configurações da loja" 
+    });
+  }
+});
+
