@@ -8,15 +8,10 @@
       </div>
     </div>
 
-    <!-- Loading Skeleton -->
+    <!-- Loading -->
     <div v-if="loading" class="loading">
-      <div class="loading-skeleton">
-        <div class="skeleton-section" v-for="n in 5" :key="n">
-          <div class="skeleton-header"></div>
-          <div class="skeleton-field"></div>
-          <div class="skeleton-field"></div>
-        </div>
-      </div>
+      <div class="loading-spinner"></div>
+      <p>Carregando configurações...</p>
     </div>
 
     <!-- Form -->
@@ -109,13 +104,7 @@
           <div class="form-group">
             <label for="logo">Logo da Loja</label>
             <div class="image-preview-wrapper">
-              <img 
-                :src="form.logo || '/logo.jpg'" 
-                alt="Logo" 
-                class="image-preview logo-preview"
-                @click="openImageOverlay(form.logo)"
-                style="cursor: pointer;"
-              />
+              <img :src="form.logo || '/logo.jpg'" alt="Logo" class="image-preview logo-preview" />
               <div class="image-info">
                 <p>Recomendado: 150x150px</p>
                 <p>Formato: JPG, PNG, WEBP</p>
@@ -152,13 +141,7 @@
           <div class="form-group">
             <label for="banner">Banner Principal</label>
             <div class="image-preview-wrapper">
-              <img 
-                :src="form.banner || '/not_found.jpg'" 
-                alt="Banner" 
-                class="image-preview banner-preview"
-                @click="openImageOverlay(form.banner)"
-                style="cursor: pointer;"
-              />
+              <img :src="form.banner || '/not_found.jpg'" alt="Banner" class="image-preview banner-preview" />
               <div class="image-info">
                 <p>Recomendado: 1200x400px</p>
                 <p>Formato: JPG, PNG, WEBP</p>
@@ -353,17 +336,15 @@
             </div>
             <button 
               v-if="form.deliveryZones.length > 1"
-              @click="confirmRemoveZone(index)" 
-              class="btn-delete"
+              @click="removeZone(index)" 
+              class="btn-remove-zone"
               type="button"
+              title="Remover zona"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                <line x1="10" y1="11" x2="10" y2="17"></line>
-                <line x1="14" y1="11" x2="14" y2="17"></line>
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
-              <span>Excluir</span>
             </button>
           </div>
         </div>
@@ -411,53 +392,11 @@
       <span>{{ alert.message }}</span>
       <button @click="alert.show = false" class="alert-close">×</button>
     </div>
-
-    <!-- Modal de Confirmação de Remoção de Zona -->
-    <div v-if="deleteZoneModal.show" class="modal-overlay" @click="deleteZoneModal.show = false">
-      <div class="delete-modal" @click.stop>
-        <div class="modal-header">
-          <div class="warning-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-              <line x1="12" y1="9" x2="12" y2="13"></line>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
-            </svg>
-          </div>
-          <h2>Confirmar Exclusão</h2>
-        </div>
-        
-        <div class="modal-content">
-          <p>Tem certeza que deseja excluir a zona de entrega <strong>"{{ deleteZoneModal.zoneLabel }}"</strong>?</p>
-          <p class="warning-text">Esta ação não pode ser desfeita.</p>
-        </div>
-        
-        <div class="modal-actions">
-          <button @click="deleteZoneModal.show = false" class="btn-cancel">
-            Cancelar
-          </button>
-          <button @click="executeRemoveZone" class="btn-delete-confirm">
-            Sim, Excluir
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
-
-  <!-- Image Overlay -->
-  <ImageOverlay
-    :show="showImageOverlay"
-    :imageUrl="currentImageUrl"
-    @close="closeImageOverlay"
-  />
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import ImageOverlay from '~/components/ImageOverlay.vue'
-import { useImageOverlay } from '~/composables/useImageOverlay'
-
-// Image overlay
-const { showImageOverlay, currentImageUrl, openImageOverlay, closeImageOverlay } = useImageOverlay()
 
 definePageMeta({
   layout: 'dashboard'
@@ -568,61 +507,6 @@ const geocodeAddress = async () => {
   }
 }
 
-// Função para geocodificação reversa (coordenadas → endereço)
-const reverseGeocode = async (lat, lng) => {
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
-    )
-    
-    const data = await response.json()
-    
-    if (data && data.address) {
-      const address = data.address
-      
-      // Montar endereço formatado: rua, número, bairro, cidade, estado
-      const parts = []
-      
-      // Rua
-      const street = address.road || address.street || address.pedestrian || address.footway || ''
-      if (street) parts.push(street)
-      
-      // Número
-      if (address.house_number) parts.push(address.house_number)
-      
-      // Bairro
-      const neighborhood = address.suburb || address.neighbourhood || address.quarter || ''
-      if (neighborhood) parts.push(neighborhood)
-      
-      // Cidade
-      const city = address.city || address.town || address.village || address.municipality || ''
-      if (city) parts.push(city)
-      
-      // Estado
-      if (address.state) parts.push(address.state)
-      
-      const formattedAddress = parts.join(', ')
-      
-      if (formattedAddress) {
-        // Atualizar o endereço no formulário
-        form.value.location.address = formattedAddress
-        
-        // Atualizar popup do marcador
-        if (storeMarker) {
-          storeMarker.bindPopup('<strong>Sua Loja</strong><br>' + formattedAddress).openPopup()
-        }
-        
-        showAlert('Endereço atualizado com base na nova posição', 'success')
-      } else {
-        showAlert('Não foi possível obter um endereço detalhado', 'warning')
-      }
-    }
-  } catch (error) {
-    console.error('Erro ao obter endereço:', error)
-    showAlert('Não foi possível obter o endereço da nova posição', 'warning')
-  }
-}
-
 // Atualizar label da zona automaticamente
 const updateZoneLabel = (index) => {
   const zone = form.value.deliveryZones[index]
@@ -674,14 +558,10 @@ const initMap = () => {
   storeMarker.bindPopup('<strong>Sua Loja</strong><br>' + (form.value.location.address || 'Arraste para ajustar a posição'))
   
   // Atualizar coordenadas quando arrastar o marcador
-  storeMarker.on('dragend', async function() {
+  storeMarker.on('dragend', function() {
     const position = storeMarker.getLatLng()
     form.value.location.latitude = position.lat
     form.value.location.longitude = position.lng
-    
-    // Geocodificação reversa para obter o endereço
-    await reverseGeocode(position.lat, position.lng)
-    
     updateMapCircles()
   })
   
@@ -867,37 +747,6 @@ const addZone = () => {
   })
 }
 
-// Modal de confirmação de remoção de zona
-const deleteZoneModal = ref({
-  show: false,
-  zoneIndex: null,
-  zoneLabel: ''
-})
-
-const confirmRemoveZone = (index) => {
-  const zone = form.value.deliveryZones[index]
-  deleteZoneModal.value = {
-    show: true,
-    zoneIndex: index,
-    zoneLabel: zone.label || `Zona ${index + 1}`
-  }
-}
-
-const executeRemoveZone = () => {
-  if (deleteZoneModal.value.zoneIndex !== null) {
-    form.value.deliveryZones.splice(deleteZoneModal.value.zoneIndex, 1)
-    
-    // Atualizar mapa
-    nextTick(() => {
-      updateMapCircles()
-    })
-    
-    showAlert('Zona removida com sucesso', 'success')
-  }
-  
-  deleteZoneModal.value.show = false
-}
-
 const removeZone = (index) => {
   if (form.value.deliveryZones.length > 1) {
     form.value.deliveryZones.splice(index, 1)
@@ -1004,9 +853,6 @@ onMounted(async () => {
   
   // Timeout de segurança
   setTimeout(() => clearInterval(checkLeaflet), 5000)
-  
-  // Adicionar listener para ESC
-  window.addEventListener('keydown', handleEscKey)
 })
 
 // Watcher para atualizar círculos quando zonas mudarem
@@ -1018,20 +864,10 @@ watch(() => form.value.deliveryZones, () => {
   }
 }, { deep: true })
 
-// Fechar modal com ESC
-const handleEscKey = (event) => {
-  if (event.key === 'Escape') {
-    if (deleteZoneModal.value.show) {
-      deleteZoneModal.value.show = false
-    }
-  }
-}
-
 onUnmounted(() => {
   if (map) {
     map.remove()
   }
-  window.removeEventListener('keydown', handleEscKey)
 })
 </script>
 
@@ -1434,7 +1270,7 @@ onUnmounted(() => {
 .actions-fixed {
   position: fixed;
   bottom: 0;
-  left: var(--sidebar-width, 280px);
+  left: 280px; /* sidebar width */
   right: 0;
   background: white;
   border-top: 2px solid var(--color-border-light);
@@ -1457,62 +1293,13 @@ onUnmounted(() => {
 
 /* Loading */
 .loading {
-  padding: 2rem 0;
-}
-
-.loading-skeleton {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2xl);
-}
-
-.skeleton-section {
-  background: white;
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-2xl);
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.skeleton-header {
-  height: 2rem;
-  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-md);
-  margin-bottom: var(--spacing-xl);
-  width: 40%;
-}
-
-.skeleton-field {
-  height: 3rem;
-  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-md);
-  margin-bottom: var(--spacing-lg);
-}
-
-.skeleton-field:last-child {
-  margin-bottom: 0;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.8;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-3xl);
+  gap: var(--spacing-lg);
+  color: var(--color-text-muted);
 }
 
 .loading-spinner-inline {
@@ -1723,13 +1510,13 @@ onUnmounted(() => {
 
 .zone-item {
   display: flex;
-  align-items: center;
   gap: var(--spacing-lg);
   padding: var(--spacing-xl);
   background: var(--color-bg-secondary);
   border-radius: var(--radius-lg);
   border: 2px solid var(--color-border-light);
   transition: all var(--transition-base);
+  position: relative;
 }
 
 .zone-item:hover {
@@ -1774,124 +1561,28 @@ onUnmounted(() => {
   width: 100%;
 }
 
-.zone-item .btn-delete {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border: 1px solid;
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-base);
-  background: white;
-  color: #dc2626;
-  border-color: #dc2626;
-  flex-shrink: 0;
-}
-
-.zone-item .btn-delete:hover {
-  background: #dc2626;
-  color: white;
-}
-
-/* Modal de Exclusão */
-.delete-modal {
-  background: white;
-  border-radius: 0.75rem;
-  width: 90%;
-  max-width: 400px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-}
-
-.delete-modal .modal-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.warning-icon {
+.btn-remove-zone {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  background: #fef2f2;
-  border-radius: 50%;
-  color: #dc2626;
-}
-
-.delete-modal .modal-header h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0;
-}
-
-.modal-content {
-  padding: 1.5rem;
-}
-
-.modal-content p {
-  margin: 0 0 1rem 0;
-  color: #374151;
-  line-height: 1.5;
-}
-
-.modal-content p:last-child {
-  margin-bottom: 0;
-}
-
-.warning-text {
-  color: #dc2626;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 0.75rem;
-  padding: 1.5rem;
-  border-top: 1px solid #e5e7eb;
-}
-
-.btn-cancel {
-  flex: 1;
-  padding: 0.75rem 1.5rem;
-  border: 1px solid #d1d5db;
-  background: white;
-  color: #374151;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-cancel:hover {
-  background: #f9fafb;
-  border-color: #9ca3af;
-}
-
-.btn-delete-confirm {
-  flex: 1;
-  background: #ef4444;
+  background: var(--color-danger);
   color: white;
-  border: 1px solid #ef4444;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
+  border: none;
+  border-radius: 50%;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
+  opacity: 0.7;
 }
 
-.btn-delete-confirm:hover {
-  background: #dc2626;
-  border-color: #dc2626;
+.btn-remove-zone:hover {
+  opacity: 1;
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-add-zone {
@@ -1951,19 +1642,17 @@ onUnmounted(() => {
     flex-direction: column;
   }
   
-  .zone-item .btn-delete {
+  .btn-remove-zone {
+    position: relative;
+    top: auto;
+    right: auto;
     width: 100%;
-    justify-content: center;
+    border-radius: var(--radius-md);
+    height: 40px;
   }
   
-  .delete-modal .modal-header {
-    flex-direction: column;
-    text-align: center;
-    gap: 0.75rem;
-  }
-  
-  .modal-actions {
-    flex-direction: column;
+  .btn-remove-zone:hover {
+    transform: scale(1.02);
   }
   
   .map-legend {

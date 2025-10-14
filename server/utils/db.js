@@ -59,14 +59,3 @@ export async function getDB() {
     throw new Error(`Failed to connect to MongoDB: ${error.message}`);
   }
 }
-
-// Alias para compatibilidade
-export async function connectToDatabase() {
-  const db = await getDB();
-  return { db };
-}
-
-// Alias para compatibilidade
-export async function connectDB() {
-  return await getDB();
-}

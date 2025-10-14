@@ -161,24 +161,9 @@
         </button>
       </div>
 
-      <div v-else-if="filteredProducts.length === 0 && products.length > 0" class="empty-state fade-in">
-        <div class="empty-icon-emoji">🔍</div>
-        <h3>Nenhum resultado encontrado</h3>
-        <p v-if="searchTerm">Não encontramos produtos com "{{ searchTerm }}"</p>
-        <p v-else-if="selectedCategory">Nenhum produto nesta categoria com os filtros aplicados</p>
-        <p v-else>Nenhum produto encontrado com os filtros aplicados</p>
-        <button @click="clearFilters" class="btn-secondary">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-          Limpar Filtros
-        </button>
-      </div>
-
       <div v-else class="products-grid">
         <div v-for="product in filteredProducts" :key="product._id" class="product-card hover-lift fade-in">
-          <div class="product-image" @click="openImageOverlay(product.image)" style="cursor: pointer;">
+          <div class="product-image">
             <img :src="product.image" :alt="product.name" loading="lazy" />
           </div>
           <div class="product-info">
@@ -322,9 +307,7 @@
               <img 
                 :src="productForm.image || '/not_found.jpg'" 
                 alt="Preview" 
-                class="image-preview product-image-preview"
-                @click="openImageOverlay(productForm.image)"
-                style="cursor: pointer;"
+                class="image-preview product-image-preview" 
               />
               <div class="image-info">
                 <p>Recomendado: 400x400px</p>
@@ -359,68 +342,6 @@
                 :disabled="submitting"
               />
             </div>
-          </div>
-          
-          <!-- Complementos -->
-          <div class="form-group">
-            <label>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: middle; margin-right: 6px;">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="16"></line>
-                <line x1="8" y1="12" x2="16" y2="12"></line>
-              </svg>
-              Complementos (Opcional)
-            </label>
-            <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem; margin-bottom: 0.75rem;">
-              Adicione opções extras que o cliente pode escolher (ex: Bacon, Queijo Extra, Molhos)
-            </p>
-            
-            <div v-for="(complement, index) in productForm.complements" :key="index" class="complement-item">
-              <div class="complement-fields">
-                <input
-                  v-model="complement.name"
-                  type="text"
-                  placeholder="Nome (ex: Bacon Extra)"
-                  maxlength="50"
-                  :disabled="submitting"
-                  class="complement-name"
-                />
-                <input
-                  v-model="complement.price"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="Preço (R$)"
-                  :disabled="submitting"
-                  class="complement-price"
-                />
-                <button
-                  type="button"
-                  @click="removeComplement(index)"
-                  class="btn-remove-complement"
-                  :disabled="submitting"
-                  title="Remover complemento"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              </div>
-            </div>
-            
-            <button
-              type="button"
-              @click="addComplement"
-              class="btn-add-complement"
-              :disabled="submitting"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              Adicionar Complemento
-            </button>
           </div>
           
           <div class="form-group">
@@ -486,22 +407,10 @@
       <button @click="alert.show = false" class="alert-close">×</button>
     </div>
   </div>
-
-  <!-- Image Overlay -->
-  <ImageOverlay
-    :show="showImageOverlay"
-    :imageUrl="currentImageUrl"
-    @close="closeImageOverlay"
-  />
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import ImageOverlay from '~/components/ImageOverlay.vue'
-import { useImageOverlay } from '~/composables/useImageOverlay'
-
-// Image overlay
-const { showImageOverlay, currentImageUrl, openImageOverlay, closeImageOverlay } = useImageOverlay()
 
 // Definir layout
 definePageMeta({
@@ -532,8 +441,7 @@ const productForm = ref({
   price: '',
   image: '',
   categoryId: '',
-  order: 0,
-  complements: []
+  order: 0
 })
 
 // Alert
@@ -625,14 +533,6 @@ const loadProducts = async () => {
   try {
     loading.value = true
     const response = await $fetch('/api/products')
-    
-    // Debug: verificar complementos nos produtos
-    response.forEach(product => {
-      if (product.complements && product.complements.length > 0) {
-        console.log(`Produto "${product.name}" tem ${product.complements.length} complementos:`, product.complements)
-      }
-    })
-    
     products.value = response
   } catch (error) {
     showAlert('Erro ao carregar produtos', 'error')
@@ -663,25 +563,13 @@ const createProduct = async () => {
 // Editar produto
 const editProduct = (product) => {
   editingProduct.value = product
-  
-  // Garantir que complementos seja sempre um array
-  const complements = Array.isArray(product.complements) 
-    ? product.complements.map(comp => ({
-        name: comp.name || '',
-        price: comp.price || ''
-      }))
-    : []
-  
-  console.log('Editando produto:', product.name, 'Complementos:', complements)
-  
   productForm.value = {
     name: product.name,
     description: product.description || '',
     price: product.price.toString(),
     image: product.image || '',
     categoryId: product.categoryId,
-    order: product.order || 0,
-    complements: complements
+    order: product.order || 0
   }
   showEditModal.value = true
 }
@@ -759,21 +647,8 @@ const closeModal = () => {
     price: '',
     image: '',
     categoryId: '',
-    order: 0,
-    complements: []
+    order: 0
   }
-}
-
-// Gerenciar complementos
-const addComplement = () => {
-  productForm.value.complements.push({
-    name: '',
-    price: ''
-  })
-}
-
-const removeComplement = (index) => {
-  productForm.value.complements.splice(index, 1)
 }
 
 // Handle image upload
@@ -864,25 +739,9 @@ const getCategoryName = (categoryId) => {
 }
 
 // Lifecycle
-// Fechar modal com ESC
-const handleEscKey = (event) => {
-  if (event.key === 'Escape') {
-    if (showDeleteModal.value) {
-      showDeleteModal.value = false
-    } else if (showCreateModal.value || showEditModal.value) {
-      closeModal()
-    }
-  }
-}
-
 onMounted(() => {
   loadCategories()
   loadProducts()
-  window.addEventListener('keydown', handleEscKey)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleEscKey)
 })
 </script>
 
@@ -891,21 +750,6 @@ onUnmounted(() => {
   padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
-}
-
-.empty-icon-emoji {
-  font-size: 5rem;
-  margin-bottom: 1.5rem;
-  animation: bounce 2s ease-in-out infinite;
-}
-
-@keyframes bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
 }
 
 /* Page Header */
@@ -1928,117 +1772,9 @@ onUnmounted(() => {
   }
 }
 
-/* Estilos para complementos */
-.complement-item {
-  margin-bottom: 0.75rem;
-}
-
-.complement-fields {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.complement-name {
-  flex: 2;
-  min-width: 200px;
-  padding: 0.75rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 0.9375rem;
-  transition: all 0.2s;
-}
-
-.complement-name:focus {
-  outline: none;
-  border-color: #FF6B35;
-  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
-}
-
-.complement-price {
-  flex: 0 0 140px;
-  width: 140px;
-  padding: 0.75rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 0.9375rem;
-  transition: all 0.2s;
-}
-
-.complement-price:focus {
-  outline: none;
-  border-color: #FF6B35;
-  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
-}
-
-.btn-remove-complement {
-  padding: 0.75rem;
-  background-color: #fee2e2;
-  color: #dc2626;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-remove-complement:hover {
-  background-color: #fecaca;
-  transform: scale(1.05);
-}
-
-.btn-add-complement {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background-color: #f3f4f6;
-  color: #374151;
-  border: 1px dashed #d1d5db;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  transition: all 0.2s;
-  margin-top: 0.5rem;
-}
-
-.btn-add-complement:hover {
-  background-color: #e5e7eb;
-  border-color: #9ca3af;
-}
-
-.btn-add-complement svg {
-  width: 16px;
-  height: 16px;
-}
-
 @media (max-width: 640px) {
   .products-page {
     padding: 0.75rem;
-  }
-  
-  .complement-fields {
-    flex-wrap: wrap;
-  }
-  
-  .complement-name {
-    width: 100%;
-    min-width: auto;
-    flex: none;
-  }
-  
-  .complement-price {
-    flex: 1 1 auto;
-    min-width: 120px;
-  }
-  
-  .btn-remove-complement {
-    flex: 0 0 auto;
   }
   
   .page-header h1 {
