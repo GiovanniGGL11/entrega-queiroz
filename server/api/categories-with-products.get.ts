@@ -3,12 +3,17 @@ import { getDB } from "../utils/db";
 
 export default defineEventHandler(async () => {
   try {
+    console.log('[categories-with-products] Iniciando busca...');
+    
     const db = await getDB();
+    console.log('[categories-with-products] Conexão com DB estabelecida');
+    
     const categories = db.collection("categories");
     const products = db.collection("products");
     
     // Buscar todas as categorias
     const allCategories = await categories.find({}).sort({ order: 1, createdAt: -1 }).toArray();
+    console.log('[categories-with-products] Categorias encontradas:', allCategories.length);
     
     // Para cada categoria, buscar seus produtos
     const categoriesWithProducts = await Promise.all(
@@ -16,6 +21,8 @@ export default defineEventHandler(async () => {
         const categoryProducts = await products.find({ 
           categoryId: category._id.toString() 
         }).sort({ order: 1, createdAt: -1 }).toArray();
+        
+        console.log(`[categories-with-products] Categoria "${category.name}": ${categoryProducts.length} produtos`);
         
         return {
           ...category,
@@ -31,11 +38,25 @@ export default defineEventHandler(async () => {
       })
     );
     
+    console.log('[categories-with-products] Retornando', categoriesWithProducts.length, 'categorias');
+    
     return categoriesWithProducts;
-  } catch (err) {
+  } catch (error: any) {
+    console.error("[categories-with-products] ERRO DETALHADO:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      code: error.code
+    });
+    
     throw createError({
       statusCode: 500,
-      message: "Erro ao buscar categorias com produtos",
+      message: `Erro ao buscar categorias: ${error.message}`,
+      data: {
+        errorType: error.name,
+        errorCode: error.code,
+        details: error.message
+      }
     });
   }
 });

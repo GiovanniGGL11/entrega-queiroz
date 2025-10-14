@@ -160,9 +160,59 @@ URL: `/dashboard`
 
 ### Erro 500 nas APIs
 
-- Verifique se `MONGODB_URI` está configurada
-- Verifique se o MongoDB Atlas permite conexões (IP whitelist)
-- Veja os logs da Vercel para detalhes
+**Sintomas:** APIs retornam erro 500 na Vercel
+
+**Possíveis causas e soluções:**
+
+1. **MONGODB_URI não configurada**
+
+   - ✅ Verifique em: Vercel Dashboard → Settings → Environment Variables
+   - ✅ Certifique-se de que está configurada para Production, Preview e Development
+   - ✅ Faça redeploy após adicionar
+
+2. **MongoDB Atlas bloqueando conexões**
+
+   - ✅ Acesse: MongoDB Atlas → Network Access
+   - ✅ Adicione IP: `0.0.0.0/0` (permitir todos)
+   - ✅ Aguarde 1-2 minutos para propagar
+
+3. **Connection String incorreta**
+   - ✅ Deve começar com `mongodb+srv://`
+   - ✅ Substitua `<password>` pela senha real
+   - ✅ Não deve ter espaços ou caracteres especiais não-encoded
+
+**Como debugar na Vercel:**
+
+1. Acesse: https://vercel.com/seu-usuario/queiroz-delivery
+2. Vá em **Deployments** → Selecione o deployment atual
+3. Clique em **View Function Logs** ou **Runtime Logs**
+4. Procure por:
+
+   ```
+   [DB] ERRO CRÍTICO: MONGODB_URI não está definida
+   [DB] ❌ ERRO DE CONEXÃO
+   [settings.get] ERRO DETALHADO
+   [categories-with-products] ERRO DETALHADO
+   ```
+
+5. Os logs agora mostram:
+   - Se a variável MONGODB_URI existe
+   - Detalhes do erro de conexão
+   - Stack trace completo
+   - Código do erro
+
+**Testando APIs diretamente:**
+
+```bash
+# Testar settings
+curl https://queiroz-delivery.vercel.app/api/settings
+
+# Testar categorias
+curl https://queiroz-delivery.vercel.app/api/categories-with-products
+```
+
+Se retornar JSON = ✅ Funcionando
+Se retornar erro 500 = ❌ Ver logs da Vercel
 
 ### Dados não aparecem
 

@@ -2,14 +2,20 @@ import { getDB } from "../utils/db";
 
 export default defineEventHandler(async (event) => {
   try {
+    console.log('[settings.get] Iniciando busca de configurações...');
+    
     const db = await getDB();
+    console.log('[settings.get] Conexão com DB estabelecida');
+    
     const settings = db.collection("settings");
     
     // Buscar as configurações (sempre haverá apenas um documento)
     let config = await settings.findOne({ _id: "store-config" });
+    console.log('[settings.get] Config encontrado:', config ? 'SIM' : 'NÃO');
     
     // Se não existir, criar com valores padrão
     if (!config) {
+      console.log('[settings.get] Criando configuração padrão...');
       config = {
         _id: "store-config",
         storeName: "Minha Loja",
@@ -44,6 +50,7 @@ export default defineEventHandler(async (event) => {
       };
       
       await settings.insertOne(config);
+      console.log('[settings.get] Configuração padrão criada com sucesso');
     }
     
     // Calcular se está aberto agora
@@ -58,15 +65,28 @@ export default defineEventHandler(async (event) => {
       isOpen = currentTime >= todaySchedule.open && currentTime <= todaySchedule.close;
     }
     
+    console.log('[settings.get] Retornando configurações - isOpen:', isOpen);
+    
     return {
       ...config,
       isOpen
     };
-  } catch (error) {
-    console.error("Erro ao buscar configurações:", error);
+  } catch (error: any) {
+    console.error("[settings.get] ERRO DETALHADO:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      code: error.code
+    });
+    
     throw createError({ 
       statusCode: 500, 
-      message: "Erro ao buscar configurações da loja" 
+      message: `Erro ao buscar configurações: ${error.message}`,
+      data: {
+        errorType: error.name,
+        errorCode: error.code,
+        details: error.message
+      }
     });
   }
 });
