@@ -40,14 +40,14 @@ const loadingCategories = ref(false)
 
 // Configurações da loja
 const storeSettings = ref({
-  storeName: "Queiroz Hamburgueria",
-  logo: "/logo.jpg",
-  banner: "https://images.unsplash.com/photo-1554306297-0c86e837d24b?q=80&w=1136&auto=format&fit=crop",
-  isOpen: true,
-  deliveryMinTime: 10,
-  deliveryMaxTime: 75,
+  storeName: "",
+  logo: "",
+  banner: "",
+  isOpen: false,
+  deliveryMinTime: 0,
+  deliveryMaxTime: 0,
   deliveryFee: 0,
-  minimumOrder: 15.00
+  minimumOrder: 0
 })
 
 // Estado de carregamento inicial
@@ -60,19 +60,18 @@ const loadStoreSettings = async () => {
   try {
     const settings = await $fetch('/api/settings')
     storeSettings.value = {
-      storeName: settings.storeName || storeSettings.value.storeName,
-      logo: settings.logo || storeSettings.value.logo,
-      banner: settings.banner || storeSettings.value.banner,
-      isOpen: settings.isOpen,
-      deliveryMinTime: settings.deliveryMinTime || storeSettings.value.deliveryMinTime,
-      deliveryMaxTime: settings.deliveryMaxTime || storeSettings.value.deliveryMaxTime,
-      deliveryFee: settings.deliveryFee !== undefined ? settings.deliveryFee : storeSettings.value.deliveryFee,
-      minimumOrder: settings.minimumOrder !== undefined ? settings.minimumOrder : storeSettings.value.minimumOrder
+      storeName: settings.storeName || "",
+      logo: settings.logo || "",
+      banner: settings.banner || "",
+      isOpen: settings.isOpen || false,
+      deliveryMinTime: settings.deliveryMinTime || 0,
+      deliveryMaxTime: settings.deliveryMaxTime || 0,
+      deliveryFee: settings.deliveryFee !== undefined ? settings.deliveryFee : 0,
+      minimumOrder: settings.minimumOrder !== undefined ? settings.minimumOrder : 0
     }
     settingsLoaded.value = true
   } catch (error) {
     console.error('Erro ao carregar configurações da loja:', error)
-    // Mantém valores padrão em caso de erro
     settingsLoaded.value = true
   }
 }
@@ -85,201 +84,28 @@ const loadCategories = async () => {
     // Usar a API que já retorna categorias com produtos
     const apiCategories = await $fetch('/api/categories-with-products')
     
-    // Se não há categorias na API, usar as categorias padrão
-    if (apiCategories.length === 0) {
-      categories.value = defaultCategories
-      selectedCategory.value = "artesanal"
-    } else {
-      // Mapear categorias da API para o formato esperado
-      categories.value = apiCategories.map(cat => ({
-        id: cat._id,
-        name: cat.name,
-        items: cat.items || [] // Já vem com os produtos
-      }))
-      
-      // Se não há categorias, usar a primeira categoria padrão como selecionada
-      if (categories.value.length > 0) {
-        selectedCategory.value = categories.value[0].id
-      }
+    // Mapear categorias da API para o formato esperado
+    categories.value = apiCategories.map(cat => ({
+      id: cat._id,
+      name: cat.name,
+      items: cat.items || [] // Já vem com os produtos
+    }))
+    
+    // Selecionar a primeira categoria se houver
+    if (categories.value.length > 0) {
+      selectedCategory.value = categories.value[0].id
     }
+    
     categoriesLoaded.value = true
   } catch (error) {
     console.error('Erro ao carregar categorias:', error)
-    // Em caso de erro, usar categorias padrão
-    categories.value = defaultCategories
-    selectedCategory.value = "artesanal"
+    categories.value = []
     categoriesLoaded.value = true
   } finally {
     loadingCategories.value = false
   }
 }
 
-// Categorias padrão (fallback)
-const defaultCategories = [
-  {
-    id: "artesanal",
-    name: "Hamburger Artesanal",
-    items: [
-      {
-        id: 1,
-        name: "Americano",
-        description:
-          "Pão de brioche, 150g de carne, queijo prato fatiado, alface americano, cebola roxa, tomate e maionese da casa",
-        price: 28.0,
-        image:
-          "https://imagedelivery.net/KWx2kLZVCnquS_91k5JjHA/29c11710-9052-4526-9838-92d7f05ca0ec/689d0e68e8158.jpg/small",
-        complements: [
-          { name: "Ketchup", price: 2.0 },
-          { name: "Mostarda", price: 2.0 },
-          { name: "Maionese", price: 0.4 },
-        ],
-      },
-      {
-        id: 2,
-        name: "Bacon Burger",
-        description:
-          "Pão de brioche, 150g de carne, queijo prato fatiado, alface americano, cebola roxa, tomate e maionese da casa",
-        price: 28.0,
-        image:
-          "https://imagedelivery.net/KWx2kLZVCnquS_91k5JjHA/29c11710-9052-4526-9838-92d7f05ca0ec/689d0e68e8158.jpg/small",
-        complements: [
-          { name: "Ketchup", price: 2.0 },
-          { name: "Mostarda", price: 2.0 },
-          { name: "Maionese", price: 0.4 },
-        ],
-      },
-      {
-        id: 3,
-        name: "Cheese Burger",
-        description:
-          "Pão de brioche, 150g de carne, queijo prato fatiado, alface americano, cebola roxa, tomate e maionese da casa",
-        price: 28.0,
-        image:
-          "https://imagedelivery.net/KWx2kLZVCnquS_91k5JjHA/29c11710-9052-4526-9838-92d7f05ca0ec/689d0e68e8158.jpg/small",
-        complements: [
-          { name: "Ketchup", price: 2.0 },
-          { name: "Mostarda", price: 2.0 },
-          { name: "Maionese", price: 0.4 },
-        ],
-      },
-      {
-        id: 15,
-        name: "Cheese Burger 2",
-        description:
-          "Pão de brioche, 150g de carne, queijo prato fatiado, alface americano, cebola roxa, tomate e maionese da casa",
-        price: 28.0,
-        image:
-          "https://imagedelivery.net/KWx2kLZVCnquS_91k5JjHA/29c11710-9052-4526-9838-92d7f05ca0ec/689d0e68e8158.jpg/small",
-        complements: [
-          { name: "Ketchup", price: 2.0 },
-          { name: "Mostarda", price: 2.0 },
-          { name: "Maionese", price: 0.4 },
-        ],
-      },
-      {
-        id: 16,
-        name: "Bacon Burger 2",
-        description:
-          "Pão de brioche, 150g de carne, queijo prato fatiado, alface americano, cebola roxa, tomate e maionese da casa",
-        price: 28.0,
-        image:
-          "https://imagedelivery.net/KWx2kLZVCnquS_91k5JjHA/29c11710-9052-4526-9838-92d7f05ca0ec/689d0e68e8158.jpg/small",
-        complements: [
-          { name: "Ketchup", price: 2.0 },
-          { name: "Mostarda", price: 2.0 },
-          { name: "Maionese", price: 0.4 },
-        ],
-      },
-      {
-        id: 17,
-        name: "Burger",
-        description:
-          "Pão de brioche, 150g de carne, queijo prato fatiado, alface americano, cebola roxa, tomate e maionese da casa",
-        price: 28.0,
-        image:
-          "https://imagedelivery.net/KWx2kLZVCnquS_91k5JjHA/29c11710-9052-4526-9838-92d7f05ca0ec/689d0e68e8158.jpg/small",
-        complements: [
-          { name: "Ketchup", price: 2.0 },
-          { name: "Mostarda", price: 2.0 },
-          { name: "Maionese", price: 0.4 },
-        ],
-      },
-    ],
-  },
-  {
-    id: "acompanhamento",
-    name: "Acompanhamento",
-    items: [
-      {
-        id: 4,
-        name: "Batata Frita",
-        description: "150g de batata frita crocante",
-        price: 12.0,
-        image:
-          "https://imagedelivery.net/KWx2kLZVCnquS_91k5JjHA/29c11710-9052-4526-9838-92d7f05ca0ec/6894114d6f833.jpg/small",
-        complements: [
-          { name: "Sal extra", price: 1.0 },
-          { name: "Pimenta", price: 0.4 },
-        ],
-      },
-      {
-        id: 10,
-        name: "Batata Frita 2",
-        description: "350g de batata frita crocante",
-        price: 22.0,
-        image:
-          "https://imagedelivery.net/KWx2kLZVCnquS_91k5JjHA/29c11710-9052-4526-9838-92d7f05ca0ec/6894114d6f833.jpg/small",
-        complements: [
-          { name: "Sal extra", price: 1.0 },
-          { name: "Pimenta", price: 0.4 },
-        ],
-      },
-      {
-        id: 11,
-        name: "Batata Frita 3",
-        description: "1kg de batata frita crocante",
-        price: 44.0,
-        image:
-          "https://imagedelivery.net/KWx2kLZVCnquS_91k5JjHA/29c11710-9052-4526-9838-92d7f05ca0ec/6894114d6f833.jpg/small",
-        complements: [
-          { name: "Sal extra", price: 1.0 },
-          { name: "Pimenta", price: 0.4 },
-        ],
-      },
-    ],
-  },
-  {
-    id: "bebidas",
-    name: "Bebidas",
-    items: [
-      {
-        id: 5,
-        name: "Suco Natural",
-        description: "Suco natural da fruta",
-        price: 12.0,
-        image: "/not_found.jpg",
-        complements: [
-          { name: "Gelo extra", price: 0.4 },
-          { name: "Açúcar", price: 1.0 },
-        ],
-      },
-    ],
-  },
-  {
-    id: "molho",
-    name: "Molho Extra",
-    items: [
-      {
-        id: 6,
-        name: "Molho Especial",
-        description: "Molho da casa",
-        price: 5.0,
-        image: "/not_found.jpg",
-        complements: [{ name: "Pimenta extra", price: 0.4 }],
-      },
-    ],
-  },
-];
 
 // Computeds
 const filteredCategories = computed(() => {
