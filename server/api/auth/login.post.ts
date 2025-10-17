@@ -52,7 +52,9 @@ export default defineEventHandler(async (event) => {
       user: {
         id: user._id.toString(),
         email: user.email
-      }
+      },
+      // Retornar token como fallback para casos onde cookie não funciona
+      token: token
     }
   } catch (error: any) {
     if (error.statusCode) {

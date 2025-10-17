@@ -100,13 +100,23 @@ const loadStoreSettings = async () => {
 // Verificar se já está autenticado
 const checkAuth = async () => {
   try {
+    // Preparar headers com token do localStorage como fallback
+    const headers = {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+    
+    // Tentar obter token do localStorage como fallback
+    const token = localStorage.getItem('auth_token')
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+      console.log('🔑 Usando token do localStorage para verificação')
+    }
+    
     await $fetch(`/api/auth/me?t=${Date.now()}`, {
       credentials: 'include',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
+      headers
     });
     await router.push('/dashboard');
   } catch (err) {
@@ -147,6 +157,12 @@ const handleLogin = async () => {
     }
     
     console.log('✅ Login realizado com sucesso!');
+    
+    // Armazenar token no localStorage como fallback
+    if (response.token && process.client) {
+      localStorage.setItem('auth_token', response.token);
+      console.log('🔑 Token armazenado no localStorage como fallback');
+    }
     
     // Pequeno delay para garantir que o cookie seja propagado
     await new Promise(resolve => setTimeout(resolve, 100));

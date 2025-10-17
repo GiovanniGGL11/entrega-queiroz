@@ -12,11 +12,20 @@ export default defineEventHandler(async (event) => {
       userAgent: headers['user-agent']?.substring(0, 50) + '...'
     })
     
-    // Obter token do cookie
-    const token = readTokenFromEvent(event)
+    // Obter token do cookie ou header Authorization
+    let token = readTokenFromEvent(event)
+    
+    // Fallback: tentar obter do header Authorization
+    if (!token) {
+      const authHeader = getRequestHeader(event, 'authorization')
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7)
+        console.log('🔑 Token obtido do header Authorization')
+      }
+    }
     
     if (!token) {
-      console.log('❌ Nenhum token encontrado nos cookies')
+      console.log('❌ Nenhum token encontrado nos cookies nem no header')
       throw createError({
         statusCode: 401,
         statusMessage: 'No token provided'
