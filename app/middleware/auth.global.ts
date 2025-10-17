@@ -28,18 +28,39 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   // Todas as outras rotas (incluindo /dashboard/*) requerem autenticação
   try {
     // Verificar se está autenticado - evitar cache
-    await $fetch(`/api/auth/me?t=${Date.now()}`, {
-      credentials: 'include',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
+    console.log('🔍 Verificando autenticação no cliente...')
+    
+    // Tentar múltiplas vezes com pequenos delays para casos de propagação de cookie
+    let lastError = null
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await $fetch(`/api/auth/me?t=${Date.now()}`, {
+          credentials: 'include',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        })
+        console.log('✅ Autenticado, acesso permitido ao dashboard')
+        return // Sucesso, sair do middleware
+      } catch (error) {
+        lastError = error
+        console.log(`❌ Tentativa ${attempt}/3 falhou:`, error)
+        
+        // Se não é a última tentativa, aguardar um pouco
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 200))
+        }
       }
-    })
-    console.log('✅ Autenticado, acesso permitido ao dashboard')
+    }
+    
+    // Todas as tentativas falharam
+    console.log('❌ Não autenticado após 3 tentativas, redirecionando para /login', lastError)
+    return navigateTo('/login')
   } catch (error) {
-    // Não autenticado - redirecionar para login
-    console.log('❌ Não autenticado, redirecionando para /login', error)
+    // Erro inesperado
+    console.log('❌ Erro inesperado no middleware, redirecionando para /login', error)
     return navigateTo('/login')
   }
 })

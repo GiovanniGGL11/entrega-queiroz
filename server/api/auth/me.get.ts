@@ -4,6 +4,14 @@ export default defineEventHandler(async (event) => {
   try {
     console.log('🔍 Verificando autenticação (/api/auth/me)')
     
+    // Log dos headers para debug
+    const headers = getHeaders(event)
+    console.log('📋 Headers recebidos:', {
+      cookie: headers.cookie ? 'presente' : 'ausente',
+      host: headers.host,
+      userAgent: headers['user-agent']?.substring(0, 50) + '...'
+    })
+    
     // Obter token do cookie
     const token = readTokenFromEvent(event)
     
@@ -14,6 +22,8 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'No token provided'
       })
     }
+
+    console.log('🔑 Token encontrado:', token.substring(0, 20) + '...')
 
     // Verificar token
     try {

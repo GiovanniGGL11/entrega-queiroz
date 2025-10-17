@@ -25,13 +25,36 @@ export function readTokenFromEvent(event: any): string | undefined {
 }
 
 export function setAuthCookie(event: any, token: string): void {
-  setCookie(event, AUTH_COOKIE_NAME, token, {
+  const isProduction = process.env.NODE_ENV === 'production'
+  const host = getRequestHeader(event, 'host') || ''
+  
+  console.log('🍪 Definindo cookie de autenticação:', {
+    name: AUTH_COOKIE_NAME,
+    secure: isProduction,
+    host: host,
+    sameSite: 'lax',
+    isProduction: isProduction
+  })
+  
+  const cookieOptions: any = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProduction,
     sameSite: 'lax',
     path: '/',
     maxAge: 60 * 60 * 24 * 7 // 7 dias
-  })
+  }
+  
+  // Em produção, definir domínio se necessário
+  if (isProduction && host) {
+    // Para domínios como queiroz-delivery.vercel.app, usar o domínio completo
+    if (host.includes('vercel.app') || host.includes('netlify.app')) {
+      cookieOptions.domain = host
+    }
+  }
+  
+  setCookie(event, AUTH_COOKIE_NAME, token, cookieOptions)
+  
+  console.log('✅ Cookie definido com opções:', cookieOptions)
 }
 
 export function clearAuthCookie(event: any): void {

@@ -148,6 +148,9 @@ const handleLogin = async () => {
     
     console.log('✅ Login realizado com sucesso!');
     
+    // Pequeno delay para garantir que o cookie seja propagado
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     // Redirecionar para dashboard
     await router.push("/dashboard");
   } catch (err) {
