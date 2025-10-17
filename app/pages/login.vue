@@ -104,14 +104,14 @@ const checkAuth = async () => {
     const headers = {
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
-      'Expires': '0'
+      'Expires': '0',
+      'Authorization': ''
     }
     
     // Tentar obter token do localStorage como fallback
     const token = localStorage.getItem('auth_token')
     if (token) {
       headers['Authorization'] = `Bearer ${token}`
-      console.log('🔑 Usando token do localStorage para verificação')
     }
     
     await $fetch(`/api/auth/me?t=${Date.now()}`, {
@@ -120,7 +120,7 @@ const checkAuth = async () => {
     });
     await router.push('/dashboard');
   } catch (err) {
-    console.log('Não autenticado, permanecendo no login');
+    // Não autenticado, permanecer no login
   }
 };
 
@@ -129,7 +129,6 @@ onMounted(() => {
   if (process.client) {
     if (sessionStorage.getItem('justLoggedOut') === 'true') {
       sessionStorage.removeItem('justLoggedOut');
-      console.log('Pulado verificação de auth devido a logout recente');
     } else {
       checkAuth();
     }
@@ -156,12 +155,9 @@ const handleLogin = async () => {
       sessionStorage.removeItem('justLoggedOut');
     }
     
-    console.log('✅ Login realizado com sucesso!');
-    
     // Armazenar token no localStorage como fallback
     if (response.token && process.client) {
       localStorage.setItem('auth_token', response.token);
-      console.log('🔑 Token armazenado no localStorage como fallback');
     }
     
     // Pequeno delay para garantir que o cookie seja propagado
@@ -170,7 +166,6 @@ const handleLogin = async () => {
     // Redirecionar para dashboard
     await router.push("/dashboard");
   } catch (err) {
-    console.error("❌ Erro no login:", err);
     error.value = err.data?.statusMessage || err.statusMessage || "Erro ao fazer login";
   } finally {
     loading.value = false;

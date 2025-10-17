@@ -26,15 +26,6 @@ export function readTokenFromEvent(event: any): string | undefined {
 
 export function setAuthCookie(event: any, token: string): void {
   const isProduction = process.env.NODE_ENV === 'production'
-  const host = getRequestHeader(event, 'host') || ''
-  
-  console.log('🍪 Definindo cookie de autenticação:', {
-    name: AUTH_COOKIE_NAME,
-    secure: isProduction,
-    host: host,
-    sameSite: 'lax',
-    isProduction: isProduction
-  })
   
   // Configuração mais permissiva para Vercel
   const cookieOptions: any = {
@@ -49,8 +40,6 @@ export function setAuthCookie(event: any, token: string): void {
   // Isso evita problemas de configuração de domínio
   
   setCookie(event, AUTH_COOKIE_NAME, token, cookieOptions)
-  
-  console.log('✅ Cookie definido com opções:', cookieOptions)
   
   // Também definir um cookie de fallback sem httpOnly para debug
   if (!isProduction) {

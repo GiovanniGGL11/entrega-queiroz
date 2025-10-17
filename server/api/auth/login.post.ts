@@ -40,11 +40,7 @@ export default defineEventHandler(async (event) => {
 
     // Gerar token JWT e salvar no cookie httpOnly
     const token = signUserToken({ userId: user._id.toString(), email: user.email })
-    console.log('🔑 Token gerado:', token.substring(0, 20) + '...')
-    
     setAuthCookie(event, token)
-    
-    console.log('✅ Cookie de autenticação definido com sucesso')
 
     return {
       success: true,
