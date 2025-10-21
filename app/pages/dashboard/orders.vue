@@ -71,39 +71,10 @@
           
           <div class="order-actions">
             <button 
-              v-if="order.status === 'pending'" 
-              @click="updateOrderStatus(order.id, 'confirmed')" 
-              class="btn-confirm"
+              @click="showEditStatusModal(order)" 
+              class="btn-edit"
             >
-              Confirmar
-            </button>
-            <button 
-              v-if="order.status === 'confirmed'" 
-              @click="updateOrderStatus(order.id, 'preparing')" 
-              class="btn-prepare"
-            >
-              Preparar
-            </button>
-            <button 
-              v-if="order.status === 'preparing'" 
-              @click="updateOrderStatus(order.id, 'ready')" 
-              class="btn-ready"
-            >
-              Pronto
-            </button>
-            <button 
-              v-if="order.status === 'ready'" 
-              @click="updateOrderStatus(order.id, 'delivered')" 
-              class="btn-deliver"
-            >
-              Entregue
-            </button>
-            <button 
-              v-if="['pending', 'confirmed'].includes(order.status)" 
-              @click="updateOrderStatus(order.id, 'cancelled')" 
-              class="btn-cancel"
-            >
-              Cancelar
+              Editar Status
             </button>
             <button @click="viewOrderDetails(order)" class="btn-view">
               Ver Detalhes
@@ -174,33 +145,98 @@
       </div>
     </div>
 
-    <!-- Alert -->
-    <div v-if="alert.show" class="alert" :class="alert.type">
-      <p>{{ alert.message }}</p>
-      <button @click="alert.show = false" class="alert-close">×</button>
+    <!-- Modal de Confirmação -->
+    <div v-if="confirmationModal.show" class="confirmation-overlay" @click="cancelConfirmation">
+      <div class="modal-content confirmation-modal" @click.stop>
+        <div class="modal-header">
+          <h3>{{ confirmationModal.title }}</h3>
+          <button @click="cancelConfirmation" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <p>{{ confirmationModal.message }}</p>
+        </div>
+        <div class="modal-footer">
+          <button @click="cancelConfirmation" class="btn-cancel-modal">
+            Cancelar
+          </button>
+          <button @click="executeConfirmedAction" class="btn-confirm-modal">
+            Confirmar
+          </button>
+        </div>
+      </div>
     </div>
+
+    <!-- Modal de Edição de Status -->
+    <div v-if="showStatusModal" class="status-overlay" @click="closeStatusModal">
+      <div class="modal-content status-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Editar Status do Pedido</h3>
+          <button @click="closeStatusModal" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Status Atual:</label>
+            <span class="current-status">{{ getStatusText(orderToUpdate?.status) }}</span>
+          </div>
+          <div class="form-group">
+            <label for="newStatus">Novo Status:</label>
+            <select id="newStatus" v-model="newStatus" class="status-select">
+              <option value="pending">Pendente</option>
+              <option value="confirmed">Confirmado</option>
+              <option value="preparing">Preparando</option>
+              <option value="ready">Pronto</option>
+              <option value="delivered">Entregue</option>
+              <option value="cancelled">Cancelado</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="closeStatusModal" class="btn-cancel-modal">
+            Cancelar
+          </button>
+          <button @click="saveStatusEdit" class="btn-confirm-modal">
+            Salvar Alteração
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert -->
+    <Alert 
+      :show="alert.show" 
+      :type="alert.type" 
+      :message="alert.message"
+      @close="alert.show = false"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import Alert from '~/components/Alert.vue'
+import { useAlert } from '~/composables/useAlert'
 
 // Definir layout
 definePageMeta({
   layout: 'dashboard'
 })
 
+// Composable de alert
+const { alert, showSuccess, showError, showWarning, showInfo } = useAlert()
+
 // Estado da página
 const loading = ref(false)
 const orders = ref([])
 const statusFilter = ref('')
 const selectedOrder = ref(null)
-
-// Alert
-const alert = ref({
+const showStatusModal = ref(false)
+const orderToUpdate = ref(null)
+const newStatus = ref('')
+const confirmationModal = ref({
   show: false,
-  type: 'success',
-  message: ''
+  title: '',
+  message: '',
+  action: null
 })
 
 // Funções
@@ -236,67 +272,46 @@ const getStatusText = (status) => {
 const loadOrders = async () => {
   try {
     loading.value = true
-    // TODO: Substituir por chamada real da API
-    // const url = statusFilter.value 
-    //   ? `/api/orders?status=${statusFilter.value}`
-    //   : '/api/orders'
-    // const response = await $fetch(url)
+    const url = statusFilter.value 
+      ? `/api/orders?status=${statusFilter.value}`
+      : '/api/orders'
+    const response = await $fetch(url)
     
-    // Mock data
-    orders.value = [
-      {
-        id: '001',
-        customer: 'João Silva',
-        phone: '(11) 99999-9999',
-        address: 'Rua das Flores, 123 - Centro',
-        status: 'pending',
-        total: 45.50,
-        subtotal: 40.50,
-        deliveryFee: 5.00,
-        createdAt: new Date().toISOString(),
-        items: [
-          { id: 1, name: 'Hamburger Artesanal', quantity: 1, price: 28.00, complements: [] },
-          { id: 2, name: 'Batata Frita', quantity: 1, price: 12.00, complements: [] },
-          { id: 3, name: 'Coca-Cola', quantity: 1, price: 5.50, complements: [] }
-        ]
-      },
-      {
-        id: '002',
-        customer: 'Maria Santos',
-        phone: '(11) 88888-8888',
-        status: 'preparing',
-        total: 32.00,
-        subtotal: 32.00,
-        deliveryFee: 0,
-        createdAt: new Date(Date.now() - 3600000).toISOString(),
-        items: [
-          { id: 1, name: 'Cheese Burger', quantity: 1, price: 25.00, complements: [] },
-          { id: 2, name: 'Suco Natural', quantity: 1, price: 7.00, complements: [] }
-        ]
-      },
-      {
-        id: '003',
-        customer: 'Pedro Costa',
-        phone: '(11) 77777-7777',
-        status: 'delivered',
-        total: 67.50,
-        subtotal: 67.50,
-        deliveryFee: 0,
-        createdAt: new Date(Date.now() - 7200000).toISOString(),
-        items: [
-          { id: 1, name: 'Duplo Bacon', quantity: 1, price: 35.00, complements: [] },
-          { id: 2, name: 'Batata Frita Grande', quantity: 1, price: 18.00, complements: [] },
-          { id: 3, name: 'Coca-Cola 2L', quantity: 1, price: 14.50, complements: [] }
-        ]
-      }
-    ]
+    console.log('Resposta da API de pedidos:', response)
     
-    // Filtrar por status se necessário
-    if (statusFilter.value) {
-      orders.value = orders.value.filter(order => order.status === statusFilter.value)
-    }
+    orders.value = response.map(order => ({
+      id: order.orderNumber,
+      _id: order._id,
+      customer: order.customerInfo.name,
+      phone: order.customerInfo.phone,
+      email: order.customerInfo.email,
+      address: order.deliveryInfo.address,
+      neighborhood: order.deliveryInfo.neighborhood,
+      city: order.deliveryInfo.city,
+      zipCode: order.deliveryInfo.zipCode,
+      complement: order.deliveryInfo.complement,
+      status: order.status,
+      total: order.totalAmount,
+      subtotal: order.totalAmount - order.deliveryInfo.deliveryFee,
+      deliveryFee: order.deliveryInfo.deliveryFee,
+      paymentMethod: order.paymentMethod,
+      notes: order.notes,
+      createdAt: order.createdAt,
+      items: order.items.map(item => ({
+        id: item.productId,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        subtotal: item.subtotal,
+        complements: item.complements || []
+      }))
+    }))
+    
+    console.log('Pedidos processados:', orders.value)
   } catch (error) {
-    showAlert('Erro ao carregar pedidos', 'error')
+    console.error('Erro ao carregar pedidos:', error)
+    const errorMessage = error.data?.message || error.message || 'Erro ao carregar pedidos'
+    showAlert(errorMessage, 'error')
   } finally {
     loading.value = false
   }
@@ -306,23 +321,88 @@ const refreshOrders = () => {
   loadOrders()
 }
 
-const updateOrderStatus = async (orderId, newStatus) => {
-  try {
-    // TODO: Substituir por chamada real da API
-    // await $fetch(`/api/orders/${orderId}`, {
-    //   method: 'PUT',
-    //   body: { status: newStatus }
-    // })
-    
-    // Mock update
-    const order = orders.value.find(o => o.id === orderId)
-    if (order) {
-      order.status = newStatus
-      showAlert(`Status do pedido #${orderId} atualizado para ${getStatusText(newStatus)}`, 'success')
-    }
-  } catch (error) {
-    showAlert('Erro ao atualizar status do pedido', 'error')
+// Função para mostrar modal de confirmação
+const showConfirmation = (title, message, action) => {
+  confirmationModal.value = {
+    show: true,
+    title,
+    message,
+    action
   }
+}
+
+// Função para executar ação confirmada
+const executeConfirmedAction = async () => {
+  if (confirmationModal.value.action) {
+    await confirmationModal.value.action()
+  }
+  confirmationModal.value.show = false
+}
+
+// Função para cancelar confirmação
+const cancelConfirmation = () => {
+  confirmationModal.value.show = false
+}
+
+// Função para mostrar modal de edição de status
+const showEditStatusModal = (order) => {
+  orderToUpdate.value = order
+  newStatus.value = order.status
+  showStatusModal.value = true
+}
+
+// Função para fechar modal de edição de status
+const closeStatusModal = () => {
+  showStatusModal.value = false
+  orderToUpdate.value = null
+  newStatus.value = ''
+}
+
+// Função para executar a atualização de status
+const performStatusUpdate = async (orderId, newStatus) => {
+  try {
+    const order = orders.value.find(o => o.id === orderId)
+    if (!order) {
+      console.error('Pedido não encontrado:', orderId)
+      showAlert('Pedido não encontrado', 'error')
+      return
+    }
+    
+    console.log('Atualizando pedido:', orderId, 'para status:', newStatus)
+    console.log('ID do MongoDB:', order._id)
+    
+    const response = await $fetch(`/api/orders/${order._id}`, {
+      method: 'PUT',
+      body: { status: newStatus }
+    })
+    
+    console.log('Resposta da API:', response)
+    
+    // Atualizar status localmente
+    order.status = newStatus
+    showAlert(`Status do pedido #${orderId} atualizado para ${getStatusText(newStatus)}`, 'success')
+  } catch (error) {
+    console.error('Erro ao atualizar pedido:', error)
+    const errorMessage = error.data?.message || error.message || 'Erro ao atualizar status do pedido'
+    showAlert(errorMessage, 'error')
+  }
+}
+
+// Função para salvar status editado
+const saveStatusEdit = async () => {
+  if (!orderToUpdate.value || !newStatus.value) return
+  
+  const orderId = orderToUpdate.value.id
+  const currentStatusText = getStatusText(orderToUpdate.value.status)
+  const newStatusText = getStatusText(newStatus.value)
+  
+  const title = 'Confirmar Alteração de Status'
+  const message = `Deseja realmente alterar o status do pedido #${orderId} de "${currentStatusText}" para "${newStatusText}"?`
+  
+  showConfirmation(title, message, async () => {
+    await performStatusUpdate(orderId, newStatus.value)
+    closeStatusModal()
+  })
 }
 
 const viewOrderDetails = (order) => {
@@ -334,14 +414,15 @@ const closeOrderModal = () => {
 }
 
 const showAlert = (message, type = 'success') => {
-  alert.value = {
-    show: true,
-    type,
-    message
+  if (type === 'success') {
+    showSuccess(message)
+  } else if (type === 'error') {
+    showError(message)
+  } else if (type === 'warning') {
+    showWarning(message)
+  } else {
+    showInfo(message)
   }
-  setTimeout(() => {
-    alert.value.show = false
-  }, 5000)
 }
 
 // Lifecycle
@@ -352,6 +433,7 @@ onMounted(() => {
 
 <style scoped>
 .orders-page {
+  padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -380,12 +462,26 @@ onMounted(() => {
 
 .filter-select {
   padding: 0.5rem 1rem;
-  border: 1px solid #e2e8f0;
+  padding-right: calc(1rem + 1.5rem); /* Espaço extra para a setinha */
+  border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
   background: white;
-  color: #64748b;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1rem;
+  color: #374151;
   font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
 }
 
 .btn-refresh {
@@ -393,18 +489,19 @@ onMounted(() => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: white;
+  border: 1px solid #dc2626;
   border-radius: 0.5rem;
-  color: #64748b;
+  color: #dc2626;
   font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .btn-refresh:hover:not(:disabled) {
-  background: #e2e8f0;
-  color: #475569;
+  background: #dc2626;
+  color: white;
 }
 
 .btn-refresh:disabled {
@@ -441,16 +538,17 @@ onMounted(() => {
 
 .order-card {
   background: white;
+  border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
   padding: 1.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e2e8f0;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .order-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #dc2626;
 }
 
 .order-header {
@@ -567,72 +665,44 @@ onMounted(() => {
 
 .order-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
+  margin-top: 1rem;
 }
 
 .order-actions button {
-  padding: 0.375rem 0.75rem;
-  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid;
   border-radius: 0.375rem;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.btn-confirm {
-  background: #3b82f6;
-  color: white;
-}
-
-.btn-confirm:hover {
-  background: #2563eb;
-}
-
-.btn-prepare {
-  background: #f59e0b;
-  color: white;
-}
-
-.btn-prepare:hover {
-  background: #d97706;
-}
-
-.btn-ready {
-  background: #10b981;
-  color: white;
-}
-
-.btn-ready:hover {
-  background: #059669;
-}
-
-.btn-deliver {
-  background: #8b5cf6;
-  color: white;
-}
-
-.btn-deliver:hover {
-  background: #7c3aed;
-}
-
-.btn-cancel {
-  background: #ef4444;
-  color: white;
-}
-
-.btn-cancel:hover {
-  background: #dc2626;
-}
-
 .btn-view {
+  background: white;
+  color: #6b7280;
+  border-color: #6b7280;
+}
+
+.btn-view:hover {
   background: #6b7280;
   color: white;
 }
 
-.btn-view:hover {
-  background: #4b5563;
+.btn-edit {
+  background: white;
+  color: #dc2626;
+  border-color: #dc2626;
+}
+
+.btn-edit:hover {
+  background: #dc2626;
+  color: white;
 }
 
 /* Modal */
@@ -754,6 +824,131 @@ onMounted(() => {
   margin-bottom: 0.25rem;
 }
 
+/* Modal de Confirmação e Edição de Status */
+.confirmation-modal,
+.status-modal {
+  max-width: 500px;
+}
+
+/* Overlay específico para modal de confirmação */
+.confirmation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1002;
+  padding: 1rem;
+}
+
+/* Overlay específico para modal de edição de status */
+.status-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.btn-cancel-modal {
+  padding: 0.5rem 1rem;
+  background: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel-modal:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.btn-confirm-modal {
+  padding: 0.5rem 1rem;
+  background: #dc2626;
+  color: white;
+  border: 1px solid #dc2626;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-confirm-modal:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.current-status {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: #f3f4f6;
+  color: #374151;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-select {
+  width: 100%;
+  padding: 0.5rem;
+  padding-right: calc(0.5rem + 1.5rem); /* Espaço extra para a setinha */
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  background: white;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1rem;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+}
+
+.status-select:focus {
+  outline: none;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
 /* Alert */
 .alert {
   position: fixed;
@@ -789,7 +984,17 @@ onMounted(() => {
 }
 
 /* Responsividade */
+@media (max-width: 1024px) {
+  .orders-page {
+    padding: 1.5rem;
+  }
+}
+
 @media (max-width: 768px) {
+  .orders-page {
+    padding: 1rem;
+  }
+  
   .page-header {
     flex-direction: column;
     gap: 1rem;
@@ -810,6 +1015,12 @@ onMounted(() => {
   
   .order-actions button {
     width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .orders-page {
+    padding: 0.75rem;
   }
 }
 </style>

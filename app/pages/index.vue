@@ -2,13 +2,16 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import ImageOverlay from '~/components/ImageOverlay.vue'
 import { useImageOverlay } from '~/composables/useImageOverlay'
+import { useCart } from '~/composables/useCart'
 
 // Estado do carrinho e modal
 const selectedItem = ref(null);
 const quantity = ref(1);
 const complementsQty = ref({});
 const observation = ref("");
-const cart = ref([]);
+
+// Usar o composable do carrinho
+const { cart, cartCount, cartSubtotal, cartTotal, addToCart: addToCartComposable, removeFromCart, updateCartQuantity } = useCart()
 
 // Estado da sidebar
 const showSidebar = ref(false);
@@ -20,14 +23,6 @@ const searchQuery = ref("");
 // Estado do cupom
 const couponCode = ref("");
 const discountAmount = ref(0);
-
-// Estado do endereço de entrega
-const deliveryAddress = ref("");
-const deliveryComplement = ref("");
-const deliveryFee = ref(0);
-const deliveryDistance = ref(0);
-const calculatingDelivery = ref(false);
-const deliveryError = ref("");
 
 // Estado mobile
 const isMobile = ref(false);
@@ -125,13 +120,7 @@ const filteredCategories = computed(() => {
     .filter((cat) => cat.items.length > 0);
 });
 
-const cartSubtotal = computed(() => {
-  return cart.value.reduce((sum, item) => sum + item.totalPrice, 0);
-});
-
-const cartTotal = computed(() => {
-  return cartSubtotal.value - discountAmount.value + deliveryFee.value;
-});
+// Remover computeds duplicados - já vêm do composable
 
 const totalPrice = computed(() => {
   if (!selectedItem.value) return 0;
@@ -240,59 +229,14 @@ const addToCart = () => {
     .filter(([_, qty]) => qty > 0)
     .map(([name, qty]) => {
       const comp = selectedItem.value.complements.find((c) => c.name === name);
-      return { name, qty, price: comp?.price || 0 };
+      return { name, quantity: qty, price: comp?.price || 0 };
     });
 
-  const compStr = complements
-    .map((c) => `${c.name}:${c.qty}`)
-    .sort()
-    .join(",");
-  const variantKey = `${selectedItem.value.id}|${observation.value}|${compStr}`;
-
-  const cartItem = {
-    ...selectedItem.value,
-    variantKey,
-    quantity: quantity.value,
-    complements,
-    observation: observation.value,
-    totalPrice: totalPrice.value,
-  };
-
-  const existingIndex = cart.value.findIndex(
-    (item) => item.variantKey === variantKey
-  );
-
-  if (existingIndex >= 0) {
-    cart.value[existingIndex].quantity += quantity.value;
-    cart.value[existingIndex].totalPrice += totalPrice.value;
-  } else {
-    cart.value.push(cartItem);
-  }
-
-  console.log("Carrinho atualizado:", cart.value);
+  addToCartComposable(selectedItem.value, quantity.value, complements, observation.value);
   closeModal();
 };
 
-const updateCartQuantity = (variantKey, delta) => {
-  const index = cart.value.findIndex((i) => i.variantKey === variantKey);
-  if (index === -1) return;
-
-  const item = cart.value[index];
-  const oldQuantity = item.quantity;
-  const newQuantity = Math.max(1, oldQuantity + delta);
-  if (newQuantity === oldQuantity) return;
-
-  const unitPrice = item.totalPrice / oldQuantity;
-  item.quantity = newQuantity;
-  item.totalPrice = unitPrice * newQuantity;
-};
-
-const removeFromCart = (variantKey) => {
-  const index = cart.value.findIndex((i) => i.variantKey === variantKey);
-  if (index !== -1) {
-    cart.value.splice(index, 1);
-  }
-};
+// Funções do carrinho já vêm do composable
 
 const openSidebar = () => {
   showSidebar.value = true;
@@ -303,9 +247,8 @@ const closeSidebar = () => {
 };
 
 const finalizeOrder = () => {
-  console.log("Finalizar pedido:", cart.value);
-  // Aqui você pode implementar a lógica para finalizar o pedido
   closeSidebar();
+  navigateTo('/checkout');
 };
 
 const applyCoupon = () => {
@@ -318,119 +261,6 @@ const applyCoupon = () => {
   }
   couponCode.value = "";
 };
-
-// Calcular frete baseado no endereço
-const calculateDelivery = async () => {
-  if (!deliveryAddress.value || deliveryAddress.value.trim() === '') {
-    deliveryFee.value = 0
-    deliveryDistance.value = 0
-    deliveryError.value = ""
-    return
-  }
-  
-  calculatingDelivery.value = true
-  deliveryError.value = ""
-  
-  try {
-    // Limpar e padronizar o endereço
-    let searchAddress = deliveryAddress.value.trim()
-    
-    // Remover palavras comuns de complemento que podem atrapalhar a busca
-    const complementWords = [
-      /casa\s+\d+/gi,
-      /apt[o]?\s*\.?\s*\d+/gi,
-      /apartamento\s+\d+/gi,
-      /bloco\s+[a-z0-9]+/gi,
-      /bl\s*\.?\s*[a-z0-9]+/gi,
-      /quadra\s+\d+/gi,
-      /lote\s+\d+/gi,
-      /sala\s+\d+/gi,
-      /andar\s+\d+/gi
-    ]
-    
-    // Criar versão sem complementos
-    let cleanAddress = searchAddress
-    complementWords.forEach(pattern => {
-      cleanAddress = cleanAddress.replace(pattern, '')
-    })
-    cleanAddress = cleanAddress.replace(/\s+/g, ' ').trim()
-    
-    // Tentar múltiplas variações do endereço
-    const addressVariations = [
-      searchAddress, // Original
-      cleanAddress, // Sem complementos
-      `${cleanAddress}, Brasil`, // Com país
-    ]
-    
-    let geocodeData = null
-    let foundAddress = null
-    
-    // Tentar cada variação até encontrar resultado
-    for (const addressToTry of addressVariations) {
-      const geocodeResponse = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressToTry)}&limit=3&countrycodes=br`
-      )
-      
-      const data = await geocodeResponse.json()
-      
-      if (data && data.length > 0) {
-        geocodeData = data[0]
-        foundAddress = addressToTry
-        break
-      }
-      
-      // Pequeno delay para não sobrecarregar a API
-      await new Promise(resolve => setTimeout(resolve, 200))
-    }
-    
-    if (!geocodeData) {
-      deliveryError.value = "Endereço não encontrado. Tente incluir: Cidade - Estado (Ex: Rua, Número - São Paulo - SP)"
-      deliveryFee.value = 0
-      deliveryDistance.value = 0
-      return
-    }
-    
-    const clientLat = parseFloat(geocodeData.lat)
-    const clientLng = parseFloat(geocodeData.lon)
-    
-    // Calcular taxa de entrega
-    const response = await $fetch('/api/calculate-delivery', {
-      method: 'POST',
-      body: {
-        latitude: clientLat,
-        longitude: clientLng
-      }
-    })
-    
-    if (response.canDeliver) {
-      deliveryFee.value = response.deliveryFee
-      deliveryDistance.value = response.distance
-      deliveryError.value = ""
-    } else {
-      deliveryError.value = response.message
-      deliveryFee.value = 0
-      deliveryDistance.value = response.distance
-    }
-  } catch (error) {
-    console.error('Erro ao calcular entrega:', error)
-    deliveryError.value = "Erro ao calcular entrega. Tente novamente."
-    deliveryFee.value = 0
-    deliveryDistance.value = 0
-  } finally {
-    calculatingDelivery.value = false
-  }
-}
-
-// Debounce para calcular entrega
-let deliveryTimeout = null
-const onDeliveryAddressChange = () => {
-  if (deliveryTimeout) {
-    clearTimeout(deliveryTimeout)
-  }
-  deliveryTimeout = setTimeout(() => {
-    calculateDelivery()
-  }, 1000) // Aguarda 1 segundo após parar de digitar
-}
 
 // Keyboard shortcut handler
 const handleKeydown = (event) => {
@@ -450,24 +280,7 @@ const checkMobile = () => {
   isMobile.value = window.innerWidth <= 768;
 };
 
-// LocalStorage
-const CART_KEY = "queiroz-hamburgueria-cart";
-
-const loadCart = () => {
-  const saved = localStorage.getItem(CART_KEY);
-  if (saved) {
-    try {
-      cart.value = JSON.parse(saved);
-    } catch (e) {
-      console.error("Invalid cart data from localStorage");
-      cart.value = [];
-    }
-  }
-};
-
-const saveCart = () => {
-  localStorage.setItem(CART_KEY, JSON.stringify(cart.value));
-};
+// LocalStorage já é gerenciado pelo composable useCart
 
 // Watchers
 watch(searchQuery, () => {
@@ -510,24 +323,12 @@ watch(showImageOverlay, (newVal) => {
   }
 });
 
-watch(
-  cart,
-  () => {
-    saveCart();
-  },
-  { deep: true }
-);
+// Watchers do carrinho já são gerenciados pelo composable
 
-watch(cartSubtotal, () => {
-  if (discountAmount.value > cartSubtotal.value) {
-    discountAmount.value = 0;
-  }
-});
+// Watchers do carrinho já são gerenciados pelo composable
 
 // Lifecycle
 onMounted(async () => {
-  loadCart();
-  
   // Carregar APIs em paralelo
   await Promise.all([
     loadStoreSettings(),
@@ -607,33 +408,6 @@ useHead({
             </span>
           </div>
           
-          <!-- Taxa de Entrega -->
-          <div class="info-row">
-            <svg
-              class="info-icon"
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <rect x="1" y="3" width="15" height="13"/>
-              <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
-              <circle cx="5.5" cy="18.5" r="2.5"/>
-              <circle cx="18.5" cy="18.5" r="2.5"/>
-            </svg>
-            <span class="info-text">
-              <strong>Taxa:</strong>
-              <template v-if="storeSettings.deliveryFee > 0">
-                R$ {{ storeSettings.deliveryFee.toFixed(2) }}
-              </template>
-              <template v-else>
-                Grátis
-              </template>
-            </span>
-          </div>
           
           <!-- Pedido Mínimo (se houver) -->
           <div class="info-row" v-if="storeSettings.minimumOrder > 0">
@@ -797,7 +571,7 @@ useHead({
               :key="comp.name"
               class="complement"
             >
-              <b>{{ comp.qty }}x</b> {{ comp.name }}
+              <b>{{ comp.quantity }}x</b> {{ comp.name }}
             </span>
           </div>
         </div>
@@ -844,50 +618,6 @@ useHead({
     </div>
 
     <div class="sidebar-footer">
-      <!-- Campo de Endereço de Entrega -->
-      <div class="delivery-address-section">
-        <label for="deliveryAddress" class="delivery-label">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-            <circle cx="12" cy="10" r="3"></circle>
-          </svg>
-          Endereço de Entrega
-        </label>
-        <div class="delivery-input-wrapper">
-          <input
-            id="deliveryAddress"
-            type="text"
-            v-model="deliveryAddress"
-            @input="onDeliveryAddressChange"
-            placeholder="Rua, Número - Bairro, Cidade - Estado"
-            class="delivery-input"
-          />
-          <div v-if="calculatingDelivery" class="calculating-spinner">
-            <div class="spinner-small"></div>
-          </div>
-        </div>
-        <small v-if="!deliveryError && !calculatingDelivery" class="delivery-hint">
-          Ex: Rua, Número - Bairro - São Paulo - SP
-        </small>
-        
-        <!-- Campo de Complemento (opcional) -->
-        <div class="complement-wrapper">
-          <input
-            type="text"
-            v-model="deliveryComplement"
-            placeholder="Complemento (opcional): Casa, Apto, Bloco..."
-            class="complement-input"
-          />
-        </div>
-        
-        <div v-if="deliveryError" class="delivery-error">
-          ⚠️ {{ deliveryError }}
-        </div>
-        <div v-if="deliveryDistance > 0 && !deliveryError" class="delivery-success">
-          ✅ Distância: {{ deliveryDistance.toFixed(1) }}km
-          <span v-if="deliveryComplement" class="complement-display">• {{ deliveryComplement }}</span>
-        </div>
-      </div>
 
       <!-- <div class="coupon-section">
         <input
@@ -910,20 +640,13 @@ useHead({
         <span class="discount-value">-{{ formatPrice(discountAmount) }}</span>
       </div>
       
-      <!-- Taxa de Entrega -->
-      <div v-if="deliveryAddress" class="delivery-fee-line">
-        <span class="delivery-label">Taxa de Entrega</span>
-        <span class="delivery-value" :class="{ free: deliveryFee === 0 }">
-          {{ deliveryFee === 0 ? 'Grátis' : formatPrice(deliveryFee) }}
-        </span>
-      </div>
       
       <div class="total">
         <span class="total-label">Total</span>
         <span class="total-value">{{ formatPrice(cartTotal) }}</span>
       </div>
-      <button class="finalize-btn" @click="finalizeOrder" :disabled="!deliveryAddress || deliveryError || calculatingDelivery">
-        {{ deliveryAddress && !deliveryError ? 'Finalizar Pedido' : 'Informe o endereço de entrega' }}
+      <button class="finalize-btn" @click="finalizeOrder" :disabled="cartCount === 0">
+        {{ cartCount > 0 ? 'Finalizar Pedido' : 'Carrinho vazio' }}
       </button>
     </div>
   </div>
@@ -2645,144 +2368,6 @@ body {
     right: 0.5rem;
     font-size: 1.5rem;
   }
-}
-
-/* Endereço de Entrega */
-.delivery-address-section {
-  background: white;
-  padding: 1rem;
-  border-radius: 0.75rem;
-  margin-bottom: 1rem;
-  border: 2px solid #e5e7eb;
-}
-
-.delivery-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 0.5rem;
-}
-
-.delivery-input-wrapper {
-  position: relative;
-}
-
-.delivery-input {
-  width: 100%;
-  padding: 0.75rem;
-  padding-right: 2.5rem;
-  border: 2px solid #d1d5db;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  transition: all 0.2s;
-}
-
-.delivery-input:focus {
-  outline: none;
-  border-color: #FF6B35;
-  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
-}
-
-.calculating-spinner {
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.spinner-small {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #e5e7eb;
-  border-top-color: #FF6B35;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.delivery-hint {
-  display: block;
-  margin-top: 0.5rem;
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-.complement-wrapper {
-  margin-top: 0.75rem;
-}
-
-.complement-input {
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  font-size: 0.8125rem;
-  transition: all 0.2s;
-  background: #f9fafb;
-}
-
-.complement-input:focus {
-  outline: none;
-  border-color: #FF6B35;
-  background: white;
-  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.1);
-}
-
-.complement-display {
-  margin-left: 0.5rem;
-  color: #6b7280;
-  font-size: 0.75rem;
-}
-
-.delivery-error {
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  background: #fee2e2;
-  color: #dc2626;
-  border-radius: 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.delivery-success {
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  background: #d1fae5;
-  color: #059669;
-  border-radius: 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-/* Linha de Taxa de Entrega */
-.delivery-fee-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-top: 1px solid #e5e7eb;
-  font-size: 0.875rem;
-}
-
-.delivery-fee-line .delivery-label {
-  color: #4b5563;
-  font-weight: 500;
-  margin: 0;
-}
-
-.delivery-value {
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.delivery-value.free {
-  color: #10b981;
 }
 
 /* Subtotal */

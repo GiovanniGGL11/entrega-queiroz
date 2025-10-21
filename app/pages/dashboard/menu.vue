@@ -352,9 +352,15 @@ onMounted(() => {
 .form-group textarea,
 .form-group select {
   padding: 0.75rem;
+  padding-right: calc(0.75rem + 1.5rem); /* Espaço extra para a setinha */
   border: 1px solid #d1d5db;
   border-radius: 0.5rem;
   font-size: 1rem;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1rem;
+  appearance: none;
 }
 
 .form-group input:focus,

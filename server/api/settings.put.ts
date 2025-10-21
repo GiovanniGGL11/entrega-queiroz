@@ -13,7 +13,8 @@ export default defineEventHandler(async (event) => {
       deliveryMinTime, 
       deliveryMaxTime,
       deliveryFee,
-      minimumOrder
+      minimumOrder,
+      checkoutFields
     } = body;
     
     // Validações
@@ -50,6 +51,48 @@ export default defineEventHandler(async (event) => {
         statusCode: 400,
         message: "Pedido mínimo deve ser maior ou igual a 0",
       });
+    }
+    
+    // Validar campos do checkout
+    if (checkoutFields !== undefined) {
+      if (typeof checkoutFields !== 'object' || checkoutFields === null) {
+        throw createError({
+          statusCode: 400,
+          message: "Campos do checkout devem ser um objeto válido",
+        });
+      }
+      
+      const validFields = [
+        'customerName', 'customerPhone', 'customerEmail',
+        'deliveryAddress', 'deliveryComplement', 'deliveryNeighborhood',
+        'deliveryCity', 'deliveryZipCode', 'paymentMethod', 'notes'
+      ];
+      
+      for (const fieldName of validFields) {
+        if (checkoutFields[fieldName] !== undefined) {
+          const field = checkoutFields[fieldName];
+          if (typeof field !== 'object' || field === null) {
+            throw createError({
+              statusCode: 400,
+              message: `Campo ${fieldName} deve ser um objeto válido`,
+            });
+          }
+          
+          if (typeof field.enabled !== 'boolean') {
+            throw createError({
+              statusCode: 400,
+              message: `Campo ${fieldName}.enabled deve ser um booleano`,
+            });
+          }
+          
+          if (typeof field.required !== 'boolean') {
+            throw createError({
+              statusCode: 400,
+              message: `Campo ${fieldName}.required deve ser um booleano`,
+            });
+          }
+        }
+      }
     }
     
     // Validar horários de funcionamento
@@ -96,6 +139,7 @@ export default defineEventHandler(async (event) => {
     if (deliveryMaxTime !== undefined) updateFields.deliveryMaxTime = parseInt(deliveryMaxTime);
     if (deliveryFee !== undefined) updateFields.deliveryFee = parseFloat(deliveryFee);
     if (minimumOrder !== undefined) updateFields.minimumOrder = parseFloat(minimumOrder);
+    if (checkoutFields !== undefined) updateFields.checkoutFields = checkoutFields;
 
     const result = await settings.updateOne(
       { _id: "store-config" },

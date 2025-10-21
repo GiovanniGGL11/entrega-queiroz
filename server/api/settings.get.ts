@@ -45,6 +45,18 @@ export default defineEventHandler(async (event) => {
         deliveryMaxTime: 60,
         deliveryFee: 5.00, // Taxa padrão (será calculada por distância)
         minimumOrder: 0,
+        checkoutFields: {
+          customerName: { enabled: true, required: true },
+          customerPhone: { enabled: true, required: true },
+          customerEmail: { enabled: true, required: false },
+          deliveryAddress: { enabled: true, required: true },
+          deliveryComplement: { enabled: true, required: false },
+          deliveryNeighborhood: { enabled: true, required: true },
+          deliveryCity: { enabled: true, required: true },
+          deliveryZipCode: { enabled: true, required: true },
+          paymentMethod: { enabled: true, required: true },
+          notes: { enabled: true, required: false }
+        },
         updatedAt: new Date(),
         createdAt: new Date()
       };

@@ -85,30 +85,6 @@
             <p v-if="category.description" class="category-description">{{ category.description }}</p>
             <p v-else class="category-description no-description">Sem descrição</p>
             
-            <!-- Lista de produtos da categoria -->
-            <div v-if="category.items && category.items.length > 0" class="category-items">
-              <h4>Produtos:</h4>
-              <div class="items-list">
-                <div v-for="item in category.items.slice(0, 3)" :key="item._id" class="item-chip">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="1"></circle>
-                  </svg>
-                  <span>{{ item.name }}</span>
-                  <span class="item-price">R$ {{ item.price.toFixed(2) }}</span>
-                </div>
-                <div v-if="category.items.length > 3" class="more-items">
-                  +{{ category.items.length - 3 }} {{ category.items.length - 3 === 1 ? 'outro' : 'outros' }}
-                </div>
-              </div>
-            </div>
-            <div v-else class="category-items empty">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-              </svg>
-              <span>Nenhum produto nesta categoria</span>
-            </div>
             
             <span class="created-date">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -257,7 +233,30 @@
 
     <!-- Alert de Sucesso/Erro -->
     <div v-if="alert.show" :class="['alert', alert.type]">
-      <span>{{ alert.message }}</span>
+      <div class="alert-icon">
+        <svg v-if="alert.type === 'success'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22,4 12,14.01 9,11.01"></polyline>
+        </svg>
+        <svg v-else-if="alert.type === 'error'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="15" y1="9" x2="9" y2="15"></line>
+          <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>
+        <svg v-else-if="alert.type === 'warning'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 16v-4"></path>
+          <path d="M12 8h.01"></path>
+        </svg>
+      </div>
+      <div class="alert-content">
+        <div class="alert-message">{{ alert.message }}</div>
+      </div>
       <button @click="alert.show = false" class="alert-close">×</button>
     </div>
   </div>
@@ -303,11 +302,15 @@ const alert = ref({
 const loadCategories = async () => {
   try {
     loading.value = true
-    // Usar a API que retorna categorias com produtos
-    const response = await $fetch('/api/categories-with-products')
-    categories.value = response.map(cat => ({
+    // Carregar categorias e contagem de produtos em paralelo
+    const [categoriesResponse, countsResponse] = await Promise.all([
+      $fetch('/api/categories'),
+      $fetch('/api/categories-count')
+    ])
+    
+    categories.value = categoriesResponse.map(cat => ({
       ...cat,
-      itemCount: cat.items?.length || 0
+      itemCount: countsResponse[cat._id] || 0
     }))
     
     // Inicializar SortableJS após carregar as categorias
@@ -509,9 +512,8 @@ const initSortable = async () => {
   }
   
   try {
-    // Importar SortableJS
-    const SortableModule = await import('sortablejs')
-    const Sortable = SortableModule.default || SortableModule
+    // Importar SortableJS como dependência estática
+    const { default: Sortable } = await import('sortablejs')
     
     console.log('SortableJS importado:', Sortable)
     
@@ -529,7 +531,6 @@ const initSortable = async () => {
       emptyInsertThreshold: 5,
       delay: 0,
       delayOnTouchStart: false,
-      touchStartThreshold: 5,
       onStart: (evt) => {
         console.log('🎯 Drag started:', evt.oldIndex)
         evt.item.style.opacity = '0.6'
@@ -747,96 +748,6 @@ onUnmounted(() => {
   color: #9ca3af;
 }
 
-/* Category Items List */
-.category-items {
-  margin: 1rem 0 0.75rem 0;
-  padding: 1rem;
-  background: #f9fafb;
-  border-radius: 0.5rem;
-  border: 1px solid #e5e7eb;
-}
-
-.category-items h4 {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #374151;
-  margin: 0 0 0.75rem 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.items-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.item-chip {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background: white;
-  border-radius: 0.375rem;
-  border: 1px solid #e5e7eb;
-  font-size: 0.875rem;
-  transition: all 0.2s;
-}
-
-.item-chip:hover {
-  border-color: #3b82f6;
-  background: #eff6ff;
-}
-
-.item-chip svg {
-  color: #3b82f6;
-  flex-shrink: 0;
-}
-
-.item-chip span:first-of-type {
-  flex: 1;
-  color: #1f2937;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.item-price {
-  color: #059669;
-  font-weight: 600;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.more-items {
-  padding: 0.5rem 0.75rem;
-  text-align: center;
-  color: #6b7280;
-  font-size: 0.875rem;
-  font-weight: 500;
-  background: #f3f4f6;
-  border-radius: 0.375rem;
-}
-
-.category-items.empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: #fef3c7;
-  border-color: #fbbf24;
-  color: #92400e;
-  font-size: 0.875rem;
-  font-style: italic;
-}
-
-.category-items.empty svg {
-  color: #f59e0b;
-  flex-shrink: 0;
-}
 
 .btn-text {
   display: inline;
@@ -1502,28 +1413,6 @@ onUnmounted(() => {
     font-size: 0.6875rem;
   }
   
-  .category-items {
-    padding: 0.75rem;
-  }
-  
-  .category-items h4 {
-    font-size: 0.8125rem;
-  }
-  
-  .item-chip {
-    padding: 0.375rem 0.5rem;
-    font-size: 0.8125rem;
-  }
-  
-  .item-chip svg {
-    width: 12px;
-    height: 12px;
-  }
-  
-  .more-items {
-    padding: 0.375rem 0.5rem;
-    font-size: 0.8125rem;
-  }
   
   .page-header h1 {
     font-size: 1.5rem;

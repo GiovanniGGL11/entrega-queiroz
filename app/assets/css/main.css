@@ -248,6 +248,16 @@ input, textarea, select {
   width: 100%;
 }
 
+/* Estilo específico para selects com setinha */
+select {
+  padding-right: calc(var(--spacing-lg) + 1.5rem); /* Espaço extra para a setinha */
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1rem;
+  appearance: none;
+}
+
 input:focus, 
 textarea:focus, 
 select:focus {
@@ -436,58 +446,109 @@ select:focus-visible {
 }
 
 /* ========================================
-   ALERTS / TOASTS
+   ALERTS / TOASTS - Sistema de Notificações Melhorado
    ======================================== */
 .alert {
   position: fixed;
   top: var(--spacing-xl);
   right: var(--spacing-xl);
   padding: var(--spacing-lg) var(--spacing-xl);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
   display: flex;
   align-items: center;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
   z-index: var(--z-toast);
-  min-width: 300px;
+  min-width: 320px;
+  max-width: 480px;
   font-weight: 500;
-  animation: slideIn var(--transition-slow);
+  animation: slideInRight 0.3s ease-out;
+  backdrop-filter: blur(10px);
 }
 
 .alert.success {
-  background: var(--color-success);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .alert.error {
-  background: var(--color-error);
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .alert.warning {
-  background: var(--color-warning);
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .alert.info {
-  background: var(--color-info);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.alert-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.alert-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.alert-title {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  opacity: 0.95;
+}
+
+.alert-message {
+  font-size: var(--font-size-sm);
+  opacity: 0.9;
+  line-height: 1.4;
 }
 
 .alert-close {
   background: none;
   border: none;
   color: inherit;
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-lg);
   cursor: pointer;
-  padding: 0;
+  padding: var(--spacing-xs);
   line-height: 1;
-  opacity: 0.8;
-  transition: opacity var(--transition-base);
+  opacity: 0.7;
+  transition: all var(--transition-base);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
 }
 
 .alert-close:hover {
   opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 /* ========================================

@@ -1,6 +1,6 @@
 export default defineNuxtRouteMiddleware(async (to, from) => {
   // Páginas públicas que não precisam de autenticação
-  const publicPages = ['/login', '/']
+  const publicPages = ['/login', '/', '/checkout']
 
   // Se está tentando acessar página pública, permitir
   if (publicPages.includes(to.path)) {

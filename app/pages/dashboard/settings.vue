@@ -389,6 +389,275 @@
         </div>
       </div>
 
+      <!-- Campos do Checkout -->
+      <div class="settings-section card">
+        <div class="section-header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 12l2 2 4-4"></path>
+            <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
+            <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"></path>
+            <path d="M12 3c0 1-1 3-3 3s-3-2-3-3 1-3 3-3 3 2 3 3"></path>
+            <path d="M12 21c0-1 1-3 3-3s3 2 3 3-1 3-3 3-3-2-3-3"></path>
+          </svg>
+          <h2>Campos do Checkout</h2>
+        </div>
+        
+        <p class="section-description">
+          Configure quais campos devem ser exibidos no formulário de checkout. Você pode habilitar/desabilitar campos e definir se são obrigatórios.
+        </p>
+
+        <div class="checkout-fields">
+          <div class="field-group">
+            <h3>Informações do Cliente</h3>
+            <div class="field-item">
+              <div class="field-info">
+                <label>Nome do Cliente</label>
+                <span class="field-description">Nome completo do cliente</span>
+              </div>
+              <div class="field-controls">
+                <label class="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.customerName.enabled"
+                    @change="updateFieldRequired('customerName')"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+                <label class="required-switch" v-if="form.checkoutFields.customerName.enabled">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.customerName.required"
+                  />
+                  <span class="required-text">Obrigatório</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="field-item">
+              <div class="field-info">
+                <label>Telefone</label>
+                <span class="field-description">Número de telefone para contato</span>
+              </div>
+              <div class="field-controls">
+                <label class="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.customerPhone.enabled"
+                    @change="updateFieldRequired('customerPhone')"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+                <label class="required-switch" v-if="form.checkoutFields.customerPhone.enabled">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.customerPhone.required"
+                  />
+                  <span class="required-text">Obrigatório</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="field-item">
+              <div class="field-info">
+                <label>E-mail</label>
+                <span class="field-description">E-mail do cliente (opcional)</span>
+              </div>
+              <div class="field-controls">
+                <label class="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.customerEmail.enabled"
+                    @change="updateFieldRequired('customerEmail')"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+                <label class="required-switch" v-if="form.checkoutFields.customerEmail.enabled">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.customerEmail.required"
+                  />
+                  <span class="required-text">Obrigatório</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <h3>Endereço de Entrega</h3>
+            <div class="field-item">
+              <div class="field-info">
+                <label>CEP</label>
+                <span class="field-description">Código postal para cálculo do frete</span>
+              </div>
+              <div class="field-controls">
+                <label class="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.deliveryZipCode.enabled"
+                    @change="updateFieldRequired('deliveryZipCode')"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+                <label class="required-switch" v-if="form.checkoutFields.deliveryZipCode.enabled">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.deliveryZipCode.required"
+                  />
+                  <span class="required-text">Obrigatório</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="field-item">
+              <div class="field-info">
+                <label>Endereço</label>
+                <span class="field-description">Rua, avenida, etc.</span>
+              </div>
+              <div class="field-controls">
+                <label class="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.deliveryAddress.enabled"
+                    @change="updateFieldRequired('deliveryAddress')"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+                <label class="required-switch" v-if="form.checkoutFields.deliveryAddress.enabled">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.deliveryAddress.required"
+                  />
+                  <span class="required-text">Obrigatório</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="field-item">
+              <div class="field-info">
+                <label>Complemento</label>
+                <span class="field-description">Apartamento, casa, bloco, etc.</span>
+              </div>
+              <div class="field-controls">
+                <label class="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.deliveryComplement.enabled"
+                    @change="updateFieldRequired('deliveryComplement')"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+                <label class="required-switch" v-if="form.checkoutFields.deliveryComplement.enabled">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.deliveryComplement.required"
+                  />
+                  <span class="required-text">Obrigatório</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="field-item">
+              <div class="field-info">
+                <label>Bairro</label>
+                <span class="field-description">Nome do bairro</span>
+              </div>
+              <div class="field-controls">
+                <label class="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.deliveryNeighborhood.enabled"
+                    @change="updateFieldRequired('deliveryNeighborhood')"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+                <label class="required-switch" v-if="form.checkoutFields.deliveryNeighborhood.enabled">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.deliveryNeighborhood.required"
+                  />
+                  <span class="required-text">Obrigatório</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="field-item">
+              <div class="field-info">
+                <label>Cidade</label>
+                <span class="field-description">Nome da cidade</span>
+              </div>
+              <div class="field-controls">
+                <label class="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.deliveryCity.enabled"
+                    @change="updateFieldRequired('deliveryCity')"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+                <label class="required-switch" v-if="form.checkoutFields.deliveryCity.enabled">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.deliveryCity.required"
+                  />
+                  <span class="required-text">Obrigatório</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <h3>Pagamento e Observações</h3>
+            <div class="field-item">
+              <div class="field-info">
+                <label>Forma de Pagamento</label>
+                <span class="field-description">Método de pagamento escolhido</span>
+              </div>
+              <div class="field-controls">
+                <label class="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.paymentMethod.enabled"
+                    @change="updateFieldRequired('paymentMethod')"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+                <label class="required-switch" v-if="form.checkoutFields.paymentMethod.enabled">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.paymentMethod.required"
+                  />
+                  <span class="required-text">Obrigatório</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="field-item">
+              <div class="field-info">
+                <label>Observações</label>
+                <span class="field-description">Comentários adicionais do cliente</span>
+              </div>
+              <div class="field-controls">
+                <label class="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.notes.enabled"
+                    @change="updateFieldRequired('notes')"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+                <label class="required-switch" v-if="form.checkoutFields.notes.enabled">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.checkoutFields.notes.required"
+                  />
+                  <span class="required-text">Obrigatório</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Botões de Ação -->
       <div class="actions-fixed">
         <div class="actions-container">
@@ -408,7 +677,30 @@
 
     <!-- Alert -->
     <div v-if="alert.show" :class="['alert', alert.type]">
-      <span>{{ alert.message }}</span>
+      <div class="alert-icon">
+        <svg v-if="alert.type === 'success'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22,4 12,14.01 9,11.01"></polyline>
+        </svg>
+        <svg v-else-if="alert.type === 'error'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="15" y1="9" x2="9" y2="15"></line>
+          <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>
+        <svg v-else-if="alert.type === 'warning'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 16v-4"></path>
+          <path d="M12 8h.01"></path>
+        </svg>
+      </div>
+      <div class="alert-content">
+        <div class="alert-message">{{ alert.message }}</div>
+      </div>
       <button @click="alert.show = false" class="alert-close">×</button>
     </div>
 
@@ -500,7 +792,19 @@ const form = ref({
   deliveryMinTime: 30,
   deliveryMaxTime: 60,
   deliveryFee: 5.00,
-  minimumOrder: 0
+  minimumOrder: 0,
+  checkoutFields: {
+    customerName: { enabled: true, required: true },
+    customerPhone: { enabled: true, required: true },
+    customerEmail: { enabled: true, required: false },
+    deliveryAddress: { enabled: true, required: true },
+    deliveryComplement: { enabled: true, required: false },
+    deliveryNeighborhood: { enabled: true, required: true },
+    deliveryCity: { enabled: true, required: true },
+    deliveryZipCode: { enabled: true, required: true },
+    paymentMethod: { enabled: true, required: true },
+    notes: { enabled: true, required: false }
+  }
 })
 
 const alert = ref({
@@ -623,13 +927,10 @@ const reverseGeocode = async (lat, lng) => {
   }
 }
 
-// Atualizar label da zona automaticamente
-const updateZoneLabel = (index) => {
-  const zone = form.value.deliveryZones[index]
-  if (zone.fee === 0) {
-    zone.label = `Até ${zone.maxDistance}km - Grátis`
-  } else {
-    zone.label = `Até ${zone.maxDistance}km - R$ ${zone.fee.toFixed(2)}`
+// Função para atualizar campo obrigatório quando desabilitado
+const updateFieldRequired = (fieldName) => {
+  if (!form.value.checkoutFields[fieldName].enabled) {
+    form.value.checkoutFields[fieldName].required = false
   }
 }
 
@@ -813,7 +1114,8 @@ const loadSettings = async () => {
       deliveryMinTime: response.deliveryMinTime || 30,
       deliveryMaxTime: response.deliveryMaxTime || 60,
       deliveryFee: response.deliveryFee || 0,
-      minimumOrder: response.minimumOrder || 0
+      minimumOrder: response.minimumOrder || 0,
+      checkoutFields: response.checkoutFields || form.value.checkoutFields
     }
     originalForm.value = JSON.parse(JSON.stringify(form.value))
   } catch (error) {
@@ -1528,6 +1830,133 @@ onUnmounted(() => {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Campos do Checkout */
+.checkout-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.field-group h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 0.5rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.field-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.field-item:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.field-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.field-info label {
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.field-description {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.field-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: #10b981;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+.required-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.required-switch input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #10b981;
+}
+
+.required-text {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
 }
 
 /* Responsive */

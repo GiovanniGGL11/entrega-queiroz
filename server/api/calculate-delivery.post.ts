@@ -20,70 +20,184 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
-    const { latitude, longitude } = body;
+    const { zipCode, latitude, longitude } = body;
     
-    if (latitude === undefined || longitude === null) {
-      throw createError({
-        statusCode: 400,
-        message: "Latitude e longitude são obrigatórias",
-      });
-    }
+    console.log('[calculate-delivery] Recebido:', { zipCode, latitude, longitude });
     
     // Buscar configurações da loja
     const db = await getDB();
     const settings = db.collection("settings");
     const config = await settings.findOne({ _id: "store-config" });
     
-    if (!config || !config.location) {
+    if (!config) {
+      console.log('[calculate-delivery] Configurações não encontradas');
       throw createError({
         statusCode: 500,
         message: "Configurações da loja não encontradas",
       });
     }
     
-    // Calcular distância
-    const distance = calculateDistance(
-      config.location.latitude,
-      config.location.longitude,
-      parseFloat(latitude),
-      parseFloat(longitude)
-    );
+    console.log('[calculate-delivery] Config encontrado:', {
+      deliveryZones: config.deliveryZones?.length || 0,
+      hasDefaultZone: !!config.defaultDeliveryZone
+    });
     
-    // Encontrar zona de entrega correspondente
-    const deliveryZones = config.deliveryZones || [];
-    let deliveryFee = null;
-    let deliveryZone = null;
-    let canDeliver = false;
-    
-    // Ordenar zonas por distância máxima
-    const sortedZones = [...deliveryZones].sort((a, b) => a.maxDistance - b.maxDistance);
-    
-    for (const zone of sortedZones) {
-      if (distance <= zone.maxDistance) {
-        deliveryFee = zone.fee;
-        deliveryZone = zone;
-        canDeliver = true;
-        break;
+    // Se CEP foi fornecido, usar lógica baseada em CEP
+    if (zipCode) {
+      const cleanZipCode = zipCode.replace(/\D/g, '');
+      console.log('[calculate-delivery] CEP limpo:', cleanZipCode);
+      
+      if (cleanZipCode.length !== 8) {
+        throw createError({
+          statusCode: 400,
+          message: "CEP deve ter 8 dígitos",
+        });
       }
+      
+      // Definir zonas de entrega baseadas em CEP
+      const deliveryZones = config.deliveryZones || [];
+      const cepPrefix = cleanZipCode.substring(0, 5); // Primeiros 5 dígitos do CEP
+      
+      console.log('[calculate-delivery] CEP prefix:', cepPrefix);
+      console.log('[calculate-delivery] Zonas disponíveis:', deliveryZones.map(z => ({ label: z.label, fee: z.fee, hasCepRanges: !!z.cepRanges })));
+      
+      // Encontrar zona de entrega correspondente ao CEP
+      let deliveryFee = null;
+      let deliveryZone = null;
+      let canDeliver = false;
+      
+      // Verificar se o CEP está em alguma zona de entrega específica
+      for (const zone of deliveryZones) {
+        if (zone.cepRanges && zone.cepRanges.some((range: any) => {
+          const [start, end] = range.split('-').map((cep: string) => cep.substring(0, 5));
+          return cepPrefix >= start && cepPrefix <= end;
+        })) {
+          deliveryFee = zone.fee;
+          deliveryZone = zone;
+          canDeliver = true;
+          console.log('[calculate-delivery] Zona específica encontrada:', zone.label);
+          break;
+        }
+      }
+      
+      // Se não encontrou zona específica, usar zona padrão baseada em distância
+      if (!canDeliver) {
+        // Para CEPs não mapeados, usar uma lógica inteligente baseada no CEP
+        if (deliveryZones.length > 0) {
+          // Determinar zona baseada no prefixo do CEP
+          // CEPs que começam com 08 são da região metropolitana de São Paulo
+          // Usar zona intermediária para esses CEPs
+          let selectedZone = deliveryZones[0]; // Zona padrão (mais próxima)
+          
+          if (cepPrefix.startsWith('08')) {
+            // Para região metropolitana, usar zona intermediária se disponível
+            if (deliveryZones.length >= 2) {
+              selectedZone = deliveryZones[1]; // Segunda zona (intermediária)
+            }
+          } else if (cepPrefix.startsWith('01') || cepPrefix.startsWith('02') || 
+                     cepPrefix.startsWith('03') || cepPrefix.startsWith('04') || 
+                     cepPrefix.startsWith('05') || cepPrefix.startsWith('06') || 
+                     cepPrefix.startsWith('07')) {
+            // Para São Paulo capital, usar zona mais próxima
+            selectedZone = deliveryZones[0];
+          } else {
+            // Para outras regiões muito distantes, não entregar
+            console.log('[calculate-delivery] CEP muito distante, não entregando:', cepPrefix);
+            return {
+              canDeliver: false,
+              message: "Desculpe, não entregamos neste CEP",
+              zipCode: cleanZipCode
+            };
+          }
+          
+          deliveryFee = selectedZone.fee;
+          deliveryZone = selectedZone;
+          canDeliver = true;
+          console.log('[calculate-delivery] Usando zona baseada no CEP:', selectedZone.label, 'para CEP:', cepPrefix);
+        }
+      }
+      
+      // Se ainda não encontrou, não entrega
+      if (!canDeliver) {
+        console.log('[calculate-delivery] Não é possível entregar no CEP:', cleanZipCode);
+        return {
+          canDeliver: false,
+          message: "Desculpe, não entregamos neste CEP",
+          zipCode: cleanZipCode
+        };
+      }
+      
+      const result = {
+        canDeliver: true,
+        deliveryFee: deliveryFee,
+        deliveryZone: deliveryZone.label,
+        estimatedTime: `${config.deliveryMinTime || 30}-${config.deliveryMaxTime || 45} min`,
+        zipCode: cleanZipCode
+      };
+      
+      console.log('[calculate-delivery] Resultado:', result);
+      return result;
     }
     
-    // Se não encontrou zona, não entrega
-    if (!canDeliver) {
+    // Fallback para coordenadas (mantido para compatibilidade)
+    if (latitude !== undefined && longitude !== undefined) {
+      if (!config.location) {
+        throw createError({
+          statusCode: 500,
+          message: "Localização da loja não configurada",
+        });
+      }
+      
+      // Calcular distância
+      const distance = calculateDistance(
+        config.location.latitude,
+        config.location.longitude,
+        parseFloat(latitude),
+        parseFloat(longitude)
+      );
+      
+      // Encontrar zona de entrega correspondente
+      const deliveryZones = config.deliveryZones || [];
+      let deliveryFee = null;
+      let deliveryZone = null;
+      let canDeliver = false;
+      
+      // Ordenar zonas por distância máxima
+      const sortedZones = [...deliveryZones].sort((a, b) => a.maxDistance - b.maxDistance);
+      
+      for (const zone of sortedZones) {
+        if (distance <= zone.maxDistance) {
+          deliveryFee = zone.fee;
+          deliveryZone = zone;
+          canDeliver = true;
+          break;
+        }
+      }
+      
+      // Se não encontrou zona, não entrega
+      if (!canDeliver) {
+        return {
+          canDeliver: false,
+          distance: parseFloat(distance.toFixed(2)),
+          message: "Desculpe, não entregamos nesta região",
+          maxDistance: sortedZones.length > 0 ? sortedZones[sortedZones.length - 1].maxDistance : 0
+        };
+      }
+      
       return {
-        canDeliver: false,
+        canDeliver: true,
         distance: parseFloat(distance.toFixed(2)),
-        message: "Desculpe, não entregamos nesta região",
-        maxDistance: sortedZones.length > 0 ? sortedZones[sortedZones.length - 1].maxDistance : 0
+        deliveryFee: deliveryFee,
+        deliveryZone: deliveryZone.label,
+        estimatedTime: `${config.deliveryMinTime || 30}-${config.deliveryMaxTime || 45} min`
       };
     }
     
-    return {
-      canDeliver: true,
-      distance: parseFloat(distance.toFixed(2)),
-      deliveryFee: deliveryFee,
-      deliveryZone: deliveryZone.label,
-      estimatedTime: `${config.deliveryMinTime}-${config.deliveryMaxTime} min`
-    };
+    throw createError({
+      statusCode: 400,
+      message: "CEP ou coordenadas são obrigatórios",
+    });
+    
   } catch (err: any) {
     if (err.statusCode) {
       throw err;

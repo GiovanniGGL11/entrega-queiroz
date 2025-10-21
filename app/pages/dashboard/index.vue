@@ -1,7 +1,57 @@
 <template>
   <div class="dashboard-home">
-    <!-- Estatísticas Cards -->
-    <div class="stats-grid">
+    <!-- Skeleton Loading -->
+    <div v-if="loading" class="skeleton-container">
+      <!-- Skeleton para Cards de Estatísticas -->
+      <div class="stats-grid">
+        <div v-for="i in 4" :key="i" class="stat-card skeleton-card">
+          <div class="stat-icon skeleton-icon"></div>
+          <div class="stat-content">
+            <div class="skeleton-text skeleton-title"></div>
+            <div class="skeleton-text skeleton-subtitle"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skeleton para Cards de Conteúdo -->
+      <div class="dashboard-content">
+        <!-- Skeleton para Pedidos Recentes -->
+        <div class="card skeleton-card">
+          <div class="card-header">
+            <div class="skeleton-text skeleton-header"></div>
+            <div class="skeleton-button"></div>
+          </div>
+          <div class="card-body">
+            <div v-for="i in 5" :key="i" class="order-item skeleton-order">
+              <div class="skeleton-text skeleton-customer"></div>
+              <div class="skeleton-text skeleton-status"></div>
+              <div class="skeleton-text skeleton-total"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skeleton para Resumo de Vendas -->
+        <div class="card skeleton-card">
+          <div class="card-header">
+            <div class="skeleton-text skeleton-header"></div>
+            <div class="skeleton-select"></div>
+          </div>
+          <div class="card-body">
+            <div class="sales-summary">
+              <div v-for="i in 3" :key="i" class="sales-item">
+                <div class="skeleton-text skeleton-sales-label"></div>
+                <div class="skeleton-text skeleton-sales-value"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conteúdo Real -->
+    <div v-else>
+      <!-- Estatísticas Cards -->
+      <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -185,6 +235,7 @@
           </div>
         </div>
       </div>
+      </div>
     </div>
   </div>
 </template>
@@ -198,6 +249,7 @@ definePageMeta({
 })
 
 // Estado da página
+const loading = ref(true)
 const loadingOrders = ref(false)
 const selectedPeriod = ref('today')
 const selectedOrder = ref(null)
@@ -252,67 +304,63 @@ const getStatusText = (status) => {
 
 const loadStats = async () => {
   try {
-    // TODO: Substituir por chamada real da API
-    // const response = await $fetch('/api/dashboard/stats')
+    // Carregar dados reais das APIs
+    const [ordersResponse, productsResponse] = await Promise.all([
+      $fetch('/api/orders'),
+      $fetch('/api/products')
+    ])
     
-    // Mock data
+    // Calcular estatísticas reais
+    const totalOrders = ordersResponse.length
+    const pendingOrders = ordersResponse.filter(order => order.status === 'pending').length
+    const totalRevenue = ordersResponse.reduce((sum, order) => sum + order.totalAmount, 0)
+    const totalProducts = productsResponse.length
+    
     stats.value = {
-      totalOrders: 156,
-      pendingOrders: 8,
-      totalRevenue: 12450.80,
-      totalProducts: 24
+      totalOrders,
+      pendingOrders,
+      totalRevenue,
+      totalProducts
     }
   } catch (error) {
     console.error('Erro ao carregar estatísticas:', error)
+    // Fallback para dados mock em caso de erro
+    stats.value = {
+      totalOrders: 0,
+      pendingOrders: 0,
+      totalRevenue: 0,
+      totalProducts: 0
+    }
+  } finally {
+    loading.value = false
   }
 }
 
 const loadOrders = async () => {
   try {
     loadingOrders.value = true
-    // TODO: Substituir por chamada real da API
-    // const response = await $fetch('/api/orders/recent')
+    const response = await $fetch('/api/orders')
     
-    // Mock data
-    recentOrders.value = [
-      {
-        id: '001',
-        customer: 'João Silva',
-        status: 'pending',
-        total: 45.50,
-        createdAt: new Date().toISOString(),
-        items: [
-          { id: 1, name: 'Hamburger Artesanal', quantity: 1, price: 28.00 },
-          { id: 2, name: 'Batata Frita', quantity: 1, price: 12.00 },
-          { id: 3, name: 'Coca-Cola', quantity: 1, price: 5.50 }
-        ]
-      },
-      {
-        id: '002',
-        customer: 'Maria Santos',
-        status: 'preparing',
-        total: 32.00,
-        createdAt: new Date(Date.now() - 3600000).toISOString(),
-        items: [
-          { id: 1, name: 'Cheese Burger', quantity: 1, price: 25.00 },
-          { id: 2, name: 'Suco Natural', quantity: 1, price: 7.00 }
-        ]
-      },
-      {
-        id: '003',
-        customer: 'Pedro Costa',
-        status: 'delivered',
-        total: 67.50,
-        createdAt: new Date(Date.now() - 7200000).toISOString(),
-        items: [
-          { id: 1, name: 'Duplo Bacon', quantity: 1, price: 35.00 },
-          { id: 2, name: 'Batata Frita Grande', quantity: 1, price: 18.00 },
-          { id: 3, name: 'Coca-Cola 2L', quantity: 1, price: 14.50 }
-        ]
-      }
-    ]
+    // Pegar apenas os últimos 5 pedidos
+    recentOrders.value = response
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 5)
+      .map(order => ({
+        id: order.orderNumber,
+        customer: order.customerInfo.name,
+        status: order.status,
+        total: order.totalAmount,
+        createdAt: order.createdAt,
+        items: order.items.map(item => ({
+          id: item.productId,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price
+        }))
+      }))
   } catch (error) {
-    console.error('Erro ao carregar pedidos:', error)
+    console.error('Erro ao carregar pedidos recentes:', error)
+    recentOrders.value = []
   } finally {
     loadingOrders.value = false
   }
@@ -337,8 +385,12 @@ const loadSalesData = async () => {
   }
 }
 
-const refreshOrders = () => {
-  loadOrders()
+const refreshOrders = async () => {
+  await Promise.all([
+    loadStats(),
+    loadOrders(),
+    loadSalesData()
+  ])
 }
 
 const viewOrder = (order) => {
@@ -359,9 +411,9 @@ onMounted(() => {
 
 <style scoped>
 .dashboard-home {
+  padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0;
 }
 
 .stats-grid {
@@ -390,7 +442,7 @@ onMounted(() => {
 .stat-icon {
   width: 3rem;
   height: 3rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
   border-radius: 0.75rem;
   display: flex;
   align-items: center;
@@ -568,7 +620,7 @@ td {
 
 .btn-view {
   padding: 0.375rem 0.75rem;
-  background: #667eea;
+  background: #f97316;
   color: white;
   border: none;
   border-radius: 0.375rem;
@@ -578,7 +630,7 @@ td {
 }
 
 .btn-view:hover {
-  background: #5a67d8;
+  background: #ea580c;
 }
 
 .sales-summary {
@@ -724,7 +776,17 @@ td {
 }
 
 /* Responsividade */
+@media (max-width: 1024px) {
+  .dashboard-home {
+    padding: 1.5rem;
+  }
+}
+
 @media (max-width: 768px) {
+  .dashboard-home {
+    padding: 1rem;
+  }
+  
   .dashboard-content {
     grid-template-columns: 1fr;
   }
@@ -745,6 +807,130 @@ td {
   
   th, td {
     padding: 0.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-home {
+    padding: 0.75rem;
+  }
+}
+
+/* Skeleton Loading Styles */
+.skeleton-container {
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.skeleton-card {
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.skeleton-icon {
+  width: 3rem;
+  height: 3rem;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 0.75rem;
+}
+
+.skeleton-text {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 0.25rem;
+  height: 1rem;
+}
+
+.skeleton-title {
+  width: 60px;
+  height: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-subtitle {
+  width: 100px;
+  height: 0.875rem;
+}
+
+.skeleton-header {
+  width: 120px;
+  height: 1.25rem;
+}
+
+.skeleton-button {
+  width: 80px;
+  height: 2rem;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 0.375rem;
+}
+
+.skeleton-select {
+  width: 100px;
+  height: 2rem;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 0.375rem;
+}
+
+.skeleton-order {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.skeleton-customer {
+  width: 120px;
+  height: 1rem;
+}
+
+.skeleton-status {
+  width: 80px;
+  height: 1.5rem;
+  border-radius: 0.75rem;
+}
+
+.skeleton-total {
+  width: 60px;
+  height: 1rem;
+}
+
+.skeleton-sales-label {
+  width: 80px;
+  height: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.skeleton-sales-value {
+  width: 100px;
+  height: 1.25rem;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
   }
 }
 </style>
