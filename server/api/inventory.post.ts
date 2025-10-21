@@ -1,7 +1,12 @@
 // server/api/inventory.post.ts
 import { getDB } from "../utils/db";
+import { ObjectId } from "mongodb";
+import { requireAuth } from "../utils/auth-middleware";
 
 export default defineEventHandler(async (event) => {
+  // Verificar autenticação
+  await requireAuth(event);
+  
   const body = await readBody(event);
   const { productId, initialStock, minStock, maxStock, costPrice } = body;
 
@@ -25,7 +30,7 @@ export default defineEventHandler(async (event) => {
     const products = db.collection("products");
     
     // Verificar se o produto existe
-    const product = await products.findOne({ _id: productId });
+    const product = await products.findOne({ _id: new ObjectId(productId) });
     if (!product) {
       throw createError({
         statusCode: 404,

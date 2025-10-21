@@ -64,7 +64,7 @@ const storeSettings = ref({
 // Carregar configurações da loja
 const loadStoreSettings = async () => {
   try {
-    const settings = await $fetch('/api/settings')
+    const settings = await $fetch('/api/public/settings')
     storeSettings.value = {
       storeName: settings.storeName || "",
       logo: settings.logo || "",

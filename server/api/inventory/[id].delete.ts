@@ -1,7 +1,12 @@
 // server/api/inventory/[id].delete.ts
 import { getDB } from "../../utils/db";
+import { ObjectId } from "mongodb";
+import { requireAuth } from "../../utils/auth-middleware";
 
 export default defineEventHandler(async (event) => {
+  // Verificar autenticação
+  await requireAuth(event);
+  
   const id = getRouterParam(event, 'id');
 
   if (!id) {
@@ -14,7 +19,6 @@ export default defineEventHandler(async (event) => {
   try {
     const db = await getDB();
     const inventory = db.collection("inventory");
-    const ObjectId = require('mongodb').ObjectId;
     
     const result = await inventory.deleteOne({ _id: new ObjectId(id) });
 

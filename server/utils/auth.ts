@@ -40,17 +40,6 @@ export function setAuthCookie(event: any, token: string): void {
   // Isso evita problemas de configuração de domínio
   
   setCookie(event, AUTH_COOKIE_NAME, token, cookieOptions)
-  
-  // Também definir um cookie de fallback sem httpOnly para debug
-  if (!isProduction) {
-    setCookie(event, 'debug_auth_token', token.substring(0, 20) + '...', {
-      httpOnly: false,
-      secure: false,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7
-    })
-  }
 }
 
 export function clearAuthCookie(event: any): void {

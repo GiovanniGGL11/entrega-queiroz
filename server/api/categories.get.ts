@@ -1,11 +1,21 @@
 // server/api/categories.get.ts
 import { getDB } from "../utils/db";
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
+  const query = getQuery(event);
+  const { showAll = false } = query;
+
   try {
     const db = await getDB();
     const categories = db.collection("categories");
-    const allCategories = await categories.find({}).sort({ order: 1, createdAt: -1 }).toArray();
+    
+    let filter = {};
+    // Se showAll não for true, filtrar apenas categorias visíveis
+    if (showAll !== 'true') {
+      filter.isVisible = { $ne: false }; // Inclui categorias com isVisible: true ou undefined
+    }
+    
+    const allCategories = await categories.find(filter).sort({ order: 1, createdAt: -1 }).toArray();
     return allCategories;
   } catch (err) {
     throw createError({

@@ -1,7 +1,11 @@
 import { connectToDatabase } from '../../utils/db'
 import { ObjectId } from 'mongodb'
+import { requireAuth } from '../../utils/auth-middleware'
 
 export default defineEventHandler(async (event) => {
+  // Verificar autenticação
+  await requireAuth(event);
+  
   try {
     const id = getRouterParam(event, 'id')
     

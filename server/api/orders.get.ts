@@ -1,7 +1,11 @@
 // server/api/orders.get.ts
 import { getDB } from "../utils/db";
+import { requireAuth } from "../utils/auth-middleware";
 
 export default defineEventHandler(async (event) => {
+  // Verificar autenticação
+  await requireAuth(event);
+  
   const query = getQuery(event);
   const { status, limit = 50, skip = 0 } = query;
 

@@ -50,60 +50,79 @@
 
     <!-- Conteúdo Real -->
     <div v-else>
-      <!-- Estatísticas Cards -->
+      <!-- Header do Dashboard -->
+      <div class="page-header">
+        <h1>Dashboard</h1>
+        <div class="header-actions">
+          <button @click="refreshOrders" class="btn-refresh" :disabled="loadingOrders">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+            </svg>
+            {{ loadingOrders ? 'Carregando...' : 'Atualizar' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Estatísticas -->
       <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-          </svg>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <h3>{{ formatCurrency(stats.basic.totalRevenue) }}</h3>
+            <p>Receita Total</p>
+            <small>{{ stats.basic.totalOrders }} pedidos</small>
+          </div>
         </div>
-        <div class="stat-content">
-          <h3>{{ stats.totalOrders }}</h3>
-          <p>Total de Pedidos</p>
-        </div>
-      </div>
 
-      <div class="stat-card">
-        <div class="stat-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12,6 12,12 16,14"></polyline>
-          </svg>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12,6 12,12 16,14"></polyline>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <h3>{{ stats.basic.pendingOrders }}</h3>
+            <p>Pedidos Pendentes</p>
+            <small>{{ ((stats.basic.pendingOrders / stats.basic.totalOrders) * 100).toFixed(1) }}% do total</small>
+          </div>
         </div>
-        <div class="stat-content">
-          <h3>{{ stats.pendingOrders }}</h3>
-          <p>Pedidos Pendentes</p>
-        </div>
-      </div>
 
-      <div class="stat-card">
-        <div class="stat-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="1" x2="12" y2="23"></line>
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-          </svg>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 19c-5 0-9-4-9-9s4-9 9-9 9 4 9 9-4 9-9 9z"></path>
+              <path d="M9 9l3 3 3-3"></path>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <h3>{{ formatCurrency(stats.basic.averageTicket) }}</h3>
+            <p>Ticket Médio</p>
+            <small>por pedido</small>
+          </div>
         </div>
-        <div class="stat-content">
-          <h3>{{ formatCurrency(stats.totalRevenue) }}</h3>
-          <p>Receita Total</p>
-        </div>
-      </div>
 
-      <div class="stat-card">
-        <div class="stat-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 3h18l-2 14H5L3 3z"></path>
-            <path d="M8 21h8"></path>
-          </svg>
-        </div>
-        <div class="stat-content">
-          <h3>{{ stats.totalProducts }}</h3>
-          <p>Produtos Ativos</p>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3h18l-2 14H5L3 3z"></path>
+              <path d="M8 21h8"></path>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <h3>{{ stats.basic.totalProducts }}</h3>
+            <p>Produtos Ativos</p>
+            <small>{{ stats.insights.topSellingItems.length }} categorias</small>
+          </div>
         </div>
       </div>
-    </div>
 
     <!-- Gráficos e Tabelas -->
     <div class="dashboard-content">
@@ -172,7 +191,7 @@
         <div class="card-header">
           <h2>Resumo de Vendas</h2>
           <div class="period-selector">
-            <select v-model="selectedPeriod" @change="loadSalesData">
+            <select v-model="selectedPeriod" class="period-select">
               <option value="today">Hoje</option>
               <option value="week">Esta Semana</option>
               <option value="month">Este Mês</option>
@@ -183,15 +202,33 @@
         <div class="sales-summary">
           <div class="sales-item">
             <span class="sales-label">Vendas:</span>
-            <span class="sales-value">{{ formatCurrency(salesData.total) }}</span>
+            <span class="sales-value">{{ formatCurrency(currentPeriodData.revenue) }}</span>
           </div>
           <div class="sales-item">
             <span class="sales-label">Pedidos:</span>
-            <span class="sales-value">{{ salesData.orders }}</span>
+            <span class="sales-value">{{ currentPeriodData.orders }}</span>
           </div>
           <div class="sales-item">
             <span class="sales-label">Ticket Médio:</span>
-            <span class="sales-value">{{ formatCurrency(salesData.averageTicket) }}</span>
+            <span class="sales-value">{{ formatCurrency(currentPeriodData.averageTicket) }}</span>
+          </div>
+          <div v-if="currentPeriodData.growth !== undefined" class="sales-item">
+            <span class="sales-label">Crescimento:</span>
+            <span class="sales-value" :class="currentPeriodData.growth >= 0 ? 'positive' : 'negative'">
+              {{ currentPeriodData.growth >= 0 ? '+' : '' }}{{ currentPeriodData.growth.toFixed(1) }}%
+            </span>
+          </div>
+        </div>
+        
+        <!-- Top 5 Itens Mais Vendidos -->
+        <div class="top-items">
+          <h4>Top 5 Itens Mais Vendidos</h4>
+          <div class="items-list">
+            <div v-for="(item, index) in stats.insights.topSellingItems" :key="item.name" class="item-row">
+              <div class="item-rank">{{ index + 1 }}º</div>
+              <div class="item-name">{{ item.name }}</div>
+              <div class="item-quantity">{{ item.quantity }} vendas</div>
+            </div>
           </div>
         </div>
       </div>
@@ -254,22 +291,33 @@ const loadingOrders = ref(false)
 const selectedPeriod = ref('today')
 const selectedOrder = ref(null)
 
-// Estatísticas (mock data - será substituído por API)
+// Estatísticas reais
 const stats = ref({
-  totalOrders: 0,
-  pendingOrders: 0,
-  totalRevenue: 0,
-  totalProducts: 0
+  basic: {
+    totalOrders: 0,
+    pendingOrders: 0,
+    totalRevenue: 0,
+    totalProducts: 0,
+    averageTicket: 0
+  },
+  periods: {
+    today: { orders: 0, revenue: 0, averageTicket: 0 },
+    week: { orders: 0, revenue: 0, averageTicket: 0, growth: 0 },
+    month: { orders: 0, revenue: 0, averageTicket: 0, growth: 0 },
+    year: { orders: 0, revenue: 0, averageTicket: 0 }
+  },
+  insights: {
+    mostSoldItem: { name: 'Nenhum', quantity: 0 },
+    topSellingItems: []
+  }
 })
 
-// Dados de vendas
-const salesData = ref({
-  total: 0,
-  orders: 0,
-  averageTicket: 0
+// Dados do período atual selecionado
+const currentPeriodData = computed(() => {
+  return stats.value.periods[selectedPeriod.value] || stats.value.periods.today
 })
 
-// Pedidos recentes (mock data - será substituído por API)
+// Pedidos recentes
 const recentOrders = ref([])
 
 // Funções
@@ -304,32 +352,30 @@ const getStatusText = (status) => {
 
 const loadStats = async () => {
   try {
-    // Carregar dados reais das APIs
-    const [ordersResponse, productsResponse] = await Promise.all([
-      $fetch('/api/orders'),
-      $fetch('/api/products')
-    ])
-    
-    // Calcular estatísticas reais
-    const totalOrders = ordersResponse.length
-    const pendingOrders = ordersResponse.filter(order => order.status === 'pending').length
-    const totalRevenue = ordersResponse.reduce((sum, order) => sum + order.totalAmount, 0)
-    const totalProducts = productsResponse.length
-    
-    stats.value = {
-      totalOrders,
-      pendingOrders,
-      totalRevenue,
-      totalProducts
-    }
+    // Carregar estatísticas reais da API
+    const response = await $fetch('/api/dashboard/stats')
+    stats.value = response
   } catch (error) {
     console.error('Erro ao carregar estatísticas:', error)
-    // Fallback para dados mock em caso de erro
+    // Fallback para dados vazios em caso de erro
     stats.value = {
-      totalOrders: 0,
-      pendingOrders: 0,
-      totalRevenue: 0,
-      totalProducts: 0
+      basic: {
+        totalOrders: 0,
+        pendingOrders: 0,
+        totalRevenue: 0,
+        totalProducts: 0,
+        averageTicket: 0
+      },
+      periods: {
+        today: { orders: 0, revenue: 0, averageTicket: 0 },
+        week: { orders: 0, revenue: 0, averageTicket: 0, growth: 0 },
+        month: { orders: 0, revenue: 0, averageTicket: 0, growth: 0 },
+        year: { orders: 0, revenue: 0, averageTicket: 0 }
+      },
+      insights: {
+        mostSoldItem: { name: 'Nenhum', quantity: 0 },
+        topSellingItems: []
+      }
     }
   } finally {
     loading.value = false
@@ -366,30 +412,10 @@ const loadOrders = async () => {
   }
 }
 
-const loadSalesData = async () => {
-  try {
-    // TODO: Substituir por chamada real da API
-    // const response = await $fetch(`/api/dashboard/sales?period=${selectedPeriod.value}`)
-    
-    // Mock data baseado no período
-    const mockData = {
-      today: { total: 450.80, orders: 12, averageTicket: 37.57 },
-      week: { total: 3240.50, orders: 89, averageTicket: 36.41 },
-      month: { total: 12450.80, orders: 356, averageTicket: 34.97 },
-      year: { total: 145680.20, orders: 4156, averageTicket: 35.05 }
-    }
-    
-    salesData.value = mockData[selectedPeriod.value] || mockData.today
-  } catch (error) {
-    console.error('Erro ao carregar dados de vendas:', error)
-  }
-}
-
 const refreshOrders = async () => {
   await Promise.all([
     loadStats(),
-    loadOrders(),
-    loadSalesData()
+    loadOrders()
   ])
 }
 
@@ -402,10 +428,18 @@ const closeOrderModal = () => {
 }
 
 // Lifecycle
-onMounted(() => {
-  loadStats()
-  loadOrders()
-  loadSalesData()
+onMounted(async () => {
+  // Aguardar um pouco para garantir que a autenticação seja verificada
+  await new Promise(resolve => setTimeout(resolve, 100))
+  
+  try {
+    await Promise.all([
+      loadStats(),
+      loadOrders()
+    ])
+  } catch (error) {
+    console.error('Erro ao carregar dados do dashboard:', error)
+  }
 })
 </script>
 
@@ -414,6 +448,28 @@ onMounted(() => {
   padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .stats-grid {
@@ -465,6 +521,45 @@ onMounted(() => {
   font-size: 0.875rem;
 }
 
+.stat-content small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.positive {
+  color: #059669;
+}
+
+.negative {
+  color: #dc2626;
+}
+
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  color: #64748b;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.btn-refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .dashboard-content {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -493,38 +588,30 @@ onMounted(() => {
   color: #1e293b;
 }
 
-.btn-refresh {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.period-selector {
+  position: relative;
+}
+
+.period-select {
   padding: 0.5rem 1rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-  color: #64748b;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-refresh:hover:not(:disabled) {
-  background: #e2e8f0;
-  color: #475569;
-}
-
-.btn-refresh:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.period-selector select {
-  padding: 0.5rem 1rem;
+  padding-right: 2.5rem;
   border: 1px solid #e2e8f0;
   border-radius: 0.5rem;
   background: white;
   color: #64748b;
   font-size: 0.875rem;
   cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+}
+
+.period-select:focus {
+  outline: none;
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
 }
 
 .orders-table {
@@ -659,6 +746,62 @@ td {
   color: #1e293b;
 }
 
+/* Top Items Styles */
+.top-items {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.top-items h4 {
+  margin: 0 0 1rem 0;
+  color: #1e293b;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  gap: 1rem;
+}
+
+.item-rank {
+  width: 2rem;
+  height: 2rem;
+  background: #f97316;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.item-name {
+  flex: 1;
+  color: #1e293b;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.item-quantity {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 /* Modal */
 .modal-overlay {
   position: fixed;
@@ -791,14 +934,20 @@ td {
     grid-template-columns: 1fr;
   }
   
-  .stats-grid {
-    grid-template-columns: 1fr;
+  .page-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
   }
   
   .card-header {
     flex-direction: column;
     gap: 1rem;
     align-items: stretch;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
   
   .table-container {

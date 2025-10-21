@@ -6,7 +6,7 @@ const currentImageUrl = ref('')
 
 export const useImageOverlay = () => {
   const openImageOverlay = (url) => {
-    if (!url || url === '/not_found.jpg') return
+    if (!url) return
     currentImageUrl.value = url
     showImageOverlay.value = true
     document.body.style.overflow = 'hidden'

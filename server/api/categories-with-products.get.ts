@@ -11,18 +11,21 @@ export default defineEventHandler(async () => {
     const categories = db.collection("categories");
     const products = db.collection("products");
     
-    // Buscar todas as categorias
-    const allCategories = await categories.find({}).sort({ order: 1, createdAt: -1 }).toArray();
-    console.log('[categories-with-products] Categorias encontradas:', allCategories.length);
+    // Buscar apenas categorias visíveis
+    const allCategories = await categories.find({ 
+      isVisible: { $ne: false } // Inclui categorias com isVisible: true ou undefined
+    }).sort({ order: 1, createdAt: -1 }).toArray();
+    console.log('[categories-with-products] Categorias visíveis encontradas:', allCategories.length);
     
-    // Para cada categoria, buscar seus produtos
+    // Para cada categoria, buscar seus produtos visíveis
     const categoriesWithProducts = await Promise.all(
       allCategories.map(async (category: any) => {
         const categoryProducts = await products.find({ 
-          categoryId: category._id.toString() 
+          categoryId: category._id.toString(),
+          isVisible: { $ne: false } // Apenas produtos visíveis
         }).sort({ order: 1, createdAt: -1 }).toArray();
         
-        console.log(`[categories-with-products] Categoria "${category.name}": ${categoryProducts.length} produtos`);
+        console.log(`[categories-with-products] Categoria "${category.name}": ${categoryProducts.length} produtos visíveis`);
         
         return {
           ...category,
@@ -38,7 +41,7 @@ export default defineEventHandler(async () => {
       })
     );
     
-    console.log('[categories-with-products] Retornando', categoriesWithProducts.length, 'categorias');
+    console.log('[categories-with-products] Retornando', categoriesWithProducts.length, 'categorias visíveis');
     
     return categoriesWithProducts;
   } catch (error: any) {

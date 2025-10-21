@@ -34,7 +34,41 @@ export default defineNuxtConfig({
         target: "es2022",
       },
     },
-    // Remove o array plugins - middlewares .global.ts são auto-detectados
+    // Configurações de segurança
+    routeRules: {
+      // APIs públicas (não precisam de autenticação)
+      '/api/auth/**': { cors: true },
+      '/api/orders': { cors: true },
+      '/api/calculate-delivery': { cors: true },
+      '/api/categories-with-products': { cors: true },
+      '/api/product': { cors: true },
+      '/api/products': { cors: true },
+      '/api/categories': { cors: true },
+      '/api/public/**': { cors: true },
+      
+      // APIs administrativas (protegidas por middleware)
+      '/api/dashboard/**': { cors: true },
+      '/api/inventory/**': { cors: true },
+      '/api/settings': { cors: true },
+      '/api/upload-image': { cors: true },
+    },
   },
-  // routeRules removido - o middleware auth.global.ts já protege as rotas automaticamente
+  // Configurações de segurança
+  security: {
+    headers: {
+      crossOriginEmbedderPolicy: process.env.NODE_ENV === 'development' ? 'unsafe-none' : 'require-corp',
+      contentSecurityPolicy: {
+        'base-uri': ["'self'"],
+        'font-src': ["'self'", 'https:', 'data:'],
+        'form-action': ["'self'"],
+        'frame-ancestors': ["'none'"],
+        'img-src': ["'self'", 'data:', 'https:'],
+        'object-src': ["'none'"],
+        'script-src-attr': ["'none'"],
+        'style-src': ["'self'", 'https:', "'unsafe-inline'"],
+        'script-src': ["'self'", 'https:', "'unsafe-inline'"],
+        'upgrade-insecure-requests': true
+      }
+    }
+  }
 });

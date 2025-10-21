@@ -35,7 +35,7 @@
       <nav class="sidebar-nav">
         <ul>
           <li>
-            <NuxtLink to="/dashboard" class="nav-link" :class="{ active: $route.path === '/dashboard' }" :title="sidebarCollapsed ? 'Dashboard' : ''">
+            <NuxtLink to="/dashboard" class="nav-link" :class="{ active: $route.path === '/dashboard' }" :title="sidebarCollapsed ? 'Dashboard' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="3" width="7" height="7"></rect>
                 <rect x="14" y="3" width="7" height="7"></rect>
@@ -46,7 +46,7 @@
             </NuxtLink>
           </li>
           <li>
-            <NuxtLink to="/dashboard/categories" class="nav-link" :class="{ active: $route.path === '/dashboard/categories' }" :title="sidebarCollapsed ? 'Categorias' : ''">
+            <NuxtLink to="/dashboard/categories" class="nav-link" :class="{ active: $route.path === '/dashboard/categories' }" :title="sidebarCollapsed ? 'Categorias' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 3h18l-2 14H5L3 3z"></path>
                 <path d="M8 21h8"></path>
@@ -55,7 +55,7 @@
             </NuxtLink>
           </li>
           <li>
-            <NuxtLink to="/dashboard/products" class="nav-link" :class="{ active: $route.path === '/dashboard/products' }" :title="sidebarCollapsed ? 'Produtos' : ''">
+            <NuxtLink to="/dashboard/products" class="nav-link" :class="{ active: $route.path === '/dashboard/products' }" :title="sidebarCollapsed ? 'Produtos' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
                 <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -65,7 +65,7 @@
             </NuxtLink>
           </li>
           <li>
-            <NuxtLink to="/dashboard/inventory" class="nav-link" :class="{ active: $route.path === '/dashboard/inventory' }" :title="sidebarCollapsed ? 'Estoque' : ''">
+            <NuxtLink to="/dashboard/inventory" class="nav-link" :class="{ active: $route.path === '/dashboard/inventory' }" :title="sidebarCollapsed ? 'Estoque' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 3h18l-2 14H5L3 3z"></path>
                 <path d="M8 21h8"></path>
@@ -76,7 +76,7 @@
             </NuxtLink>
           </li>
           <li>
-            <NuxtLink to="/dashboard/orders" class="nav-link" :class="{ active: $route.path === '/dashboard/orders' }" :title="sidebarCollapsed ? 'Pedidos' : ''">
+            <NuxtLink to="/dashboard/orders" class="nav-link" :class="{ active: $route.path === '/dashboard/orders' }" :title="sidebarCollapsed ? 'Pedidos' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
@@ -85,7 +85,7 @@
             </NuxtLink>
           </li>
           <li>
-            <NuxtLink to="/dashboard/settings" class="nav-link" :class="{ active: $route.path === '/dashboard/settings' }" :title="sidebarCollapsed ? 'Configurações' : ''">
+            <NuxtLink to="/dashboard/settings" class="nav-link" :class="{ active: $route.path === '/dashboard/settings' }" :title="sidebarCollapsed ? 'Configurações' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
                 <circle cx="12" cy="12" r="3"></circle>
@@ -96,7 +96,7 @@
         </ul>
       </nav>
       <div class="sidebar-footer">
-        <button @click="handleLogout" class="logout-btn" :title="sidebarCollapsed ? 'Sair' : ''">
+        <button @click="handleLogoutAndCloseSidebar" class="logout-btn" :title="sidebarCollapsed ? 'Sair' : ''">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16,17 21,12 16,7"></polyline>
@@ -150,7 +150,7 @@ const storeName = ref('')
 // Buscar configurações da loja
 const loadStoreSettings = async () => {
   try {
-    const data = await $fetch('/api/settings')
+    const data = await $fetch('/api/public/settings')
     storeLogo.value = data.logo || ''
     storeName.value = data.storeName || 'Dashboard'
   } catch (error) {
@@ -167,6 +167,13 @@ const toggleSidebar = () => {
   // Salvar estado no localStorage
   if (process.client) {
     localStorage.setItem('sidebarCollapsed', sidebarCollapsed.value.toString())
+  }
+}
+
+// Função para fechar sidebar no mobile após navegação
+const closeSidebarOnMobile = () => {
+  if (isMobile.value) {
+    sidebarCollapsed.value = true
   }
 }
 
@@ -190,6 +197,12 @@ const handleLogout = async () => {
     }
     await router.push('/login')
   }
+}
+
+// Função combinada para logout e fechar sidebar no mobile
+const handleLogoutAndCloseSidebar = async () => {
+  closeSidebarOnMobile()
+  await handleLogout()
 }
 
 // Título da página baseado na rota
@@ -616,10 +629,16 @@ onMounted(() => {
   
   .dashboard-header {
     padding: 1rem 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
   }
   
   .dashboard-content {
     padding: 1rem;
+    min-height: calc(100vh - 68px);
   }
   
   .sidebar-header {
@@ -628,25 +647,26 @@ onMounted(() => {
   
   .sidebar-nav {
     padding: 0.5rem 0;
+    flex: 1;
+    overflow-y: auto;
   }
-
- 
   
   .nav-link {
     padding: 0.75rem 1rem;
+    min-height: 44px;
   }
   
   .sidebar-footer {
     padding: 1rem;
+    position: sticky;
+    bottom: 0;
+    background: white;
+    z-index: 1;
+    border-top: 1px solid #e5e7eb;
   }
-
-  @media (max-width: 768px) {
-    .sidebar-footer {
-      position: sticky;
-      bottom: 0;
-      background: white; /* Garante visibilidade no mobile */
-      z-index: 1;
-    }
+  
+  .logout-btn {
+    min-height: 44px;
   }
 }
 

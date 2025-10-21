@@ -1,7 +1,12 @@
 // server/api/inventory/[id].put.ts
 import { getDB } from "../../utils/db";
+import { ObjectId } from "mongodb";
+import { requireAuth } from "../../utils/auth-middleware";
 
 export default defineEventHandler(async (event) => {
+  // Verificar autenticação
+  await requireAuth(event);
+  
   const id = getRouterParam(event, 'id');
   const body = await readBody(event);
   const { currentStock, minStock, maxStock, costPrice, operation, quantity, reason } = body;
@@ -16,7 +21,6 @@ export default defineEventHandler(async (event) => {
   try {
     const db = await getDB();
     const inventory = db.collection("inventory");
-    const ObjectId = require('mongodb').ObjectId;
     
     // Verificar se o item de estoque existe
     const existingItem = await inventory.findOne({ _id: new ObjectId(id) });
@@ -27,17 +31,17 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    let updateData = {
+    let updateData: any = {
       updatedAt: new Date()
     };
 
     // Se for uma operação específica (entrada/saída)
-    if (operation && quantity) {
+    if (operation && quantity !== undefined && quantity !== null) {
       const qty = parseInt(quantity);
-      if (qty <= 0) {
+      if (isNaN(qty) || qty <= 0) {
         throw createError({
           statusCode: 400,
-          message: "Quantidade deve ser maior que zero",
+          message: "Quantidade deve ser um número maior que zero",
         });
       }
 
@@ -99,7 +103,7 @@ export default defineEventHandler(async (event) => {
       message: "Estoque atualizado com sucesso",
       inventory: updatedItem
     };
-  } catch (err) {
+  } catch (err: any) {
     if (err.statusCode) {
       throw err;
     }

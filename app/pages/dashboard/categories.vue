@@ -80,7 +80,12 @@
           <div class="category-info">
             <div class="category-name-wrapper">
               <h3>{{ category.name }}</h3>
-              <span class="item-badge">{{ category.itemCount || 0 }} {{ category.itemCount === 1 ? 'item' : 'itens' }}</span>
+              <div class="category-badges">
+                <span class="item-badge">{{ category.itemCount || 0 }} {{ category.itemCount === 1 ? 'item' : 'itens' }}</span>
+                <span :class="['visibility-badge', category.isVisible !== false ? 'visible' : 'hidden']">
+                  {{ category.isVisible !== false ? 'Visível' : 'Oculta' }}
+                </span>
+              </div>
             </div>
             <p v-if="category.description" class="category-description">{{ category.description }}</p>
             <p v-else class="category-description no-description">Sem descrição</p>
@@ -108,6 +113,7 @@
             <button 
               @click="deleteCategory(category._id)" 
               class="btn-delete"
+              :title="category.itemCount > 0 ? `Excluir categoria (${category.itemCount} produto(s) associado(s))` : 'Excluir categoria'"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3,6 5,6 21,6"></polyline>
@@ -170,6 +176,20 @@
             <span class="char-count">{{ categoryForm.description.length }}/200</span>
           </div>
           
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                v-model="categoryForm.isVisible"
+                :disabled="submitting"
+              />
+              <span class="checkbox-text">
+                <span class="checkbox-title">Exibir no menu</span>
+                <span class="checkbox-description">Esta categoria será visível para os clientes no cardápio</span>
+              </span>
+            </label>
+          </div>
+          
           <div class="form-group" style="display:none;">
             <label for="categoryOrder">Ordem de Exibição</label>
             <input
@@ -203,29 +223,103 @@
     <!-- Modal de Confirmação de Exclusão -->
     <div v-if="showDeleteModal" class="modal-overlay" @click="showDeleteModal = false">
       <div class="delete-modal" @click.stop>
+        <!-- Header -->
         <div class="modal-header">
-          <div class="warning-icon">
+          <div class="header-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-              <line x1="12" y1="9" x2="12" y2="13"></line>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              <path d="M3 6h18"></path>
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
             </svg>
           </div>
-          <h2>Confirmar Exclusão</h2>
+          <div class="header-content">
+            <h2>Excluir Categoria</h2>
+            <p class="header-subtitle">{{ categoryToDelete?.name }}</p>
+          </div>
         </div>
         
+        <!-- Conteúdo -->
         <div class="modal-content">
-          <p>Tem certeza que deseja excluir a categoria <strong>"{{ categoryToDelete?.name }}"</strong>?</p>
-          <p class="warning-text">Esta ação não pode ser desfeita e pode afetar produtos associados.</p>
+          <!-- Quando não há produtos -->
+          <div v-if="categoryToDelete?.itemCount === 0" class="simple-delete">
+            <div class="info-message">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 16v-4"></path>
+                <path d="M12 8h.01"></path>
+              </svg>
+              <div>
+                <h3>Esta categoria está vazia</h3>
+                <p>Você pode excluí-la com segurança. Esta ação não pode ser desfeita.</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Quando há produtos -->
+          <div v-else class="complex-delete">
+            <!-- Aviso -->
+            <div class="warning-message">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              <div>
+                <h3>Atenção!</h3>
+                <p>Esta categoria possui <strong>{{ categoryToDelete?.itemCount }} produto(s)</strong> associado(s).</p>
+                <p>Escolha como deseja proceder:</p>
+              </div>
+            </div>
+            
+            <!-- Opções de exclusão -->
+            <div class="delete-options">
+              <div class="option-item" :class="{ 'selected': deleteOption === 'category-only' }" @click="deleteOption = 'category-only'">
+                <div class="option-radio">
+                  <input type="radio" v-model="deleteOption" value="category-only" />
+                </div>
+                <div class="option-content">
+                  <h4>Excluir apenas a categoria</h4>
+                  <p>Os produtos ficarão sem categoria e precisarão ser reorganizados manualmente.</p>
+                  <span class="option-badge warning">Não recomendado</span>
+                </div>
+              </div>
+              
+              <div class="option-item" :class="{ 'selected': deleteOption === 'category-and-products' }" @click="deleteOption = 'category-and-products'">
+                <div class="option-radio">
+                  <input type="radio" v-model="deleteOption" value="category-and-products" />
+                </div>
+                <div class="option-content">
+                  <h4>Excluir categoria + produtos</h4>
+                  <p>Remove completamente a categoria e todos os {{ categoryToDelete?.itemCount }} produto(s) associado(s).</p>
+                  <span class="option-badge danger">Exclusão completa</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         
+        <!-- Botões -->
         <div class="modal-actions">
           <button @click="showDeleteModal = false" class="btn-cancel">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
             Cancelar
           </button>
-          <button @click="confirmDelete" class="btn-delete-confirm" :disabled="deleting">
+          <button @click="confirmDelete" class="btn-delete-confirm" :disabled="deleting || (categoryToDelete?.itemCount > 0 && !deleteOption)">
+            <svg v-if="!deleting" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3,6 5,6 21,6"></polyline>
+              <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+            </svg>
+            <svg v-else class="loading-spinner" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 11-6.219-8.56"/>
+            </svg>
             <span v-if="deleting">Excluindo...</span>
-            <span v-else>Sim, Excluir</span>
+            <span v-else-if="categoryToDelete?.itemCount === 0">Excluir Categoria</span>
+            <span v-else-if="deleteOption === 'category-only'">Excluir Categoria</span>
+            <span v-else-if="deleteOption === 'category-and-products'">Excluir Tudo</span>
+            <span v-else>Selecione uma opção</span>
           </button>
         </div>
       </div>
@@ -280,6 +374,7 @@ const submitting = ref(false)
 const deleting = ref(false)
 const editingCategory = ref(null)
 const categoryToDelete = ref(null)
+const deleteOption = ref('')
 const categoriesContainer = ref(null)
 const isUpdatingOrder = ref(false)
 let sortableInstance = null
@@ -288,7 +383,8 @@ let sortableInstance = null
 const categoryForm = ref({
   name: '',
   description: '',
-  order: 0
+  order: 0,
+  isVisible: true
 })
 
 // Alert
@@ -304,7 +400,7 @@ const loadCategories = async () => {
     loading.value = true
     // Carregar categorias e contagem de produtos em paralelo
     const [categoriesResponse, countsResponse] = await Promise.all([
-      $fetch('/api/categories'),
+      $fetch('/api/categories?showAll=true'), // Mostrar todas as categorias no dashboard
       $fetch('/api/categories-count')
     ])
     
@@ -352,7 +448,8 @@ const editCategory = (category) => {
   categoryForm.value = {
     name: category.name,
     description: category.description || '',
-    order: category.order || 0
+    order: category.order || 0,
+    isVisible: category.isVisible !== false // Default true se não definido
   }
   showEditModal.value = true
 }
@@ -389,6 +486,7 @@ const deleteCategory = (categoryId) => {
   const category = categories.value.find(c => c._id === categoryId)
   if (category) {
     categoryToDelete.value = category
+    deleteOption.value = '' // Reset da opção
     showDeleteModal.value = true
   }
 }
@@ -399,14 +497,30 @@ const confirmDelete = async () => {
   
   try {
     deleting.value = true
+    
+    // Determinar a opção de exclusão
+    const shouldDeleteProducts = categoryToDelete.value.itemCount > 0 && deleteOption.value === 'category-and-products'
+    
     await $fetch(`/api/categories/${categoryToDelete.value._id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      body: {
+        deleteProducts: shouldDeleteProducts
+      }
     })
     
+    // Remover categoria da lista
     categories.value = categories.value.filter(c => c._id !== categoryToDelete.value._id)
-    showAlert('Categoria excluída com sucesso!', 'success')
+    
+    // Mostrar mensagem apropriada
+    if (shouldDeleteProducts) {
+      showAlert(`Categoria "${categoryToDelete.value.name}" e ${categoryToDelete.value.itemCount} produto(s) excluído(s) com sucesso!`, 'success')
+    } else {
+      showAlert('Categoria excluída com sucesso!', 'success')
+    }
+    
     showDeleteModal.value = false
     categoryToDelete.value = null
+    deleteOption.value = ''
     
     // Reinicializar SortableJS
     await nextTick()
@@ -435,7 +549,8 @@ const closeModal = () => {
   categoryForm.value = {
     name: '',
     description: '',
-    order: 0
+    order: 0,
+    isVisible: true
   }
 }
 
@@ -835,8 +950,9 @@ onUnmounted(() => {
 .btn-primary {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  background: #dc2626;
+  background: #ff8e24;
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -844,10 +960,12 @@ onUnmounted(() => {
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
+  min-height: 44px; /* Touch-friendly */
+  white-space: nowrap;
 }
 
 .btn-primary:hover {
-  background: #b91c1c;
+  background: #e67e22;
 }
 
 .btn-primary:disabled {
@@ -989,8 +1107,8 @@ onUnmounted(() => {
 }
 
 .category-card.sortable:hover {
-  border-color: #dc2626;
-  box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.1);
+  border-color: #ff8e24;
+  box-shadow: 0 4px 6px -1px rgba(255, 142, 36, 0.1);
 }
 
 .drag-handle {
@@ -1013,9 +1131,9 @@ onUnmounted(() => {
 }
 
 .drag-handle:hover {
-  color: #dc2626;
-  background: #fef2f2;
-  border-color: #dc2626;
+  color: #ff8e24;
+  background: #fff4ec;
+  border-color: #ff8e24;
   transform: scale(1.1);
 }
 
@@ -1083,12 +1201,12 @@ onUnmounted(() => {
 
 .btn-edit {
   background: white;
-  color: #dc2626;
-  border-color: #dc2626;
+  color: #ff8e24;
+  border-color: #ff8e24;
 }
 
 .btn-edit:hover {
-  background: #dc2626;
+  background: #ff8e24;
   color: white;
 }
 
@@ -1101,6 +1219,327 @@ onUnmounted(() => {
 .btn-delete:hover {
   background: #dc2626;
   color: white;
+}
+
+.btn-delete.disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-color: #d1d5db;
+  cursor: not-allowed;
+}
+
+.btn-delete.disabled:hover {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-color: #d1d5db;
+}
+
+/* Modal de exclusão equilibrado */
+.delete-modal {
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 480px;
+  width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: modalSlideIn 0.2s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Header */
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #fef2f2;
+  border-radius: 0.5rem;
+  color: #dc2626;
+}
+
+.header-content h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.header-subtitle {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0.25rem 0 0 0;
+}
+
+/* Conteúdo com scroll */
+.modal-content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Scrollbar customizada */
+.modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Mensagens informativas */
+.info-message,
+.warning-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.info-message {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0c4a6e;
+}
+
+.warning-message {
+  background: #fef3cd;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.info-message svg,
+.warning-message svg {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.info-message h3,
+.warning-message h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem 0;
+}
+
+.info-message p,
+.warning-message p {
+  font-size: 0.875rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Opções de exclusão */
+.delete-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.option-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: white;
+}
+
+.option-item:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.option-item.selected {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.option-radio {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.option-radio input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #dc2626;
+  cursor: pointer;
+}
+
+.option-content {
+  flex: 1;
+}
+
+.option-content h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.25rem 0;
+}
+
+.option-content p {
+  font-size: 0.8125rem;
+  color: #6b7280;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.4;
+}
+
+.option-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.option-badge.warning {
+  background: #fef3cd;
+  color: #92400e;
+}
+
+.option-badge.danger {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Botões com tamanho fixo */
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  background: #fafafa;
+  flex-shrink: 0;
+}
+
+.btn-cancel,
+.btn-delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex: 1;
+  justify-content: center;
+  min-width: 0; /* Evita que os botões mudem de tamanho */
+  white-space: nowrap; /* Evita quebra de linha */
+}
+
+/* Garantir que os ícones mantenham tamanho fixo */
+.btn-cancel svg,
+.btn-delete-confirm svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0; /* Evita que o ícone encolha */
+}
+
+.btn-cancel {
+  background: white;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+.btn-cancel:hover {
+  background: #f9fafb;
+  color: #374151;
+  border-color: #9ca3af;
+}
+
+.btn-delete-confirm {
+  background: #dc2626;
+  color: white;
+  border: 1px solid #dc2626;
+  font-weight: 600;
+}
+
+.btn-delete-confirm:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.btn-delete-confirm:disabled {
+  background: #9ca3af;
+  border-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsividade */
+@media (max-width: 640px) {
+  .delete-modal {
+    width: 95vw;
+    max-height: 85vh;
+  }
+  
+  .modal-header {
+    padding: 1rem 1rem 0.75rem;
+  }
+  
+  .modal-content {
+    padding: 1rem;
+  }
+  
+  .modal-actions {
+    padding: 0.75rem 1rem;
+    flex-direction: column;
+  }
+  
+  .btn-cancel,
+  .btn-delete-confirm {
+    width: 100%;
+  }
 }
 
 .modal-overlay {
@@ -1488,8 +1927,10 @@ onUnmounted(() => {
   }
   
   .btn-primary {
-    padding: 0.75rem 1rem;
+    padding: 0.875rem 1rem;
     font-size: 0.875rem;
+    min-height: 44px;
+    justify-content: center;
   }
   
   .category-info {
@@ -1593,8 +2034,72 @@ onUnmounted(() => {
   }
   
   .btn-primary, .btn-secondary {
-    padding: 0.625rem 1rem;
+    padding: 0.875rem 1rem;
     font-size: 0.875rem;
+    min-height: 44px;
+    justify-content: center;
   }
+}
+
+/* Checkbox styles */
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.5rem 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #ff8e24;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.checkbox-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.checkbox-title {
+  font-weight: 500;
+  color: #1f2937;
+  font-size: 0.875rem;
+}
+
+.checkbox-description {
+  font-size: 0.75rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+/* Category badges */
+.category-badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.visibility-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.visibility-badge.visible {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.visibility-badge.hidden {
+  background: #fee2e2;
+  color: #991b1b;
 }
 </style>

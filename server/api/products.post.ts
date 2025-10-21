@@ -1,9 +1,13 @@
 // server/api/products.post.ts
 import { getDB } from "../utils/db";
+import { requireAuth } from "../utils/auth-middleware";
 
 export default defineEventHandler(async (event) => {
+  // Verificar autenticação
+  await requireAuth(event);
+  
   const body = await readBody(event);
-  const { name, description, price, image, categoryId, complements, order = 0 } = body;
+  const { name, description, price, image, categoryId, complements, order = 0, isVisible = true } = body;
 
   if (!name || name.trim() === '') {
     throw createError({
@@ -51,6 +55,7 @@ export default defineEventHandler(async (event) => {
       categoryId: categoryId,
       complements: complements || [],
       order: parseInt(order) || 0,
+      isVisible: Boolean(isVisible),
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -67,6 +72,7 @@ export default defineEventHandler(async (event) => {
         categoryId: categoryId,
         complements: complements || [],
         order: parseInt(order) || 0,
+        isVisible: Boolean(isVisible),
         createdAt: new Date(),
         updatedAt: new Date()
       }

@@ -1,8 +1,12 @@
 // server/api/orders/[id].put.ts
 import { getDB } from "../../utils/db";
 import { ObjectId } from "mongodb";
+import { requireAuth } from "../../utils/auth-middleware";
 
 export default defineEventHandler(async (event) => {
+  // Verificar autenticação
+  await requireAuth(event);
+  
   const id = getRouterParam(event, 'id');
   const body = await readBody(event);
   const { status, notes } = body;

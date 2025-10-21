@@ -80,7 +80,7 @@ const storeSettings = ref({
 
 const loadStoreSettings = async () => {
   try {
-    const data = await $fetch('/api/settings');
+    const data = await $fetch('/api/public/settings');
     storeSettings.value = {
       storeName: data.storeName || 'Queiroz Hamburgueria',
       logo: data.logo || '/logo.jpg'
@@ -153,11 +153,6 @@ const handleLogin = async () => {
     
     if (process.client) {
       sessionStorage.removeItem('justLoggedOut');
-    }
-    
-    // Armazenar token no localStorage como fallback
-    if (response.token && process.client) {
-      localStorage.setItem('auth_token', response.token);
     }
     
     // Pequeno delay para garantir que o cookie seja propagado

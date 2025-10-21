@@ -1,11 +1,15 @@
 // server/api/categories/[id].put.ts
 import { getDB } from "../../utils/db";
 import { ObjectId } from "mongodb";
+import { requireAuth } from "../../utils/auth-middleware";
 
 export default defineEventHandler(async (event) => {
+  // Verificar autenticação
+  await requireAuth(event);
+  
   const id = getRouterParam(event, 'id');
   const body = await readBody(event);
-  const { name, description, order } = body;
+  const { name, description, order, isVisible } = body;
 
   if (!ObjectId.isValid(id)) {
     throw createError({
@@ -65,6 +69,10 @@ export default defineEventHandler(async (event) => {
     
     if (order !== undefined) {
       updateFields.order = parseInt(order);
+    }
+    
+    if (isVisible !== undefined) {
+      updateFields.isVisible = Boolean(isVisible);
     }
 
     const result = await categories.updateOne(

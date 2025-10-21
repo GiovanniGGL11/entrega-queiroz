@@ -1,11 +1,15 @@
 // server/api/products/[id].put.ts
 import { getDB } from "../../utils/db";
 import { ObjectId } from "mongodb";
+import { requireAuth } from "../../utils/auth-middleware";
 
 export default defineEventHandler(async (event) => {
+  // Verificar autenticação
+  await requireAuth(event);
+  
   const id = getRouterParam(event, 'id');
   const body = await readBody(event);
-  const { name, description, price, image, categoryId, complements, order } = body;
+  const { name, description, price, image, categoryId, complements, order, isVisible } = body;
 
   if (!id || !ObjectId.isValid(id)) {
     throw createError({
@@ -73,6 +77,7 @@ export default defineEventHandler(async (event) => {
           categoryId: categoryId,
           complements: complements || [],
           order: order !== undefined ? parseInt(order) : existingProduct.order,
+          isVisible: isVisible !== undefined ? Boolean(isVisible) : existingProduct.isVisible,
           updatedAt: new Date(),
         }
       }
@@ -96,6 +101,7 @@ export default defineEventHandler(async (event) => {
         categoryId: categoryId,
         complements: complements || [],
         order: order !== undefined ? parseInt(order) : existingProduct.order,
+        isVisible: isVisible !== undefined ? Boolean(isVisible) : existingProduct.isVisible,
         createdAt: existingProduct.createdAt,
         updatedAt: new Date()
       }

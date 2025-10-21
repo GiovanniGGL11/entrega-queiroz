@@ -98,6 +98,17 @@
         </div>
         
         <div class="filter-group">
+          <label for="visibilityFilter">
+            Visibilidade
+          </label>
+          <select id="visibilityFilter" v-model="visibilityFilter" @change="loadProducts" class="filter-select">
+            <option value="">Todos</option>
+            <option value="visible">Apenas Visíveis</option>
+            <option value="hidden">Apenas Ocultos</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
           <label for="priceRange">
             Preço Máximo
           </label>
@@ -184,7 +195,12 @@
           <div class="product-info">
             <div class="product-header">
               <h3>{{ product.name }}</h3>
-              <span class="category-badge">{{ getCategoryName(product.categoryId) }}</span>
+              <div class="product-badges">
+                <span class="category-badge">{{ getCategoryName(product.categoryId) }}</span>
+                <span :class="['visibility-badge', product.isVisible !== false ? 'visible' : 'hidden']">
+                  {{ product.isVisible !== false ? 'Visível' : 'Oculto' }}
+                </span>
+              </div>
             </div>
             <p v-if="product.description" class="product-description">{{ product.description }}</p>
             <p v-else class="product-description no-description">Sem descrição</p>
@@ -353,7 +369,7 @@
               <input
                 id="productImage"
                 v-model="productForm.image"
-                type="url"
+                type="text"
                 placeholder="Cole uma URL"
                 class="url-input"
                 :disabled="submitting"
@@ -434,6 +450,20 @@
               :disabled="submitting"
             />
             <small>Números menores aparecem primeiro na categoria</small>
+          </div>
+          
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                v-model="productForm.isVisible"
+                :disabled="submitting"
+              />
+              <span class="checkbox-text">
+                <span class="checkbox-title">Exibir no menu</span>
+                <span class="checkbox-description">Este produto será visível para os clientes no cardápio</span>
+              </span>
+            </label>
           </div>
           
           <div class="form-actions">
@@ -539,6 +569,7 @@ const selectedCategory = ref('')
 const searchTerm = ref('')
 const sortBy = ref('name')
 const maxPrice = ref('')
+const visibilityFilter = ref('')
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const showDeleteModal = ref(false)
@@ -556,7 +587,8 @@ const productForm = ref({
   image: '',
   categoryId: '',
   order: 0,
-  complements: []
+  complements: [],
+  isVisible: true
 })
 
 // Alert
@@ -573,6 +605,15 @@ const filteredProducts = computed(() => {
   // Filtro por categoria
   if (selectedCategory.value) {
     filtered = filtered.filter(product => product.categoryId === selectedCategory.value)
+  }
+  
+  // Filtro por visibilidade
+  if (visibilityFilter.value) {
+    if (visibilityFilter.value === 'visible') {
+      filtered = filtered.filter(product => product.isVisible !== false)
+    } else if (visibilityFilter.value === 'hidden') {
+      filtered = filtered.filter(product => product.isVisible === false)
+    }
   }
   
   // Filtro por busca
@@ -613,7 +654,7 @@ const filteredProducts = computed(() => {
 })
 
 const hasActiveFilters = computed(() => {
-  return selectedCategory.value || searchTerm.value || maxPrice.value || sortBy.value !== 'name'
+  return selectedCategory.value || searchTerm.value || maxPrice.value || sortBy.value !== 'name' || visibilityFilter.value
 })
 
 // Debounced search
@@ -631,6 +672,7 @@ const clearFilters = () => {
   searchTerm.value = ''
   maxPrice.value = ''
   sortBy.value = 'name'
+  visibilityFilter.value = ''
 }
 
 // Carregar categorias
@@ -647,7 +689,7 @@ const loadCategories = async () => {
 const loadProducts = async () => {
   try {
     loading.value = true
-    const response = await $fetch('/api/products')
+    const response = await $fetch('/api/products?showAll=true') // Mostrar todos os produtos no dashboard
     
     // Debug: verificar complementos nos produtos
     response.forEach(product => {
@@ -704,7 +746,8 @@ const editProduct = (product) => {
     image: product.image || '',
     categoryId: product.categoryId,
     order: product.order || 0,
-    complements: complements
+    complements: complements,
+    isVisible: product.isVisible !== false // Default true se não definido
   }
   showEditModal.value = true
 }
@@ -783,7 +826,8 @@ const closeModal = () => {
     image: '',
     categoryId: '',
     order: 0,
-    complements: []
+    complements: [],
+    isVisible: true
   }
 }
 
@@ -1141,8 +1185,9 @@ onUnmounted(() => {
 .btn-primary {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  background: #dc2626;
+  background: #ff8e24;
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -1150,10 +1195,12 @@ onUnmounted(() => {
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
+  min-height: 44px; /* Touch-friendly */
+  white-space: nowrap;
 }
 
 .btn-primary:hover {
-  background: #b91c1c;
+  background: #e67e22;
 }
 
 .btn-primary:disabled {
@@ -1230,6 +1277,7 @@ onUnmounted(() => {
   font-size: 1rem;
   background: white;
   transition: border-color 0.2s;
+  min-height: 44px; /* Touch-friendly */
 }
 
 /* Estilo específico para selects */
@@ -1490,12 +1538,12 @@ onUnmounted(() => {
 
 .btn-edit {
   background: white;
-  color: #dc2626;
-  border-color: #dc2626;
+  color: #ff8e24;
+  border-color: #ff8e24;
 }
 
 .btn-edit:hover {
-  background: #dc2626;
+  background: #ff8e24;
   color: white;
 }
 
@@ -2079,8 +2127,10 @@ onUnmounted(() => {
   }
   
   .btn-primary {
-    padding: 0.75rem 1rem;
+    padding: 0.875rem 1rem;
     font-size: 0.875rem;
+    width: 100%;
+    justify-content: center;
   }
   
   .filters-section {
@@ -2092,8 +2142,9 @@ onUnmounted(() => {
   }
   
   .filter-select, .search-input, .price-input {
-    padding: 0.625rem;
+    padding: 0.875rem;
     font-size: 0.875rem;
+    min-height: 44px;
   }
   
   .product-info {
@@ -2199,8 +2250,72 @@ onUnmounted(() => {
   }
   
   .btn-primary, .btn-secondary {
-    padding: 0.625rem 1rem;
+    padding: 0.875rem 1rem;
     font-size: 0.875rem;
+    min-height: 44px;
+    justify-content: center;
   }
+}
+
+/* Checkbox styles */
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.5rem 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #ff8e24;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.checkbox-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.checkbox-title {
+  font-weight: 500;
+  color: #1f2937;
+  font-size: 0.875rem;
+}
+
+.checkbox-description {
+  font-size: 0.75rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+/* Product badges */
+.product-badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.visibility-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.visibility-badge.visible {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.visibility-badge.hidden {
+  background: #fee2e2;
+  color: #991b1b;
 }
 </style>

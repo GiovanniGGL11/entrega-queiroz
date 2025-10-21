@@ -1,9 +1,13 @@
 // server/api/categories.post.ts
 import { getDB } from "../utils/db";
+import { requireAuth } from "../utils/auth-middleware";
 
 export default defineEventHandler(async (event) => {
+  // Verificar autenticação
+  await requireAuth(event);
+  
   const body = await readBody(event);
-  const { name, description, order = 0 } = body;
+  const { name, description, isVisible = true } = body;
 
   if (!name || name.trim() === '') {
     throw createError({
@@ -31,7 +35,7 @@ export default defineEventHandler(async (event) => {
     const result = await categories.insertOne({
       name: name.trim(),
       description: description?.trim() || '',
-      order: parseInt(order) || 0,
+      isVisible: Boolean(isVisible),
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -43,7 +47,7 @@ export default defineEventHandler(async (event) => {
         _id: result.insertedId,
         name: name.trim(),
         description: description?.trim() || '',
-        order: parseInt(order) || 0,
+        isVisible: Boolean(isVisible),
         createdAt: new Date(),
         updatedAt: new Date()
       }

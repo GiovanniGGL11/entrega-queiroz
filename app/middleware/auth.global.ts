@@ -27,19 +27,11 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     let lastError = null
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        // Preparar headers com token do localStorage como fallback
+        // Preparar headers com cache control
         const headers: any = {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0'
-        }
-        
-        // Tentar obter token do localStorage como fallback
-        if (process.client) {
-          const token = localStorage.getItem('auth_token')
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`
-          }
         }
         
         await $fetch(`/api/auth/me?t=${Date.now()}`, {

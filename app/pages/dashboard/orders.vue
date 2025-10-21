@@ -461,7 +461,7 @@ onMounted(() => {
 }
 
 .filter-select {
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
   padding-right: calc(1rem + 1.5rem); /* Espaço extra para a setinha */
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
@@ -476,6 +476,7 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.2s ease;
   appearance: none;
+  min-height: 44px; /* Touch-friendly */
 }
 
 .filter-select:focus {
@@ -487,8 +488,9 @@ onMounted(() => {
 .btn-refresh {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
   background: white;
   border: 1px solid #dc2626;
   border-radius: 0.5rem;
@@ -497,6 +499,9 @@ onMounted(() => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  min-height: 44px; /* Touch-friendly */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .btn-refresh:hover:not(:disabled) {
@@ -1002,7 +1007,21 @@ onMounted(() => {
   }
   
   .header-actions {
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+  
+  .filter-select {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    padding-right: calc(1rem + 1.5rem);
+  }
+  
+  .btn-refresh {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    justify-content: center;
   }
   
   .orders-grid {
@@ -1011,10 +1030,14 @@ onMounted(() => {
   
   .order-actions {
     flex-direction: column;
+    gap: 0.5rem;
   }
   
   .order-actions button {
     width: 100%;
+    padding: 0.875rem 1rem;
+    min-height: 44px;
+    justify-content: center;
   }
 }
 
