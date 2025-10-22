@@ -350,10 +350,12 @@ const getStatusText = (status) => {
   return statusMap[status] || status
 }
 
+const { authenticatedFetch } = useAuthenticatedFetch()
+
 const loadStats = async () => {
   try {
     // Carregar estatísticas reais da API
-    const response = await $fetch('/api/dashboard/stats')
+    const response = await authenticatedFetch('/api/dashboard/stats')
     stats.value = response
   } catch (error) {
     console.error('Erro ao carregar estatísticas:', error)
@@ -385,7 +387,8 @@ const loadStats = async () => {
 const loadOrders = async () => {
   try {
     loadingOrders.value = true
-    const response = await $fetch('/api/orders')
+    
+    const response = await authenticatedFetch('/api/orders')
     
     // Pegar apenas os últimos 5 pedidos
     recentOrders.value = response

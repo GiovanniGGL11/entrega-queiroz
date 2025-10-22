@@ -269,13 +269,16 @@ const getStatusText = (status) => {
   return statusMap[status] || status
 }
 
+const { authenticatedFetch } = useAuthenticatedFetch()
+
 const loadOrders = async () => {
   try {
     loading.value = true
+    
     const url = statusFilter.value 
       ? `/api/orders?status=${statusFilter.value}`
       : '/api/orders'
-    const response = await $fetch(url)
+    const response = await authenticatedFetch(url)
     
     console.log('Resposta da API de pedidos:', response)
     
@@ -371,7 +374,7 @@ const performStatusUpdate = async (orderId, newStatus) => {
     console.log('Atualizando pedido:', orderId, 'para status:', newStatus)
     console.log('ID do MongoDB:', order._id)
     
-    const response = await $fetch(`/api/orders/${order._id}`, {
+    const response = await authenticatedFetch(`/api/orders/${order._id}`, {
       method: 'PUT',
       body: { status: newStatus }
     })
