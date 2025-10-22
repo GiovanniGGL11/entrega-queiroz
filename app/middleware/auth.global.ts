@@ -37,18 +37,23 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
         // Sempre usar localStorage para autenticação (necessário para Vercel)
         if (process.client) {
           const token = localStorage.getItem('auth_token')
+          console.log('🔍 [MIDDLEWARE] Token do localStorage:', token ? 'present' : 'missing')
           if (token) {
             headers['Authorization'] = `Bearer ${token}`
+            console.log('🔍 [MIDDLEWARE] Header Authorization definido:', headers['Authorization'].substring(0, 20) + '...')
           }
         }
         
-        await $fetch(`/api/auth/me?t=${Date.now()}`, {
+        const response = await $fetch(`/api/auth/me?t=${Date.now()}`, {
           credentials: 'include',
           headers
         })
+        console.log('🔍 [MIDDLEWARE] Auth me response:', response)
         return // Sucesso, sair do middleware
-      } catch (error) {
+      } catch (error: any) {
         lastError = error
+        console.log(`🔍 [MIDDLEWARE] Tentativa ${attempt} falhou:`, error.statusCode, error.statusMessage)
+        console.log('🔍 [MIDDLEWARE] Error details:', error)
         
         // Se não é a última tentativa, aguardar um pouco
         if (attempt < 3) {

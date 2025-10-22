@@ -45,6 +45,7 @@ export default defineNuxtConfig({
       '/api/products': { cors: true },
       '/api/categories': { cors: true },
       '/api/public/**': { cors: true },
+      '/api/vercel-debug': { cors: true },
       
       // APIs administrativas (protegidas por middleware)
       '/api/dashboard/**': { cors: true },
