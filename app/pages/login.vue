@@ -157,6 +157,9 @@ const handleLogin = async () => {
       // Sempre salvar token no localStorage (necessário para Vercel)
       if (response.token) {
         localStorage.setItem('auth_token', response.token);
+        console.log('🔍 [LOGIN] Token salvo no localStorage:', response.token ? 'success' : 'failed');
+      } else {
+        console.log('❌ [LOGIN] Nenhum token recebido do servidor');
       }
     }
     
