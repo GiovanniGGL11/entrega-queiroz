@@ -1,27 +1,34 @@
 // server/api/orders.get.ts
 import { getDB } from "../utils/db";
-import { requireAuth } from "../utils/auth-middleware";
-import { getRequestHeader, getCookie } from 'h3';
+import { verifyUserToken } from "../utils/auth";
+import { getRequestHeader, createError } from 'h3';
 
 export default defineEventHandler(async (event) => {
-  // Debug logs para produção
-  if (process.env.NODE_ENV === 'production') {
-    console.log('🔍 [ORDERS] Endpoint chamado')
-    
-    // Verificar headers
-    const authHeader = getRequestHeader(event, 'authorization')
-    console.log('🔍 [ORDERS] Authorization header:', authHeader ? 'present' : 'missing')
-    if (authHeader) {
-      console.log('🔍 [ORDERS] Authorization header value:', authHeader)
-    }
-    
-    // Verificar cookies
-    const cookies = getCookie(event, 'auth_token')
-    console.log('🔍 [ORDERS] Auth cookie:', cookies ? 'present' : 'missing')
+  // Autenticação direta sem middleware
+  const authHeader = getRequestHeader(event, 'authorization')
+  let token = null
+  
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7)
   }
   
-  // Verificar autenticação
-  await requireAuth(event);
+  if (!token) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Token de autenticação necessário'
+    })
+  }
+  
+  // Verificar token
+  try {
+    const decoded = verifyUserToken(token)
+    // Token válido, continuar
+  } catch (jwtError) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Token inválido ou expirado'
+    })
+  }
   
   const query = getQuery(event);
   const { status, limit = 50, skip = 0 } = query;

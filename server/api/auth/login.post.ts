@@ -41,12 +41,6 @@ export default defineEventHandler(async (event) => {
     // Gerar token JWT
     const token = signUserToken({ userId: user._id.toString(), email: user.email })
     
-    // Debug logs para produção
-    if (process.env.NODE_ENV === 'production') {
-      console.log('🔍 [LOGIN API] Token gerado:', token ? 'success' : 'failed')
-      console.log('🔍 [LOGIN API] User ID:', user._id.toString())
-    }
-    
     // Na produção (Vercel), não usar cookies httpOnly devido a limitações
     if (process.env.NODE_ENV !== 'production') {
       setAuthCookie(event, token)

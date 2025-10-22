@@ -37,10 +37,8 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
         // Sempre usar localStorage para autenticação (necessário para Vercel)
         if (process.client) {
           const token = localStorage.getItem('auth_token')
-          console.log('🔍 [FRONTEND AUTH] Token do localStorage:', token ? 'present' : 'missing')
           if (token) {
             headers['Authorization'] = `Bearer ${token}`
-            console.log('🔍 [FRONTEND AUTH] Header Authorization definido')
           }
         }
         

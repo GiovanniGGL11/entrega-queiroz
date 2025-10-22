@@ -1,4 +1,5 @@
 import { readTokenFromEvent, verifyUserToken } from '../../utils/auth'
+import { getRequestHeader } from 'h3'
 
 export default defineEventHandler(async (event) => {
   try {
