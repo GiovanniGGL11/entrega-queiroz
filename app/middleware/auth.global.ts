@@ -19,23 +19,23 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     }
   }
 
-  // Client: validação autoritativa via API (sem flags locais)
+  // Client: validação autoritativa via API
 
   // Todas as outras rotas (incluindo /dashboard/*) requerem autenticação
   try {
-    // Tentar múltiplas vezes com pequenos delays para casos de propagação de cookie
+    // Tentar múltiplas vezes com pequenos delays para casos de propagação
     let lastError = null
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        // Preparar headers com cache control
+        // Preparar headers
         const headers: any = {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0'
         }
         
-        // Fallback para produção na Vercel (temporário)
-        if (process.client && process.env.NODE_ENV === 'production') {
+        // Sempre usar localStorage para autenticação (necessário para Vercel)
+        if (process.client) {
           const token = localStorage.getItem('auth_token')
           if (token) {
             headers['Authorization'] = `Bearer ${token}`

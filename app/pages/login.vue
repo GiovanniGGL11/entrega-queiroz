@@ -154,13 +154,13 @@ const handleLogin = async () => {
     if (process.client) {
       sessionStorage.removeItem('justLoggedOut');
       
-      // Fallback para produção na Vercel (temporário)
-      if (response.token && process.env.NODE_ENV === 'production') {
+      // Sempre salvar token no localStorage (necessário para Vercel)
+      if (response.token) {
         localStorage.setItem('auth_token', response.token);
       }
     }
     
-    // Pequeno delay para garantir que o cookie seja propagado
+    // Pequeno delay para garantir que o token seja salvo
     await new Promise(resolve => setTimeout(resolve, 100));
     
     // Redirecionar para dashboard

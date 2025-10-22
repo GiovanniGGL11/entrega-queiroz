@@ -185,6 +185,8 @@ const handleLogout = async () => {
     })
     
     if (process.client) {
+      // Limpar localStorage
+      localStorage.removeItem('auth_token')
       sessionStorage.setItem('justLoggedOut', 'true')
     }
     
@@ -193,6 +195,8 @@ const handleLogout = async () => {
   } catch (error) {
     console.error('Erro ao fazer logout:', error)
     if (process.client) {
+      // Limpar localStorage mesmo em caso de erro
+      localStorage.removeItem('auth_token')
       sessionStorage.setItem('justLoggedOut', 'true')
     }
     await router.push('/login')

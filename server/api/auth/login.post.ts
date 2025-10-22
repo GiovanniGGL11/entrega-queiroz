@@ -38,9 +38,13 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Gerar token JWT e salvar no cookie httpOnly
+    // Gerar token JWT
     const token = signUserToken({ userId: user._id.toString(), email: user.email })
-    setAuthCookie(event, token)
+    
+    // Na produção (Vercel), não usar cookies httpOnly devido a limitações
+    if (process.env.NODE_ENV !== 'production') {
+      setAuthCookie(event, token)
+    }
 
     return {
       success: true,
@@ -49,8 +53,8 @@ export default defineEventHandler(async (event) => {
         id: user._id.toString(),
         email: user.email
       },
-      // Retornar token temporariamente para debug na Vercel
-      token: process.env.NODE_ENV === 'production' ? token : undefined
+      // Sempre retornar token para produção (Vercel)
+      token: token
     }
   } catch (error: any) {
     if (error.statusCode) {
