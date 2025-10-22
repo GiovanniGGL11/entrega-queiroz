@@ -48,7 +48,9 @@ export default defineEventHandler(async (event) => {
       user: {
         id: user._id.toString(),
         email: user.email
-      }
+      },
+      // Retornar token temporariamente para debug na Vercel
+      token: process.env.NODE_ENV === 'production' ? token : undefined
     }
   } catch (error: any) {
     if (error.statusCode) {

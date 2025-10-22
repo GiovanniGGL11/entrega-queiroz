@@ -34,6 +34,14 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
           'Expires': '0'
         }
         
+        // Fallback para produção na Vercel (temporário)
+        if (process.client && process.env.NODE_ENV === 'production') {
+          const token = localStorage.getItem('auth_token')
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`
+          }
+        }
+        
         await $fetch(`/api/auth/me?t=${Date.now()}`, {
           credentials: 'include',
           headers

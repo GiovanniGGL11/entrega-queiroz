@@ -153,6 +153,11 @@ const handleLogin = async () => {
     
     if (process.client) {
       sessionStorage.removeItem('justLoggedOut');
+      
+      // Fallback para produção na Vercel (temporário)
+      if (response.token && process.env.NODE_ENV === 'production') {
+        localStorage.setItem('auth_token', response.token);
+      }
     }
     
     // Pequeno delay para garantir que o cookie seja propagado

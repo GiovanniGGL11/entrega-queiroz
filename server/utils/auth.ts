@@ -27,56 +27,56 @@ export function readTokenFromEvent(event: any): string | undefined {
 export function setAuthCookie(event: any, token: string): void {
   const isProduction = process.env.NODE_ENV === 'production'
   
-  // Configuração mais permissiva para Vercel
+  // Configuração otimizada para Vercel
   const cookieOptions: any = {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'lax',
+    sameSite: isProduction ? 'none' : 'lax', // 'none' necessário para HTTPS cross-origin
     path: '/',
     maxAge: 60 * 60 * 24 * 7 // 7 dias
   }
   
-  // Para Vercel, não definir domínio específico - deixar o navegador gerenciar
-  // Isso evita problemas de configuração de domínio
+  // Para produção na Vercel, não definir domínio específico
+  // Deixar o navegador gerenciar automaticamente
   
   setCookie(event, AUTH_COOKIE_NAME, token, cookieOptions)
+  
+  // Log para debug em produção
+  if (isProduction) {
+    console.log('Cookie definido:', {
+      name: AUTH_COOKIE_NAME,
+      secure: cookieOptions.secure,
+      sameSite: cookieOptions.sameSite,
+      httpOnly: cookieOptions.httpOnly
+    })
+  }
 }
 
 export function clearAuthCookie(event: any): void {
+  const isProduction = process.env.NODE_ENV === 'production'
+  
   const baseOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax' as const,
     path: '/',
     maxAge: 0,
     expires: new Date(0)
   }
 
-  const host = (getRequestHeader(event, 'host') || '').split(':')[0]
-  const domainParts = host.split('.').filter(Boolean)
-  const rootDomain = domainParts.length >= 2 ? domainParts.slice(-2).join('.') : host
-
-  const domainCandidates: (string | undefined)[] = [
-    undefined, // sem domain, mais comum em dev
-    host || undefined,
-    rootDomain && rootDomain !== host ? rootDomain : undefined,
-    host ? `.${host}` : undefined,
-    rootDomain && rootDomain !== host ? `.${rootDomain}` : undefined
-  ].filter(Boolean)
-
   const names = [AUTH_COOKIE_NAME, LEGACY_COOKIE_NAME]
 
   for (const name of names) {
-    // primeiro sem domain
+    // Limpar cookie sem domínio específico
     setCookie(event, name, '', baseOptions)
-    try { deleteCookie(event, name, { path: '/' }) } catch {}
-
-    // tentar com variações de domain
-    for (const domain of domainCandidates) {
-      const opts = { ...baseOptions, domain }
-      setCookie(event, name, '', opts)
-      try { deleteCookie(event, name, { path: '/', domain }) } catch {}
-    }
+    try { 
+      deleteCookie(event, name, { path: '/' }) 
+    } catch {}
+  }
+  
+  // Log para debug em produção
+  if (isProduction) {
+    console.log('Cookies limpos:', names)
   }
 }
 
