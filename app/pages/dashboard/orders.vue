@@ -276,13 +276,14 @@ const loadOrders = async () => {
     loading.value = true
     
     const url = statusFilter.value 
-      ? `/api/orders?status=${statusFilter.value}`
-      : '/api/orders'
+      ? `/api/orders?status=${statusFilter.value}&page=1&limit=100`
+      : '/api/orders?page=1&limit=100'
     const response = await authenticatedFetch(url)
     
-    console.log('Resposta da API de pedidos:', response)
+    // Adaptar para nova estrutura de resposta com paginação
+    const ordersData = response.orders || response
     
-    orders.value = response.map(order => ({
+    orders.value = ordersData.map(order => ({
       id: order.orderNumber,
       _id: order._id,
       customer: order.customerInfo.name,
@@ -310,7 +311,6 @@ const loadOrders = async () => {
       }))
     }))
     
-    console.log('Pedidos processados:', orders.value)
   } catch (error) {
     console.error('Erro ao carregar pedidos:', error)
     const errorMessage = error.data?.message || error.message || 'Erro ao carregar pedidos'
@@ -371,15 +371,12 @@ const performStatusUpdate = async (orderId, newStatus) => {
       return
     }
     
-    console.log('Atualizando pedido:', orderId, 'para status:', newStatus)
-    console.log('ID do MongoDB:', order._id)
     
     const response = await authenticatedFetch(`/api/orders/${order._id}`, {
       method: 'PUT',
       body: { status: newStatus }
     })
     
-    console.log('Resposta da API:', response)
     
     // Atualizar status localmente
     order.status = newStatus
@@ -1050,5 +1047,3 @@ onMounted(() => {
   }
 }
 </style>
-
-

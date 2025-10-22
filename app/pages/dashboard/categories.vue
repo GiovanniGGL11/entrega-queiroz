@@ -588,17 +588,9 @@ const initSortableWhenReady = async () => {
     const cards = categoriesContainer.value.querySelectorAll('.category-card')
     const handles = categoriesContainer.value.querySelectorAll('.drag-handle')
     
-    console.log('Tentando inicializar Sortable:', {
-      categories: categories.value.length,
-      cards: cards.length,
-      handles: handles.length,
-      container: !!categoriesContainer.value
-    })
-    
     if (cards.length > 0 && handles.length > 0) {
       initSortable()
     } else {
-      console.warn('Elementos não encontrados no DOM, tentando novamente...')
       // Tentar novamente após mais tempo
       setTimeout(() => {
         initSortableWhenReady()
@@ -615,7 +607,6 @@ const initSortable = async () => {
   }
   
   if (!categoriesContainer.value) {
-    console.warn('Container de categorias não encontrado')
     return
   }
   
@@ -624,7 +615,6 @@ const initSortable = async () => {
   const cards = categoriesContainer.value.querySelectorAll('.category-card')
   
   if (dragHandles.length === 0 || cards.length === 0) {
-    console.warn('Elementos não encontrados:', { handles: dragHandles.length, cards: cards.length })
     return
   }
   
@@ -632,7 +622,6 @@ const initSortable = async () => {
     // Importar SortableJS como dependência estática
     const { default: Sortable } = await import('sortablejs')
     
-    console.log('SortableJS importado:', Sortable)
     
     sortableInstance = new Sortable(categoriesContainer.value, {
       animation: 200,
@@ -649,7 +638,6 @@ const initSortable = async () => {
       delay: 0,
       delayOnTouchStart: false,
       onStart: (evt) => {
-        console.log('🎯 Drag started:', evt.oldIndex)
         evt.item.style.opacity = '0.6'
         evt.item.style.transform = 'rotate(2deg)'
         document.body.style.cursor = 'grabbing'
@@ -659,7 +647,6 @@ const initSortable = async () => {
         evt.item.style.transform = ''
         document.body.style.cursor = ''
         const { oldIndex, newIndex } = evt
-        console.log('✅ Drag ended:', { oldIndex, newIndex })
         
         if (oldIndex !== newIndex && oldIndex !== undefined && newIndex !== undefined) {
           await updateCategoryOrder(oldIndex, newIndex)
@@ -672,12 +659,6 @@ const initSortable = async () => {
       }
     })
     
-    console.log('✅ Sortable inicializado com sucesso!', {
-      container: categoriesContainer.value,
-      handles: dragHandles.length,
-      cards: cards.length,
-      instance: sortableInstance
-    })
   } catch (error) {
     console.error('❌ Erro ao inicializar Sortable:', error)
     showAlert('Erro ao inicializar ordenação: ' + error.message, 'error')
@@ -689,7 +670,6 @@ const destroySortable = () => {
   if (sortableInstance) {
     try {
       sortableInstance.destroy()
-      console.log('Sortable destruído com sucesso')
     } catch (error) {
       console.error('Erro ao destruir Sortable:', error)
     } finally {
@@ -716,7 +696,6 @@ const updateCategoryOrder = async (oldIndex, newIndex) => {
       order: index
     }))
     
-    console.log('Atualizando ordens:', updates)
     
     // Send batch update to server
     const updatePromises = updates.map(update => 
@@ -864,8 +843,6 @@ onUnmounted(() => {
 .created-date svg {
   color: #9ca3af;
 }
-
-
 .btn-text {
   display: inline;
 }
@@ -974,8 +951,6 @@ onUnmounted(() => {
   background: #9ca3af;
   cursor: not-allowed;
 }
-
-
 .loading-spinner {
   animation: spin 1s linear infinite;
 }

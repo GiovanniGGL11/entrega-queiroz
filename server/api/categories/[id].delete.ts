@@ -62,7 +62,6 @@ export default defineEventHandler(async (event) => {
       const deleteProductsResult = await db.collection('products').deleteMany({
         categoryId: id
       })
-      console.log(`Excluídos ${deleteProductsResult.deletedCount} produtos da categoria ${id}`)
     }
     
     const result = await db.collection('categories').deleteOne({
@@ -92,7 +91,3 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-
-
-
-

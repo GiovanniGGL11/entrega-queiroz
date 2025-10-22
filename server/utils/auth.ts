@@ -43,12 +43,7 @@ export function setAuthCookie(event: any, token: string): void {
   
   // Log para debug em produção
   if (isProduction) {
-    console.log('Cookie definido:', {
-      name: AUTH_COOKIE_NAME,
-      secure: cookieOptions.secure,
-      sameSite: cookieOptions.sameSite,
-      httpOnly: cookieOptions.httpOnly
-    })
+    // Debug info removido para produção
   }
 }
 
@@ -76,8 +71,5 @@ export function clearAuthCookie(event: any): void {
   
   // Log para debug em produção
   if (isProduction) {
-    console.log('Cookies limpos:', names)
   }
 }
-
-

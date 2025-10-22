@@ -73,7 +73,6 @@ export default defineEventHandler(async (event) => {
       const quantity = parseInt(item.quantity);
       const realSubtotal = realPrice * quantity;
       
-      console.log(`✅ Produto validado: ${realProduct.name} - Preço real: R$ ${realPrice} - Quantidade: ${quantity} - Subtotal: R$ ${realSubtotal}`);
       
       // Usar dados reais do banco de dados
       validatedItems.push({
@@ -92,23 +91,8 @@ export default defineEventHandler(async (event) => {
     const realDeliveryFee = parseFloat(deliveryInfo.deliveryFee) || 0;
     calculatedTotal += realDeliveryFee;
     
-    console.log(`💰 Total calculado pelo backend: R$ ${calculatedTotal} (Subtotal: R$ ${calculatedTotal - realDeliveryFee} + Taxa: R$ ${realDeliveryFee})`);
-    
     // Usar APENAS o total calculado pelo backend (ignorar total do frontend)
     
-    console.log('Pedido validado com sucesso:', {
-      orderNumber: body.orderNumber,
-      customerName: customerInfo.name,
-      totalItems: validatedItems.length,
-      calculatedTotal: calculatedTotal,
-      validatedItems: validatedItems.map(item => ({
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        subtotal: item.subtotal
-      }))
-    });
-
     const orders = db.collection("orders");
     const inventory = db.collection("inventory");
     

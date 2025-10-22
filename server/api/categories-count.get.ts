@@ -1,7 +1,34 @@
 // server/api/categories-count.get.ts
 import { getDB } from "../utils/db";
+import { verifyUserToken } from "../utils/auth";
+import { getRequestHeader, createError } from 'h3';
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
+  // Autenticação direta sem middleware
+  const authHeader = getRequestHeader(event, 'authorization')
+  let token = null
+  
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7)
+  }
+  
+  if (!token) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Token de autenticação necessário'
+    })
+  }
+  
+  // Verificar token
+  try {
+    const decoded = verifyUserToken(token)
+    // Token válido, continuar
+  } catch (jwtError) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Token inválido ou expirado'
+    })
+  }
   try {
     const db = await getDB();
     const products = db.collection("products");
@@ -26,11 +53,9 @@ export default defineEventHandler(async () => {
       counts[categoryId] = item.count;
     });
     
-    console.log('Contagem de produtos por categoria:', counts);
     
     return counts;
   } catch (err) {
-    console.error('Erro ao contar produtos por categoria:', err);
     throw createError({
       statusCode: 500,
       message: "Erro ao contar produtos por categoria",

@@ -3,45 +3,58 @@ import { getDB } from "../utils/db";
 
 export default defineEventHandler(async () => {
   try {
-    console.log('[categories-with-products] Iniciando busca...');
-    
     const db = await getDB();
-    console.log('[categories-with-products] Conexão com DB estabelecida');
     
     const categories = db.collection("categories");
     const products = db.collection("products");
     
-    // Buscar apenas categorias visíveis
-    const allCategories = await categories.find({ 
-      isVisible: { $ne: false } // Inclui categorias com isVisible: true ou undefined
-    }).sort({ order: 1, createdAt: -1 }).toArray();
-    console.log('[categories-with-products] Categorias visíveis encontradas:', allCategories.length);
-    
-    // Para cada categoria, buscar seus produtos visíveis
-    const categoriesWithProducts = await Promise.all(
-      allCategories.map(async (category: any) => {
-        const categoryProducts = await products.find({ 
-          categoryId: category._id.toString(),
-          isVisible: { $ne: false } // Apenas produtos visíveis
-        }).sort({ order: 1, createdAt: -1 }).toArray();
-        
-        console.log(`[categories-with-products] Categoria "${category.name}": ${categoryProducts.length} produtos visíveis`);
-        
-        return {
-          ...category,
-          items: categoryProducts.map((product: any) => ({
-            id: product._id.toString(),
-            name: product.name,
-            description: product.description,
-            price: product.price,
-            image: product.image,
-            complements: product.complements || []
-          }))
-        };
-      })
-    );
-    
-    console.log('[categories-with-products] Retornando', categoriesWithProducts.length, 'categorias visíveis');
+    // OTIMIZAÇÃO: Usar aggregation para fazer join e reduzir queries
+    const categoriesWithProducts = await categories.aggregate([
+      {
+        $match: {
+          isVisible: { $ne: false } // Inclui categorias com isVisible: true ou undefined
+        }
+      },
+      {
+        $lookup: {
+          from: "products",
+          let: { categoryId: { $toString: "$_id" } },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$categoryId", "$$categoryId"] },
+                isVisible: { $ne: false } // Apenas produtos visíveis
+              }
+            },
+            {
+              $project: {
+                id: { $toString: "$_id" },
+                name: 1,
+                description: 1,
+                price: 1,
+                image: 1,
+                complements: 1
+              }
+            },
+            { $sort: { order: 1, createdAt: -1 } }
+          ],
+          as: "items"
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          image: 1,
+          order: 1,
+          isVisible: 1,
+          createdAt: 1,
+          items: 1
+        }
+      },
+      { $sort: { order: 1, createdAt: -1 } }
+    ]).toArray();
     
     return categoriesWithProducts;
   } catch (error: any) {

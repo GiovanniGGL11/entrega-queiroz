@@ -696,7 +696,6 @@ const loadProducts = async () => {
     // Debug: verificar complementos nos produtos
     response.forEach(product => {
       if (product.complements && product.complements.length > 0) {
-        console.log(`Produto "${product.name}" tem ${product.complements.length} complementos:`, product.complements)
       }
     })
     
@@ -739,7 +738,6 @@ const editProduct = (product) => {
       }))
     : []
   
-  console.log('Editando produto:', product.name, 'Complementos:', complements)
   
   productForm.value = {
     name: product.name,

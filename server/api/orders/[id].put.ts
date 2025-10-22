@@ -58,7 +58,6 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    console.log('Atualizando pedido:', id, 'para status:', status);
 
     const db = await getDB();
     const orders = db.collection("orders");
@@ -71,19 +70,11 @@ export default defineEventHandler(async (event) => {
     if (notes !== undefined) {
       updateData.notes = notes.trim();
     }
-
-    console.log('Dados de atualização:', updateData);
-    console.log('ID convertido para ObjectId:', new ObjectId(id));
-
     const result = await orders.updateOne(
       { _id: new ObjectId(id) },
       { $set: updateData }
     );
-
-    console.log('Resultado da atualização:', result);
-
     if (result.matchedCount === 0) {
-      console.log('Pedido não encontrado com ID:', id);
       throw createError({
         statusCode: 404,
         message: "Pedido não encontrado",
@@ -92,7 +83,6 @@ export default defineEventHandler(async (event) => {
 
     // Buscar o pedido atualizado
     const updatedOrder = await orders.findOne({ _id: new ObjectId(id) });
-    console.log('Pedido atualizado encontrado:', updatedOrder);
 
     return {
       success: true,

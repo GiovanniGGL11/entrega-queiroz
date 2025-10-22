@@ -30,20 +30,16 @@ export default defineEventHandler(async (event) => {
   }
   
   try {
-    console.log('[settings.get] Iniciando busca de configurações...');
     
     const db = await getDB();
-    console.log('[settings.get] Conexão com DB estabelecida');
     
     const settings = db.collection("settings");
     
     // Buscar as configurações (sempre haverá apenas um documento)
     let config = await settings.findOne({ _id: "store-config" });
-    console.log('[settings.get] Config encontrado:', config ? 'SIM' : 'NÃO');
     
     // Se não existir, criar com valores padrão
     if (!config) {
-      console.log('[settings.get] Criando configuração padrão...');
       config = {
         _id: "store-config",
         storeName: "Minha Loja",
@@ -90,7 +86,6 @@ export default defineEventHandler(async (event) => {
       };
       
       await settings.insertOne(config);
-      console.log('[settings.get] Configuração padrão criada com sucesso');
     }
     
     // Calcular se está aberto agora
@@ -105,7 +100,6 @@ export default defineEventHandler(async (event) => {
       isOpen = currentTime >= todaySchedule.open && currentTime <= todaySchedule.close;
     }
     
-    console.log('[settings.get] Retornando configurações - isOpen:', isOpen);
     
     return {
       ...config,

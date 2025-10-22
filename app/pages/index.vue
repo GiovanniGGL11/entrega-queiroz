@@ -72,12 +72,12 @@ const loadStoreSettings = async () => {
   }
 }
 
-// Carregar categorias com produtos da API (otimizado)
+// Carregar categorias com produtos da API (otimizado com lazy loading)
 const loadCategories = async () => {
   try {
     loadingCategories.value = true
     
-    // Usar a API que já retorna categorias com produtos
+    // OTIMIZAÇÃO: Carregar apenas categorias primeiro (mais rápido)
     const apiCategories = await $fetch('/api/categories-with-products')
     
     // Mapear categorias da API para o formato esperado
@@ -102,7 +102,26 @@ const loadCategories = async () => {
   }
 }
 
-
+// OTIMIZAÇÃO: Lazy loading para produtos de categoria específica
+const loadCategoryProducts = async (categoryId) => {
+  try {
+    const category = categories.value.find(cat => cat.id === categoryId)
+    if (!category || category.items.length === 0) {
+      // Se não tem produtos carregados, buscar da API
+      const apiCategories = await $fetch('/api/categories-with-products')
+      const apiCategory = apiCategories.find(cat => cat._id === categoryId)
+      
+      if (apiCategory) {
+        const categoryIndex = categories.value.findIndex(cat => cat.id === categoryId)
+        if (categoryIndex !== -1) {
+          categories.value[categoryIndex].items = apiCategory.items || []
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao carregar produtos da categoria:', error)
+  }
+}
 // Computeds
 const filteredCategories = computed(() => {
   if (!searchQuery.value.trim()) return categories.value;
@@ -646,7 +665,12 @@ useHead({
         <span class="total-value">{{ formatPrice(cartTotal) }}</span>
       </div>
       <button class="finalize-btn" @click="finalizeOrder" :disabled="cartCount === 0">
-        {{ cartCount > 0 ? 'Finalizar Pedido' : 'Carrinho vazio' }}
+        <span class="btn-content">
+          <svg v-if="cartCount > 0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2s-.9-2-2-2m10 0c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2s2-.9 2-2s-.9-2-2-2m-8.9-5h7.45c.75 0 1.41-.41 1.75-1.03L21 4.96L19.25 4l-3.7 7H8.53L4.27 2H1v2h2l3.6 7.59l-1.35 2.44C4.52 15.37 5.48 17 7 17h12v-2H7zM12 2l4 4l-4 4l-1.41-1.41L12.17 7H8V5h4.17l-1.59-1.59z"/>
+          </svg>
+          {{ cartCount > 0 ? 'Finalizar Pedido' : 'Carrinho vazio' }}
+        </span>
       </button>
     </div>
   </div>
@@ -766,8 +790,6 @@ useHead({
   display: flex;
   flex-direction: column;
 }
-
-
 body {
   overflow-x: hidden; /* Previne scroll horizontal global */
 }
@@ -1587,6 +1609,18 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.btn-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .finalize-btn:hover {
@@ -2191,6 +2225,11 @@ body {
   .finalize-btn {
     padding: 0.75rem;
     font-size: 0.875rem;
+    gap: 6px;
+  }
+  
+  .btn-content {
+    gap: 6px;
   }
 
   .floating-cart-btn {
@@ -2351,6 +2390,11 @@ body {
   .finalize-btn {
     padding: 0.6rem;
     font-size: 0.8rem;
+    gap: 4px;
+  }
+  
+  .btn-content {
+    gap: 4px;
   }
 
   .modal-content p {

@@ -31,25 +31,37 @@ export default defineEventHandler(async (event) => {
   }
   
   const query = getQuery(event);
-  const { status, limit = 50, skip = 0 } = query;
+  const { status, page = 1, limit = 50 } = query;
 
   try {
     const db = await getDB();
     const orders = db.collection("orders");
     
-    let filter = {};
-    if (status) {
-      filter = { status: status };
-    }
+    // OTIMIZAÇÃO: Adicionar paginação e filtros otimizados
+    const skip = (parseInt(page) - 1) * parseInt(limit);
     
-    const ordersList = await orders
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .limit(parseInt(limit))
-      .skip(parseInt(skip))
-      .toArray();
+    // Construir filtro
+    const filter = status ? { status } : {};
     
-    return ordersList;
+    // Buscar pedidos com paginação e ordenação otimizada
+    const [ordersData, totalCount] = await Promise.all([
+      orders.find(filter)
+        .sort({ createdAt: -1 }) // Índice otimizado
+        .skip(skip)
+        .limit(parseInt(limit))
+        .toArray(),
+      orders.countDocuments(filter)
+    ]);
+    
+    return {
+      orders: ordersData,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalCount,
+        pages: Math.ceil(totalCount / parseInt(limit))
+      }
+    };
   } catch (err) {
     throw createError({
       statusCode: 500,

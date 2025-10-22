@@ -5,34 +5,28 @@ export async function requireAuth(event: any) {
   try {
     // Debug logs para produção
     if (process.env.NODE_ENV === 'production') {
-      console.log('🔍 [AUTH DEBUG] Verificando autenticação...')
-      console.log('🔍 [AUTH DEBUG] Headers:', Object.keys(getRequestHeader(event, 'authorization') ? { authorization: 'present' } : {}))
     }
     
     // Obter token do cookie ou header Authorization
     let token = readTokenFromEvent(event)
     
     if (process.env.NODE_ENV === 'production') {
-      console.log('🔍 [AUTH DEBUG] Token do cookie:', token ? 'present' : 'missing')
     }
     
     // Fallback: tentar obter do header Authorization
     if (!token) {
       const authHeader = getRequestHeader(event, 'authorization')
       if (process.env.NODE_ENV === 'production') {
-        console.log('🔍 [AUTH DEBUG] Authorization header:', authHeader ? 'present' : 'missing')
       }
       if (authHeader && authHeader.startsWith('Bearer ')) {
         token = authHeader.substring(7)
         if (process.env.NODE_ENV === 'production') {
-          console.log('🔍 [AUTH DEBUG] Token extraído do header:', token ? 'present' : 'missing')
         }
       }
     }
     
     if (!token) {
       if (process.env.NODE_ENV === 'production') {
-        console.log('❌ [AUTH DEBUG] Nenhum token encontrado')
       }
       throw createError({
         statusCode: 401,

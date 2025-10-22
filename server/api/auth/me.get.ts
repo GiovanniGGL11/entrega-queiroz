@@ -8,12 +8,7 @@ export default defineEventHandler(async (event) => {
     
     // Log para debug em produção
     if (process.env.NODE_ENV === 'production') {
-      console.log('API /auth/me chamada:', {
-        hasToken: !!token,
-        tokenLength: token ? token.length : 0,
-        cookies: getRequestHeader(event, 'cookie') ? 'present' : 'missing',
-        userAgent: getRequestHeader(event, 'user-agent')?.substring(0, 50)
-      })
+      // Debug info removido para produção
     }
     
     // Fallback: tentar obter do header Authorization

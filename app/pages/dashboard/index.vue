@@ -388,10 +388,13 @@ const loadOrders = async () => {
   try {
     loadingOrders.value = true
     
-    const response = await authenticatedFetch('/api/orders')
+    const response = await authenticatedFetch('/api/orders?page=1&limit=5')
+    
+    // Adaptar para nova estrutura de resposta com paginação
+    const ordersData = response.orders || response
     
     // Pegar apenas os últimos 5 pedidos
-    recentOrders.value = response
+    recentOrders.value = ordersData
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, 5)
       .map(order => ({

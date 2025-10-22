@@ -22,7 +22,6 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event);
     const { zipCode, latitude, longitude } = body;
     
-    console.log('[calculate-delivery] Recebido:', { zipCode, latitude, longitude });
     
     // Buscar configurações da loja
     const db = await getDB();
@@ -30,22 +29,15 @@ export default defineEventHandler(async (event) => {
     const config = await settings.findOne({ _id: "store-config" });
     
     if (!config) {
-      console.log('[calculate-delivery] Configurações não encontradas');
       throw createError({
         statusCode: 500,
         message: "Configurações da loja não encontradas",
       });
     }
     
-    console.log('[calculate-delivery] Config encontrado:', {
-      deliveryZones: config.deliveryZones?.length || 0,
-      hasDefaultZone: !!config.defaultDeliveryZone
-    });
-    
     // Se CEP foi fornecido, usar lógica baseada em CEP
     if (zipCode) {
       const cleanZipCode = zipCode.replace(/\D/g, '');
-      console.log('[calculate-delivery] CEP limpo:', cleanZipCode);
       
       if (cleanZipCode.length !== 8) {
         throw createError({
@@ -58,8 +50,6 @@ export default defineEventHandler(async (event) => {
       const deliveryZones = config.deliveryZones || [];
       const cepPrefix = cleanZipCode.substring(0, 5); // Primeiros 5 dígitos do CEP
       
-      console.log('[calculate-delivery] CEP prefix:', cepPrefix);
-      console.log('[calculate-delivery] Zonas disponíveis:', deliveryZones.map(z => ({ label: z.label, fee: z.fee, hasCepRanges: !!z.cepRanges })));
       
       // Encontrar zona de entrega correspondente ao CEP
       let deliveryFee = null;
@@ -75,7 +65,6 @@ export default defineEventHandler(async (event) => {
           deliveryFee = zone.fee;
           deliveryZone = zone;
           canDeliver = true;
-          console.log('[calculate-delivery] Zona específica encontrada:', zone.label);
           break;
         }
       }
@@ -102,7 +91,6 @@ export default defineEventHandler(async (event) => {
             selectedZone = deliveryZones[0];
           } else {
             // Para outras regiões muito distantes, não entregar
-            console.log('[calculate-delivery] CEP muito distante, não entregando:', cepPrefix);
             return {
               canDeliver: false,
               message: "Desculpe, não entregamos neste CEP",
@@ -113,13 +101,11 @@ export default defineEventHandler(async (event) => {
           deliveryFee = selectedZone.fee;
           deliveryZone = selectedZone;
           canDeliver = true;
-          console.log('[calculate-delivery] Usando zona baseada no CEP:', selectedZone.label, 'para CEP:', cepPrefix);
         }
       }
       
       // Se ainda não encontrou, não entrega
       if (!canDeliver) {
-        console.log('[calculate-delivery] Não é possível entregar no CEP:', cleanZipCode);
         return {
           canDeliver: false,
           message: "Desculpe, não entregamos neste CEP",
@@ -135,7 +121,6 @@ export default defineEventHandler(async (event) => {
         zipCode: cleanZipCode
       };
       
-      console.log('[calculate-delivery] Resultado:', result);
       return result;
     }
     
@@ -209,5 +194,3 @@ export default defineEventHandler(async (event) => {
     });
   }
 });
-
-

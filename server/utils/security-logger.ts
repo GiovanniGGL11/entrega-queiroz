@@ -36,12 +36,6 @@ export async function logSecurityViolation(violation: SecurityViolation) {
       severity: 'HIGH'
     });
     
-    console.warn('🚨 SECURITY VIOLATION DETECTED:', {
-      type: violation.type,
-      timestamp: violation.timestamp,
-      customer: violation.customerInfo?.name,
-      violation: violation.violation
-    });
   } catch (error) {
     console.error('Erro ao registrar violação de segurança:', error);
   }

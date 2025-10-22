@@ -20,6 +20,18 @@ export default defineEventHandler(async (event) => {
         deliveryMaxTime: 60,
         deliveryFee: 0,
         minimumOrder: 0,
+        checkoutFields: {
+          customerName: { enabled: true, required: true },
+          customerPhone: { enabled: true, required: true },
+          customerEmail: { enabled: true, required: false },
+          deliveryAddress: { enabled: true, required: true },
+          deliveryComplement: { enabled: true, required: false },
+          deliveryNeighborhood: { enabled: true, required: true },
+          deliveryCity: { enabled: true, required: true },
+          deliveryZipCode: { enabled: true, required: true },
+          paymentMethod: { enabled: true, required: true },
+          notes: { enabled: true, required: false }
+        },
         deliveryZones: [
           {
             name: "Zona 1",
@@ -53,6 +65,18 @@ export default defineEventHandler(async (event) => {
       deliveryMaxTime: storeSettings.deliveryMaxTime || 60,
       deliveryFee: storeSettings.deliveryFee !== undefined ? storeSettings.deliveryFee : 0,
       minimumOrder: storeSettings.minimumOrder !== undefined ? storeSettings.minimumOrder : 0,
+      checkoutFields: storeSettings.checkoutFields || {
+        customerName: { enabled: true, required: true },
+        customerPhone: { enabled: true, required: true },
+        customerEmail: { enabled: true, required: false },
+        deliveryAddress: { enabled: true, required: true },
+        deliveryComplement: { enabled: true, required: false },
+        deliveryNeighborhood: { enabled: true, required: true },
+        deliveryCity: { enabled: true, required: true },
+        deliveryZipCode: { enabled: true, required: true },
+        paymentMethod: { enabled: true, required: true },
+        notes: { enabled: true, required: false }
+      },
       deliveryZones: storeSettings.deliveryZones || [
         {
           name: "Zona 1",
@@ -87,6 +111,18 @@ export default defineEventHandler(async (event) => {
       deliveryMaxTime: 60,
       deliveryFee: 0,
       minimumOrder: 0,
+      checkoutFields: {
+        customerName: { enabled: true, required: true },
+        customerPhone: { enabled: true, required: true },
+        customerEmail: { enabled: true, required: false },
+        deliveryAddress: { enabled: true, required: true },
+        deliveryComplement: { enabled: true, required: false },
+        deliveryNeighborhood: { enabled: true, required: true },
+        deliveryCity: { enabled: true, required: true },
+        deliveryZipCode: { enabled: true, required: true },
+        paymentMethod: { enabled: true, required: true },
+        notes: { enabled: true, required: false }
+      },
       deliveryZones: [
         {
           name: "Zona 1",
