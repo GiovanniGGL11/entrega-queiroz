@@ -1,8 +1,25 @@
 // server/api/orders.get.ts
 import { getDB } from "../utils/db";
 import { requireAuth } from "../utils/auth-middleware";
+import { getRequestHeader, getCookie } from 'h3';
 
 export default defineEventHandler(async (event) => {
+  // Debug logs para produção
+  if (process.env.NODE_ENV === 'production') {
+    console.log('🔍 [ORDERS] Endpoint chamado')
+    
+    // Verificar headers
+    const authHeader = getRequestHeader(event, 'authorization')
+    console.log('🔍 [ORDERS] Authorization header:', authHeader ? 'present' : 'missing')
+    if (authHeader) {
+      console.log('🔍 [ORDERS] Authorization header value:', authHeader)
+    }
+    
+    // Verificar cookies
+    const cookies = getCookie(event, 'auth_token')
+    console.log('🔍 [ORDERS] Auth cookie:', cookies ? 'present' : 'missing')
+  }
+  
   // Verificar autenticação
   await requireAuth(event);
   

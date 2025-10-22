@@ -47,6 +47,7 @@ export default defineNuxtConfig({
       '/api/public/**': { cors: true },
       '/api/test-auth': { cors: true },
       '/api/test-dashboard': { cors: true },
+      '/api/manual-auth': { cors: true },
       
       // APIs administrativas (protegidas por middleware)
       '/api/dashboard/**': { cors: true },

@@ -47,9 +47,24 @@
           </div>
         </div>
         
-        <!-- Teste 3: Endpoint Real Dashboard -->
+        <!-- Teste 3: Autenticação Manual -->
         <div class="bg-white rounded-lg shadow p-6">
-          <h2 class="text-xl font-semibold mb-4">Teste 3: Endpoint Real Dashboard</h2>
+          <h2 class="text-xl font-semibold mb-4">Teste 3: Autenticação Manual</h2>
+          <button 
+            @click="testManualAuth"
+            :disabled="loading.manual"
+            class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 disabled:opacity-50"
+          >
+            {{ loading.manual ? 'Testando...' : 'Testar /api/manual-auth' }}
+          </button>
+          <div v-if="results.manual" class="mt-4 p-4 bg-gray-100 rounded">
+            <pre>{{ JSON.stringify(results.manual, null, 2) }}</pre>
+          </div>
+        </div>
+        
+        <!-- Teste 4: Endpoint Real Dashboard -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <h2 class="text-xl font-semibold mb-4">Teste 4: Endpoint Real Dashboard</h2>
           <button 
             @click="testRealDashboard"
             :disabled="loading.real"
@@ -72,11 +87,13 @@ const tokenStatus = ref(false)
 const loading = ref({
   basic: false,
   dashboard: false,
+  manual: false,
   real: false
 })
 const results = ref({
   basic: null,
   dashboard: null,
+  manual: null,
   real: null
 })
 
@@ -122,6 +139,12 @@ const testDashboardEndpoint = async () => {
   loading.value.dashboard = true
   results.value.dashboard = await makeRequest('/api/test-dashboard', 'dashboard')
   loading.value.dashboard = false
+}
+
+const testManualAuth = async () => {
+  loading.value.manual = true
+  results.value.manual = await makeRequest('/api/manual-auth', 'manual')
+  loading.value.manual = false
 }
 
 const testRealDashboard = async () => {
