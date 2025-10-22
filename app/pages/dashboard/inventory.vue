@@ -908,10 +908,12 @@ const clearFilters = () => {
   }
 }
 
+const { authenticatedFetch } = useAuthenticatedFetch()
+
 // Carregar produtos
 const loadProducts = async () => {
   try {
-    const response = await $fetch('/api/products')
+    const response = await authenticatedFetch('/api/products')
     products.value = response
   } catch (error) {
     showError('Erro ao carregar produtos')
@@ -921,7 +923,7 @@ const loadProducts = async () => {
 // Carregar categorias
 const loadCategories = async () => {
   try {
-    const response = await $fetch('/api/categories')
+    const response = await authenticatedFetch('/api/categories')
     categories.value = response
   } catch (error) {
     console.error('Erro ao carregar categorias:', error)
@@ -949,7 +951,7 @@ const registerMovement = async () => {
   try {
     submitting.value = true
     
-    const response = await $fetch('/api/inventory/movements', {
+    const response = await authenticatedFetch('/api/inventory/movements', {
       method: 'POST',
       body: {
         inventoryId: selectedItem.value._id,
@@ -987,8 +989,8 @@ const loadInventory = async () => {
     
     // Carregar dados em paralelo
     const [inventoryResponse, reportsResponse] = await Promise.all([
-      $fetch('/api/inventory'),
-      $fetch('/api/inventory/reports')
+      authenticatedFetch('/api/inventory'),
+      authenticatedFetch('/api/inventory/reports')
     ])
     
     inventory.value = inventoryResponse
@@ -1007,7 +1009,7 @@ const loadInventory = async () => {
 const createInventory = async () => {
   try {
     submitting.value = true
-    const response = await $fetch('/api/inventory', {
+    const response = await authenticatedFetch('/api/inventory', {
       method: 'POST',
       body: createForm.value
     })
@@ -1040,7 +1042,7 @@ const editInventory = (item) => {
 const updateInventory = async () => {
   try {
     submitting.value = true
-    const response = await $fetch(`/api/inventory/${editingItem.value._id}`, {
+    const response = await authenticatedFetch(`/api/inventory/${editingItem.value._id}`, {
       method: 'PUT',
       body: {
         currentStock: editForm.value.initialStock,
@@ -1098,7 +1100,7 @@ const submitStockAdjustment = async () => {
       return
     }
     
-    const response = await $fetch(`/api/inventory/${adjustingItem.value._id}`, {
+    const response = await authenticatedFetch(`/api/inventory/${adjustingItem.value._id}`, {
       method: 'PUT',
       body: {
         operation: adjustForm.value.operation,
@@ -1137,7 +1139,7 @@ const confirmDelete = async () => {
   
   try {
     deleting.value = true
-    await $fetch(`/api/inventory/${itemToDelete.value._id}`, {
+    await authenticatedFetch(`/api/inventory/${itemToDelete.value._id}`, {
       method: 'DELETE'
     })
     

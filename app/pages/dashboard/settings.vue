@@ -1100,10 +1100,12 @@ const showAlert = (message, type) => {
   }, 3000)
 }
 
+const { authenticatedFetch } = useAuthenticatedFetch()
+
 const loadSettings = async () => {
   try {
     loading.value = true
-    const response = await $fetch('/api/settings')
+    const response = await authenticatedFetch('/api/settings')
     form.value = {
       storeName: response.storeName || '',
       logo: response.logo || '',
@@ -1128,7 +1130,7 @@ const loadSettings = async () => {
 const saveSettings = async () => {
   try {
     submitting.value = true
-    await $fetch('/api/settings', {
+    await authenticatedFetch('/api/settings', {
       method: 'PUT',
       body: form.value
     })
@@ -1240,7 +1242,7 @@ const handleFileUpload = async (event, type) => {
         const base64 = e.target.result
         
         // Fazer upload
-        const response = await $fetch('/api/upload-image', {
+        const response = await authenticatedFetch('/api/upload-image', {
           method: 'POST',
           body: {
             image: base64,

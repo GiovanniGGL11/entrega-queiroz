@@ -675,10 +675,12 @@ const clearFilters = () => {
   visibilityFilter.value = ''
 }
 
+const { authenticatedFetch } = useAuthenticatedFetch()
+
 // Carregar categorias
 const loadCategories = async () => {
   try {
-    const response = await $fetch('/api/categories')
+    const response = await authenticatedFetch('/api/categories')
     categories.value = response
   } catch (error) {
     showAlert('Erro ao carregar categorias', 'error')
@@ -689,7 +691,7 @@ const loadCategories = async () => {
 const loadProducts = async () => {
   try {
     loading.value = true
-    const response = await $fetch('/api/products?showAll=true') // Mostrar todos os produtos no dashboard
+    const response = await authenticatedFetch('/api/products?showAll=true') // Mostrar todos os produtos no dashboard
     
     // Debug: verificar complementos nos produtos
     response.forEach(product => {
@@ -710,7 +712,7 @@ const loadProducts = async () => {
 const createProduct = async () => {
   try {
     submitting.value = true
-    const response = await $fetch('/api/products', {
+    const response = await authenticatedFetch('/api/products', {
       method: 'POST',
       body: productForm.value
     })
@@ -756,7 +758,7 @@ const editProduct = (product) => {
 const updateProduct = async () => {
   try {
     submitting.value = true
-    const response = await $fetch(`/api/products/${editingProduct.value._id}`, {
+    const response = await authenticatedFetch(`/api/products/${editingProduct.value._id}`, {
       method: 'PUT',
       body: productForm.value
     })
@@ -790,7 +792,7 @@ const confirmDelete = async () => {
   
   try {
     deleting.value = true
-    await $fetch(`/api/products/${productToDelete.value._id}`, {
+    await authenticatedFetch(`/api/products/${productToDelete.value._id}`, {
       method: 'DELETE'
     })
     
@@ -870,7 +872,7 @@ const handleImageUpload = async (event) => {
         const base64 = e.target.result
         
         // Fazer upload
-        const response = await $fetch('/api/upload-image', {
+        const response = await authenticatedFetch('/api/upload-image', {
           method: 'POST',
           body: {
             image: base64,

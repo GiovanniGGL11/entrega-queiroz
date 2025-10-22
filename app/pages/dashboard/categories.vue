@@ -395,13 +395,15 @@ const alert = ref({
 })
 
 // Carregar categorias
+const { authenticatedFetch } = useAuthenticatedFetch()
+
 const loadCategories = async () => {
   try {
     loading.value = true
     // Carregar categorias e contagem de produtos em paralelo
     const [categoriesResponse, countsResponse] = await Promise.all([
-      $fetch('/api/categories?showAll=true'), // Mostrar todas as categorias no dashboard
-      $fetch('/api/categories-count')
+      authenticatedFetch('/api/categories?showAll=true'), // Mostrar todas as categorias no dashboard
+      authenticatedFetch('/api/categories-count')
     ])
     
     categories.value = categoriesResponse.map(cat => ({
@@ -423,7 +425,7 @@ const loadCategories = async () => {
 const createCategory = async () => {
   try {
     submitting.value = true
-    const response = await $fetch('/api/categories', {
+    const response = await authenticatedFetch('/api/categories', {
       method: 'POST',
       body: categoryForm.value
     })
@@ -458,7 +460,7 @@ const editCategory = (category) => {
 const updateCategory = async () => {
   try {
     submitting.value = true
-    const response = await $fetch(`/api/categories/${editingCategory.value._id}`, {
+    const response = await authenticatedFetch(`/api/categories/${editingCategory.value._id}`, {
       method: 'PUT',
       body: categoryForm.value
     })
@@ -501,7 +503,7 @@ const confirmDelete = async () => {
     // Determinar a opção de exclusão
     const shouldDeleteProducts = categoryToDelete.value.itemCount > 0 && deleteOption.value === 'category-and-products'
     
-    await $fetch(`/api/categories/${categoryToDelete.value._id}`, {
+    await authenticatedFetch(`/api/categories/${categoryToDelete.value._id}`, {
       method: 'DELETE',
       body: {
         deleteProducts: shouldDeleteProducts
@@ -718,7 +720,7 @@ const updateCategoryOrder = async (oldIndex, newIndex) => {
     
     // Send batch update to server
     const updatePromises = updates.map(update => 
-      $fetch(`/api/categories/${update.id}`, {
+      authenticatedFetch(`/api/categories/${update.id}`, {
         method: 'PUT',
         body: { order: update.order }
       }).catch(error => {
