@@ -2,6 +2,15 @@
   <div class="dashboard-home">
     <!-- Skeleton Loading -->
     <div v-if="loading" class="skeleton-container">
+      <div class="loading-message">
+        <div class="loading-spinner">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12a9 9 0 11-6.219-8.56"/>
+          </svg>
+        </div>
+        <p>Carregando dados do dashboard...</p>
+      </div>
+      
       <!-- Skeleton para Cards de Estatísticas -->
       <div class="stats-grid">
         <div v-for="i in 4" :key="i" class="stat-card skeleton-card">
@@ -16,7 +25,7 @@
       <!-- Skeleton para Cards de Conteúdo -->
       <div class="dashboard-content">
         <!-- Skeleton para Pedidos Recentes -->
-        <div class="card skeleton-card">
+        <div class="content-card skeleton-card">
           <div class="card-header">
             <div class="skeleton-text skeleton-header"></div>
             <div class="skeleton-button"></div>
@@ -31,7 +40,7 @@
         </div>
 
         <!-- Skeleton para Resumo de Vendas -->
-        <div class="card skeleton-card">
+        <div class="content-card skeleton-card">
           <div class="card-header">
             <div class="skeleton-text skeleton-header"></div>
             <div class="skeleton-select"></div>
@@ -54,7 +63,12 @@
       <div class="page-header">
         <h1>Dashboard</h1>
         <div class="header-actions">
-          <button @click="refreshOrders" class="btn-refresh" :disabled="loadingOrders">
+          <button 
+            @click="refreshOrders" 
+            class="btn-refresh" 
+            :disabled="loadingOrders"
+            title="Atualizar lista de pedidos"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="23 4 23 10 17 10"></polyline>
               <polyline points="1 20 1 14 7 14"></polyline>
@@ -68,7 +82,7 @@
       <!-- Estatísticas -->
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-icon">
+          <div class="stat-icon" title="Receita total gerada">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="12" y1="1" x2="12" y2="23"></line>
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
@@ -82,7 +96,7 @@
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon">
+          <div class="stat-icon" title="Pedidos aguardando processamento">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12,6 12,12 16,14"></polyline>
@@ -96,7 +110,7 @@
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon">
+          <div class="stat-icon" title="Valor médio por pedido">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 19c-5 0-9-4-9-9s4-9 9-9 9 4 9 9-4 9-9 9z"></path>
               <path d="M9 9l3 3 3-3"></path>
@@ -110,7 +124,7 @@
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon">
+          <div class="stat-icon" title="Produtos cadastrados no sistema">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 3h18l-2 14H5L3 3z"></path>
               <path d="M8 21h8"></path>
@@ -119,18 +133,62 @@
           <div class="stat-content">
             <h3>{{ stats.basic.totalProducts }}</h3>
             <p>Produtos Ativos</p>
-            <small>{{ stats.insights.topSellingItems.length }} categorias</small>
+            <small>{{ stats.basic.totalCategories }} categorias</small>
           </div>
         </div>
       </div>
 
     <!-- Gráficos e Tabelas -->
     <div class="dashboard-content">
+      <!-- Gráficos -->
+      <div class="charts-grid">
+        <!-- Gráfico de Vendas por Período -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Vendas por Período</h3>
+          </div>
+          <DashboardChart 
+            type="bar"
+            :data="salesChartData"
+            :options="salesChartOptions"
+          />
+        </div>
+
+        <!-- Gráfico de Ticket Médio -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Ticket Médio por Período</h3>
+          </div>
+          <DashboardChart 
+            type="line"
+            :data="ticketChartData"
+            :options="ticketChartOptions"
+          />
+        </div>
+
+        <!-- Gráfico de Produtos Mais Vendidos -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Top 5 Produtos Mais Vendidos</h3>
+          </div>
+          <DashboardChart 
+            type="doughnut"
+            :data="productsChartData"
+            :options="productsChartOptions"
+          />
+        </div>
+      </div>
+
       <!-- Pedidos Recentes -->
       <div class="content-card">
         <div class="card-header">
           <h2>Pedidos Recentes</h2>
-          <button @click="refreshOrders" class="btn-refresh" :disabled="loadingOrders">
+          <button 
+            @click="refreshOrders" 
+            class="btn-refresh" 
+            :disabled="loadingOrders"
+            title="Atualizar lista de pedidos"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="23 4 23 10 17 10"></polyline>
               <polyline points="1 20 1 14 7 14"></polyline>
@@ -144,12 +202,31 @@
             <p>Carregando pedidos...</p>
           </div>
           <div v-else-if="recentOrders.length === 0" class="empty-state">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-            </svg>
-            <h3>Nenhum pedido encontrado</h3>
-            <p>Os pedidos aparecerão aqui quando forem feitos</p>
+            <div class="empty-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M16 11V7a4 4 0 0 0-8 0v4"></path>
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              </svg>
+            </div>
+            <h3>Nenhum pedido recente</h3>
+            <p>Os pedidos aparecerão aqui quando forem feitos pelos seus clientes</p>
+            <div class="empty-tips">
+              <div class="tip-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M12 6v6l4 2"></path>
+                </svg>
+                <span>Configure seus produtos no menu</span>
+              </div>
+              <div class="tip-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  <polyline points="3.27,6.96 12,12.01 20.73,6.96"></polyline>
+                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <span>Compartilhe o link do seu delivery</span>
+              </div>
+            </div>
           </div>
           <div v-else class="table-container">
             <table>
@@ -175,7 +252,11 @@
                   <td>{{ formatCurrency(order.total) }}</td>
                   <td>{{ formatDate(order.createdAt) }}</td>
                   <td>
-                    <button @click="viewOrder(order)" class="btn-view">
+                    <button 
+                      @click="viewOrder(order)" 
+                      class="btn-view"
+                      :title="`Ver detalhes do pedido #${order.id}`"
+                    >
                       Ver Detalhes
                     </button>
                   </td>
@@ -190,14 +271,17 @@
       <div class="content-card">
         <div class="card-header">
           <h2>Resumo de Vendas</h2>
-          <div class="period-selector">
-            <select v-model="selectedPeriod" class="period-select">
-              <option value="today">Hoje</option>
-              <option value="week">Esta Semana</option>
-              <option value="month">Este Mês</option>
-              <option value="year">Este Ano</option>
-            </select>
-          </div>
+        <div class="period-selector">
+          <button 
+            v-for="period in ['today', 'week', 'month', 'year']" 
+            :key="period"
+            @click="selectedPeriod = period"
+            :class="['period-btn', { active: selectedPeriod === period }]"
+            :title="`Ver dados de ${getPeriodLabel(period).toLowerCase()}`"
+          >
+            {{ getPeriodLabel(period) }}
+          </button>
+        </div>
         </div>
         <div class="sales-summary">
           <div class="sales-item">
@@ -223,7 +307,17 @@
         <!-- Top 5 Itens Mais Vendidos -->
         <div class="top-items">
           <h4>Top 5 Itens Mais Vendidos</h4>
-          <div class="items-list">
+          <div v-if="stats.insights.topSellingItems.length === 0" class="empty-items">
+            <div class="empty-icon-small">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M3 3h18l-2 14H5L3 3z"></path>
+                <path d="M8 21h8"></path>
+              </svg>
+            </div>
+            <p>Nenhum produto vendido ainda</p>
+            <small>Os produtos mais vendidos aparecerão aqui</small>
+          </div>
+          <div v-else class="items-list">
             <div v-for="(item, index) in stats.insights.topSellingItems" :key="item.name" class="item-row">
               <div class="item-rank">{{ index + 1 }}º</div>
               <div class="item-name">{{ item.name }}</div>
@@ -278,7 +372,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import DashboardChart from '~/components/DashboardChart.vue'
 
 // Definir layout
 definePageMeta({
@@ -289,6 +384,7 @@ definePageMeta({
 const loading = ref(true)
 const loadingOrders = ref(false)
 const selectedPeriod = ref('today')
+const selectedChartPeriod = ref('today')
 const selectedOrder = ref(null)
 
 // Estatísticas reais
@@ -317,10 +413,123 @@ const currentPeriodData = computed(() => {
   return stats.value.periods[selectedPeriod.value] || stats.value.periods.today
 })
 
+// Dados para gráficos
+const salesChartData = computed(() => {
+  const periods = ['today', 'week', 'month']
+  return {
+    labels: periods.map(p => getPeriodLabel(p)),
+    datasets: [{
+      label: 'Vendas (R$)',
+      data: periods.map(p => stats.value.periods[p]?.revenue || 0),
+      backgroundColor: 'rgba(255, 142, 36, 0.8)',
+      borderColor: 'rgba(255, 142, 36, 1)',
+      borderWidth: 1
+    }]
+  }
+})
+
+const ticketChartData = computed(() => {
+  const periods = ['today', 'week', 'month']
+  return {
+    labels: periods.map(p => getPeriodLabel(p)),
+    datasets: [{
+      label: 'Ticket Médio (R$)',
+      data: periods.map(p => stats.value.periods[p]?.averageTicket || 0),
+      borderColor: 'rgba(59, 130, 246, 1)',
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      tension: 0.4,
+      fill: true
+    }]
+  }
+})
+
+const productsChartData = computed(() => {
+  const topProducts = stats.value.insights.topSellingItems.slice(0, 5)
+  return {
+    labels: topProducts.map(p => p.name),
+    datasets: [{
+      data: topProducts.map(p => p.quantity),
+      backgroundColor: [
+        'rgba(255, 142, 36, 0.8)',
+        'rgba(59, 130, 246, 0.8)',
+        'rgba(16, 185, 129, 0.8)',
+        'rgba(245, 101, 101, 0.8)',
+        'rgba(139, 92, 246, 0.8)'
+      ],
+      borderWidth: 2,
+      borderColor: '#fff'
+    }]
+  }
+})
+
+const salesChartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: false
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      ticks: {
+        callback: function(value) {
+          return 'R$ ' + value.toLocaleString('pt-BR')
+        }
+      }
+    }
+  }
+}))
+
+const ticketChartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: false
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      ticks: {
+        callback: function(value) {
+          return 'R$ ' + value.toLocaleString('pt-BR')
+        }
+      }
+    }
+  }
+}))
+
+const productsChartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'bottom',
+      labels: {
+        usePointStyle: true,
+        padding: 20
+      }
+    }
+  }
+}))
+
 // Pedidos recentes
 const recentOrders = ref([])
 
 // Funções
+const getPeriodLabel = (period) => {
+  const labels = {
+    today: 'Hoje',
+    week: 'Esta Semana',
+    month: 'Este Mês',
+    year: 'Este Ano'
+  }
+  return labels[period] || period
+}
+
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -480,37 +689,47 @@ onMounted(async () => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
 }
 
 .stat-card {
-  background: white;
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  border-radius: 1rem;
+  padding: 1.75rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  gap: 1.25rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
 }
 
 .stat-icon {
-  width: 3rem;
-  height: 3rem;
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-  border-radius: 0.75rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  background: #ff8e24;
+  border-radius: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(255, 142, 36, 0.3);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover .stat-icon {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(255, 142, 36, 0.4);
 }
 
 .stat-content h3 {
@@ -546,24 +765,75 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1.25rem;
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-  color: #64748b;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  color: #475569;
   font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .btn-refresh:hover:not(:disabled) {
   background: #e2e8f0;
-  color: #475569;
+  color: #334155;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-refresh:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .btn-refresh:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Botões de Período */
+.period-selector {
+  display: flex;
+  gap: 0.5rem;
+  background: #f8fafc;
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+
+.period-btn {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 0.5rem;
+  color: #64748b;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.period-btn:hover {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.period-btn.active {
+  background: #ff8e24;
+  color: white;
+  box-shadow: 0 2px 8px rgba(255, 142, 36, 0.3);
+}
+
+.period-btn.active:hover {
+  background: #e67e22;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 142, 36, 0.4);
 }
 
 .dashboard-content {
@@ -572,11 +842,70 @@ onMounted(async () => {
   gap: 2rem;
 }
 
-.content-card {
-  background: white;
-  border-radius: 0.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+/* Gráficos */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.chart-card {
+  background: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
   overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.chart-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+}
+
+.chart-header {
+  padding: 1.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.chart-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chart-card .chart-container {
+  padding: 1.5rem;
+  height: 300px;
+}
+
+/* Gráfico de produtos mais vendidos ocupa duas colunas */
+.chart-card:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+.chart-card:nth-child(3) .chart-container {
+  height: 250px;
+}
+
+.content-card {
+  background: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.content-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
 }
 
 .card-header {
@@ -587,11 +916,23 @@ onMounted(async () => {
   justify-content: space-between;
 }
 
+.card-header {
+  padding: 1.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+}
+
 .card-header h2 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.375rem;
   font-weight: 600;
-  color: #1e293b;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .period-selector {
@@ -643,6 +984,94 @@ onMounted(async () => {
 .empty-state p {
   margin: 0;
   font-size: 0.875rem;
+}
+
+/* Enhanced Empty States */
+.empty-icon {
+  margin-bottom: 1.5rem;
+}
+
+.empty-icon svg {
+  color: #d1d5db;
+  animation: float 3s ease-in-out infinite;
+}
+
+.empty-state h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: #374151;
+}
+
+.empty-state p {
+  margin: 0 0 2rem 0;
+  font-size: 1.125rem;
+  line-height: 1.6;
+}
+
+.empty-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.tip-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.tip-item svg {
+  color: #ff8e24;
+  flex-shrink: 0;
+}
+
+.tip-item span {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.empty-items {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #6b7280;
+}
+
+.empty-icon-small {
+  margin-bottom: 1rem;
+}
+
+.empty-icon-small svg {
+  color: #d1d5db;
+}
+
+.empty-items p {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.empty-items small {
+  font-size: 0.875rem;
+  color: #9ca3af;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .table-container {
@@ -712,30 +1141,49 @@ td {
 }
 
 .btn-view {
-  padding: 0.375rem 0.75rem;
-  background: #f97316;
+  padding: 0.5rem 1rem;
+  background: #ff8e24;
   color: white;
   border: none;
-  border-radius: 0.375rem;
-  font-size: 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(255, 142, 36, 0.3);
 }
 
 .btn-view:hover {
-  background: #ea580c;
+  background: #e67e22;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 142, 36, 0.4);
+}
+
+.btn-view:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(255, 142, 36, 0.3);
 }
 
 .sales-summary {
-  padding: 1.5rem;
+  padding: 1.75rem;
+  background: #f8fafc;
 }
 
 .sales-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(241, 245, 249, 0.8);
+  transition: all 0.2s ease;
+}
+
+.sales-item:hover {
+  background: rgba(255, 142, 36, 0.05);
+  margin: 0 -1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  border-radius: 0.5rem;
 }
 
 .sales-item:last-child {
@@ -745,25 +1193,32 @@ td {
 .sales-label {
   color: #64748b;
   font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .sales-value {
-  font-weight: 600;
+  font-weight: 700;
   color: #1e293b;
+  font-size: 1rem;
 }
 
 /* Top Items Styles */
 .top-items {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #f1f5f9;
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
 }
 
 .top-items h4 {
   margin: 0 0 1rem 0;
   color: #1e293b;
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .items-list {
@@ -775,37 +1230,48 @@ td {
 .item-row {
   display: flex;
   align-items: center;
-  padding: 0.75rem;
-  background: #f8fafc;
+  padding: 0.875rem;
+  background: #ffffff;
   border-radius: 0.5rem;
-  gap: 1rem;
+  gap: 0.875rem;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.item-row:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .item-rank {
   width: 2rem;
   height: 2rem;
-  background: #f97316;
+  background: #ff8e24;
   color: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(255, 142, 36, 0.3);
   flex-shrink: 0;
 }
 
 .item-name {
   flex: 1;
   color: #1e293b;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.875rem;
 }
 
 .item-quantity {
   color: #64748b;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
+  background: rgba(100, 116, 139, 0.1);
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
 }
 
 /* Modal */
@@ -924,6 +1390,91 @@ td {
   font-weight: 600;
 }
 
+/* Micro-interactions e UX melhorias */
+.stat-card {
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+.stat-card:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-refresh, .btn-view, .period-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-refresh::before, .btn-view::before, .period-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-refresh:hover::before, .btn-view:hover::before, .period-btn:hover::before {
+  left: 100%;
+}
+
+/* Melhorias de acessibilidade */
+.stat-icon:focus,
+.btn-refresh:focus,
+.btn-view:focus,
+.period-btn:focus {
+  outline: 2px solid #ff8e24;
+  outline-offset: 2px;
+}
+
+/* Estados de loading mais suaves */
+.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Melhorias de contraste */
+.sales-value, .stat-content h3 {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.sales-label, .stat-content p {
+  font-weight: 500;
+  color: #6b7280;
+}
+
+/* Animações de entrada */
+.stat-card, .content-card {
+  animation: slideInUp 0.6s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stagger animation para cards */
+.stat-card:nth-child(1) { animation-delay: 0.1s; }
+.stat-card:nth-child(2) { animation-delay: 0.2s; }
+.stat-card:nth-child(3) { animation-delay: 0.3s; }
+.stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+.content-card:nth-child(1) { animation-delay: 0.5s; }
+.content-card:nth-child(2) { animation-delay: 0.6s; }
+
 /* Responsividade */
 @media (max-width: 1024px) {
   .dashboard-home {
@@ -938,6 +1489,14 @@ td {
   
   .dashboard-content {
     grid-template-columns: 1fr;
+  }
+  
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .chart-card:nth-child(3) {
+    grid-column: 1;
   }
   
   .page-header {
@@ -972,6 +1531,43 @@ td {
 }
 
 /* Skeleton Loading Styles */
+/* Loading States */
+.loading-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  background: #f8fafc;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+.loading-spinner {
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 1rem;
+  color: #ff8e24;
+  animation: spin 1s linear infinite;
+}
+
+.loading-message p {
+  margin: 0;
+  color: #64748b;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .skeleton-container {
   animation: skeleton-loading 1.5s ease-in-out infinite;
 }

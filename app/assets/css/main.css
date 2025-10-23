@@ -693,7 +693,6 @@ select:focus-visible {
   align-items: center;
   gap: var(--spacing-md);
   background: linear-gradient(135deg, var(--color-info-bg) 0%, #e0e7ff 100%);
-  border-left: 4px solid var(--color-info);
   padding: var(--spacing-lg) var(--spacing-xl);
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-2xl);

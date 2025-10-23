@@ -11,15 +11,21 @@ export default defineEventHandler(async (event) => {
     
     // Se não existir configurações, retornar valores padrão
     if (!storeSettings) {
+      // Calcular status baseado em horários padrão (fechado por segurança)
       return {
         storeName: "Minha Loja",
         logo: "",
         banner: "",
-        isOpen: true,
+        isOpen: false,
         deliveryMinTime: 30,
         deliveryMaxTime: 60,
         deliveryFee: 0,
         minimumOrder: 0,
+        storeAddress: "",
+        storePhone: "",
+        whatsapp: "",
+        storeLatitude: -23.5505,
+        storeLongitude: -46.6333,
         checkoutFields: {
           customerName: { enabled: true, required: true },
           customerPhone: { enabled: true, required: true },
@@ -55,16 +61,33 @@ export default defineEventHandler(async (event) => {
       };
     }
     
+    // Calcular se está aberto agora baseado nos horários
+    const now = new Date();
+    const currentDay = now.getDay();
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    const todaySchedule = storeSettings.openingHours?.find((h: any) => h.day === currentDay);
+    let isOpen = false;
+    
+    if (todaySchedule && todaySchedule.enabled) {
+      isOpen = currentTime >= todaySchedule.open && currentTime <= todaySchedule.close;
+    }
+    
     // Retornar apenas as configurações públicas necessárias
     return {
       storeName: storeSettings.storeName || "Minha Loja",
       logo: storeSettings.logo || "",
       banner: storeSettings.banner || "",
-      isOpen: storeSettings.isOpen !== undefined ? storeSettings.isOpen : true,
+      isOpen: isOpen,
       deliveryMinTime: storeSettings.deliveryMinTime || 30,
       deliveryMaxTime: storeSettings.deliveryMaxTime || 60,
       deliveryFee: storeSettings.deliveryFee !== undefined ? storeSettings.deliveryFee : 0,
       minimumOrder: storeSettings.minimumOrder !== undefined ? storeSettings.minimumOrder : 0,
+      storeAddress: storeSettings.location?.address || "",
+      storePhone: storeSettings.storePhone || "",
+      whatsapp: storeSettings.whatsapp || "",
+      storeLatitude: storeSettings.location?.latitude || -23.5505,
+      storeLongitude: storeSettings.location?.longitude || -46.6333,
       checkoutFields: storeSettings.checkoutFields || {
         customerName: { enabled: true, required: true },
         customerPhone: { enabled: true, required: true },
@@ -101,16 +124,21 @@ export default defineEventHandler(async (event) => {
   } catch (error) {
     console.error('Erro ao buscar configurações públicas:', error);
     
-    // Em caso de erro, retornar valores padrão
+    // Em caso de erro, retornar valores padrão (fechado por segurança)
     return {
       storeName: "Minha Loja",
       logo: "",
       banner: "",
-      isOpen: true,
+      isOpen: false,
       deliveryMinTime: 30,
       deliveryMaxTime: 60,
       deliveryFee: 0,
       minimumOrder: 0,
+      storeAddress: "",
+      storePhone: "",
+      whatsapp: "",
+      storeLatitude: -23.5505,
+      storeLongitude: -46.6333,
       checkoutFields: {
         customerName: { enabled: true, required: true },
         customerPhone: { enabled: true, required: true },

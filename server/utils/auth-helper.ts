@@ -31,3 +31,4 @@ export function createAuthenticatedHandler(handler: Function) {
     return handler(event)
   }
 }
+

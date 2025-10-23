@@ -46,21 +46,6 @@ const emit = defineEmits(['close'])
 const onClose = () => {
   emit('close')
 }
-
-// Fechar com ESC
-const handleEsc = (event) => {
-  if (event.key === 'Escape' && props.show) {
-    onClose()
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('keydown', handleEsc)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleEsc)
-})
 </script>
 
 <style scoped>

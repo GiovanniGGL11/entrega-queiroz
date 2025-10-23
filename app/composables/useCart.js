@@ -149,3 +149,4 @@ export const useCart = () => {
 if (process.client) {
   loadCart()
 }
+

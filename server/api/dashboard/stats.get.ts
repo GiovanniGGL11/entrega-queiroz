@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
     const db = await getDB();
     
     // OTIMIZAÇÃO: Usar aggregation pipeline para calcular estatísticas diretamente no MongoDB
-    const [ordersStats, productsStats] = await Promise.all([
+    const [ordersStats, productsStats, categoriesStats] = await Promise.all([
       // Estatísticas de pedidos usando aggregation
       db.collection("orders").aggregate([
         {
@@ -79,11 +79,15 @@ export default defineEventHandler(async (event) => {
       ]).toArray(),
       
       // Contar produtos
-      db.collection("products").countDocuments()
+      db.collection("products").countDocuments(),
+      
+      // Contar categorias
+      db.collection("categories").countDocuments()
     ]);
     
     const stats = ordersStats[0] || { totalOrders: 0, totalRevenue: 0, pendingOrders: 0, ordersToday: 0, revenueToday: 0 };
     const totalProducts = productsStats;
+    const totalCategories = categoriesStats;
     
     // Calcular estatísticas básicas
     const totalOrders = stats.totalOrders;
@@ -99,7 +103,7 @@ export default defineEventHandler(async (event) => {
     const thisWeek = new Date(today.getTime() - (today.getDay() * 24 * 60 * 60 * 1000));
     const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    const [periodStats, itemSalesStats] = await Promise.all([
+    const [periodStats, itemSalesStats, weekStats, monthStats] = await Promise.all([
       // Estatísticas por período
       db.collection("orders").aggregate([
         {
@@ -148,13 +152,51 @@ export default defineEventHandler(async (event) => {
         },
         { $sort: { totalQuantity: -1 } },
         { $limit: 10 }
+      ]).toArray(),
+      
+      // Estatísticas da semana
+      db.collection("orders").aggregate([
+        {
+          $match: {
+            createdAt: { $gte: thisWeek, $lt: today }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            orders: { $sum: 1 },
+            revenue: { $sum: "$totalAmount" }
+          }
+        }
+      ]).toArray(),
+      
+      // Estatísticas do mês
+      db.collection("orders").aggregate([
+        {
+          $match: {
+            createdAt: { $gte: thisMonth, $lt: today }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            orders: { $sum: 1 },
+            revenue: { $sum: "$totalAmount" }
+          }
+        }
       ]).toArray()
     ]);
     
     const periodData = periodStats[0] || { revenueToday: 0, revenueThisWeek: 0, revenueThisMonth: 0 };
+    const weekData = weekStats[0] || { orders: 0, revenue: 0 };
+    const monthData = monthStats[0] || { orders: 0, revenue: 0 };
     
     // Calcular item mais vendido
     const mostSoldItem = itemSalesStats[0] || { _id: 'Nenhum', totalQuantity: 0 };
+    
+    // Calcular ticket médio para cada período
+    const weekAverageTicket = weekData.orders > 0 ? weekData.revenue / weekData.orders : 0;
+    const monthAverageTicket = monthData.orders > 0 ? monthData.revenue / monthData.orders : 0;
     
     // Preparar resposta otimizada
     return {
@@ -163,6 +205,7 @@ export default defineEventHandler(async (event) => {
         pendingOrders,
         totalRevenue,
         totalProducts,
+        totalCategories,
         averageTicket
       },
       periods: {
@@ -172,15 +215,15 @@ export default defineEventHandler(async (event) => {
           averageTicket: stats.ordersToday > 0 ? periodData.revenueToday / stats.ordersToday : 0 
         },
         week: { 
-          orders: 0, // Pode ser calculado se necessário
+          orders: weekData.orders, 
           revenue: periodData.revenueThisWeek, 
-          averageTicket: 0,
+          averageTicket: weekAverageTicket,
           growth: 0 
         },
         month: { 
-          orders: 0, // Pode ser calculado se necessário
+          orders: monthData.orders, 
           revenue: periodData.revenueThisMonth, 
-          averageTicket: 0,
+          averageTicket: monthAverageTicket,
           growth: 0 
         },
         year: { 

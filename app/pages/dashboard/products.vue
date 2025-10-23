@@ -6,16 +6,31 @@
         <h1>Gerenciar Produtos</h1>
         <p class="page-description">Adicione e gerencie os produtos do seu cardápio com fotos, preços e descrições</p>
       </div>
-      <button 
-        @click="showCreateModal = true" 
-        class="btn-primary"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        Novo Produto
-      </button>
+      <div class="header-actions">
+        <button 
+          @click="refreshProducts" 
+          class="btn-refresh" 
+          :disabled="loading"
+          title="Atualizar lista de produtos"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+          </svg>
+          {{ loading ? 'Carregando...' : 'Atualizar' }}
+        </button>
+        <button 
+          @click="showCreateModal = true" 
+          class="btn-primary"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Novo Produto
+        </button>
+      </div>
     </div>
 
     <!-- Info Banner -->
@@ -707,6 +722,11 @@ const loadProducts = async () => {
   }
 }
 
+// Atualizar produtos
+const refreshProducts = async () => {
+  await loadProducts()
+}
+
 // Criar produto
 const createProduct = async () => {
   try {
@@ -1002,13 +1022,44 @@ onUnmounted(() => {
   line-height: 1.5;
 }
 
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.btn-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Info Banner */
 .info-banner {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
-  border-left: 4px solid #3b82f6;
   padding: 1rem 1.25rem;
   border-radius: 0.5rem;
   margin-bottom: 2rem;

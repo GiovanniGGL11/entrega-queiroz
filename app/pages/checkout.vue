@@ -240,39 +240,30 @@ const submitOrder = async () => {
     const randomNum = Math.floor(Math.random() * 1000)
     orderNumber.value = `#${timestamp.toString().slice(-6)}${randomNum.toString().padStart(3, '0')}`
     
-    // Preparar dados do pedido
+    // Preparar dados do pedido - APENAS dados que devem vir do frontend
     const orderData = {
-      orderNumber: orderNumber.value,
       customerInfo: {
         name: customerInfo.value.name.trim(),
         phone: customerInfo.value.phone.trim(),
         email: customerInfo.value.email.trim()
       },
-        deliveryInfo: {
-          address: deliveryInfo.value.address.trim(),
-          complement: deliveryInfo.value.complement.trim(),
-          neighborhood: deliveryInfo.value.neighborhood.trim(),
-          city: deliveryInfo.value.city.trim(),
-          zipCode: deliveryInfo.value.zipCode.trim(),
-          deliveryFee: deliveryInfo.value.deliveryFee,
-          latitude: deliveryInfo.value.latitude,
-          longitude: deliveryInfo.value.longitude,
-          deliveryZone: deliveryInfo.value.deliveryZone,
-          estimatedTime: deliveryInfo.value.estimatedTime
-        },
+      deliveryInfo: {
+        address: deliveryInfo.value.address.trim(),
+        complement: deliveryInfo.value.complement.trim(),
+        neighborhood: deliveryInfo.value.neighborhood.trim(),
+        city: deliveryInfo.value.city.trim(),
+        zipCode: deliveryInfo.value.zipCode.trim(),
+        latitude: deliveryInfo.value.latitude,
+        longitude: deliveryInfo.value.longitude
+      },
       items: cart.value.map(item => ({
         productId: item.productId,
         name: item.name,
         quantity: item.quantity,
-        price: item.price,
-        subtotal: item.totalPrice,
         complements: item.complements || []
       })),
       paymentMethod: paymentMethod.value,
-      notes: notes.value.trim(),
-      totalAmount: totalAmount.value,
-      status: 'pending',
-      createdAt: new Date()
+      notes: notes.value.trim()
     }
     
     // Enviar para API

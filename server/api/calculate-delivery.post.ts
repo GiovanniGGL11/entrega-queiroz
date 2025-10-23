@@ -59,8 +59,15 @@ export default defineEventHandler(async (event) => {
       // Verificar se o CEP está em alguma zona de entrega específica
       for (const zone of deliveryZones) {
         if (zone.cepRanges && zone.cepRanges.some((range: any) => {
-          const [start, end] = range.split('-').map((cep: string) => cep.substring(0, 5));
-          return cepPrefix >= start && cepPrefix <= end;
+          if (range.includes('-')) {
+            // Range format: "08570-08580"
+            const [start, end] = range.split('-').map((cep: string) => cep.substring(0, 5));
+            return cepPrefix >= start && cepPrefix <= end;
+          } else {
+            // Single prefix format: "08" (2 digits) or "08574" (5 digits)
+            const rangePrefix = range.substring(0, Math.min(range.length, cepPrefix.length));
+            return cepPrefix.startsWith(rangePrefix);
+          }
         })) {
           deliveryFee = zone.fee;
           deliveryZone = zone;

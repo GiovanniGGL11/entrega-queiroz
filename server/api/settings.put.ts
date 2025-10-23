@@ -35,6 +35,8 @@ export default defineEventHandler(async (event) => {
       storeName, 
       logo, 
       banner,
+      storePhone,
+      whatsapp,
       location,
       deliveryZones,
       openingHours,
@@ -160,6 +162,8 @@ export default defineEventHandler(async (event) => {
     if (storeName !== undefined) updateFields.storeName = storeName.trim();
     if (logo !== undefined) updateFields.logo = logo.trim();
     if (banner !== undefined) updateFields.banner = banner.trim();
+    if (storePhone !== undefined) updateFields.storePhone = storePhone.trim();
+    if (whatsapp !== undefined) updateFields.whatsapp = whatsapp.trim();
     if (location !== undefined) updateFields.location = location;
     if (deliveryZones !== undefined) updateFields.deliveryZones = deliveryZones;
     if (openingHours !== undefined) updateFields.openingHours = openingHours;

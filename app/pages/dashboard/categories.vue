@@ -13,6 +13,19 @@
           </svg>
           <span>Salvando ordem...</span>
         </div>
+            <button 
+              @click="refreshCategories" 
+              class="btn-refresh" 
+              :disabled="loading"
+              title="Atualizar lista de categorias"
+            >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+          </svg>
+          {{ loading ? 'Carregando...' : 'Atualizar' }}
+        </button>
         <button 
           @click="showCreateModal = true" 
           class="btn-primary"
@@ -421,6 +434,11 @@ const loadCategories = async () => {
   }
 }
 
+// Atualizar categorias
+const refreshCategories = async () => {
+  await loadCategories()
+}
+
 // Criar categoria
 const createCategory = async () => {
   try {
@@ -788,7 +806,6 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.75rem;
   background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
-  border-left: 4px solid #3b82f6;
   padding: 1rem 1.25rem;
   border-radius: 0.5rem;
   margin-bottom: 2rem;
@@ -917,6 +934,32 @@ onUnmounted(() => {
   color: #6b7280;
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.btn-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .page-header h1 {

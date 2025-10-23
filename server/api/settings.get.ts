@@ -45,6 +45,8 @@ export default defineEventHandler(async (event) => {
         storeName: "Minha Loja",
         logo: "/logo.jpg",
         banner: "/not_found.jpg",
+        storePhone: "",
+        whatsapp: "",
         location: {
           address: "",
           latitude: -23.550520, // São Paulo como padrão

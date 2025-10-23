@@ -43,6 +43,30 @@
           />
           <span class="char-count">{{ form.storeName?.length || 0 }}/100</span>
         </div>
+
+        <div class="form-group">
+          <label for="storePhone">Telefone da Loja</label>
+          <input
+            id="storePhone"
+            v-model="form.storePhone"
+            type="tel"
+            placeholder="Ex: (11) 99999-9999"
+            maxlength="20"
+          />
+          <small>Número de telefone para contato dos clientes</small>
+        </div>
+
+        <div class="form-group">
+          <label for="whatsapp">WhatsApp</label>
+          <input
+            id="whatsapp"
+            v-model="form.whatsapp"
+            type="tel"
+            placeholder="Ex: 5511999999999"
+            maxlength="20"
+          />
+          <small>Número do WhatsApp (apenas números, com código do país)</small>
+        </div>
       </div>
 
       <!-- Horário de Funcionamento -->
@@ -57,7 +81,7 @@
 
         <div class="status-display">
           <span :class="['status-indicator', computedIsOpen ? 'open' : 'closed']">
-            {{ computedIsOpen ? '● Aberta agora' : '● Fechada' }}
+            {{ computedIsOpen ? 'Aberta agora' : 'Fechada' }}
           </span>
           <p class="status-text">{{ getStatusText() }}</p>
         </div>
@@ -765,6 +789,8 @@ const form = ref({
   storeName: '',
   logo: '',
   banner: '',
+  storePhone: '',
+  whatsapp: '',
   location: {
     address: '',
     latitude: -23.550520,
@@ -1106,6 +1132,8 @@ const loadSettings = async () => {
       storeName: response.storeName || '',
       logo: response.logo || '',
       banner: response.banner || '',
+      storePhone: response.storePhone || '',
+      whatsapp: response.whatsapp || '',
       location: response.location || form.value.location,
       deliveryZones: response.deliveryZones || form.value.deliveryZones,
       openingHours: response.openingHours || form.value.openingHours,
@@ -1484,7 +1512,6 @@ onUnmounted(() => {
   padding: var(--spacing-lg);
   background: var(--color-bg-secondary);
   border-radius: var(--radius-md);
-  border-left: 4px solid var(--color-info);
 }
 
 .status-indicator {

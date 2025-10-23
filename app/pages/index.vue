@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import ImageOverlay from '~/components/ImageOverlay.vue'
+import StoreInfoModal from '~/components/StoreInfoModal.vue'
 import { useImageOverlay } from '~/composables/useImageOverlay'
 import { useCart } from '~/composables/useCart'
 
@@ -30,6 +31,12 @@ const isMobile = ref(false);
 // Estado do overlay de imagem
 const { showImageOverlay, currentImageUrl, openImageOverlay, closeImageOverlay } = useImageOverlay()
 
+// Estado do modal de informações da loja
+const showStoreInfoModal = ref(false)
+
+// Estado da barra de categorias fixa
+const showFixedCategoryBar = ref(false)
+
 // Dados das categorias
 const categories = ref([])
 const loadingCategories = ref(false)
@@ -43,7 +50,12 @@ const storeSettings = ref({
   deliveryMinTime: 0,
   deliveryMaxTime: 0,
   deliveryFee: 0,
-  minimumOrder: 0
+  minimumOrder: 0,
+  storeAddress: "",
+  storePhone: "",
+  whatsapp: "",
+  storeLatitude: -23.5505,
+  storeLongitude: -46.6333
 })
 
 // Estado de carregamento inicial
@@ -63,7 +75,12 @@ const loadStoreSettings = async () => {
       deliveryMinTime: settings.deliveryMinTime || 0,
       deliveryMaxTime: settings.deliveryMaxTime || 0,
       deliveryFee: settings.deliveryFee !== undefined ? settings.deliveryFee : 0,
-      minimumOrder: settings.minimumOrder !== undefined ? settings.minimumOrder : 0
+      minimumOrder: settings.minimumOrder !== undefined ? settings.minimumOrder : 0,
+      storeAddress: settings.storeAddress || "",
+      storePhone: settings.storePhone || "",
+      whatsapp: settings.whatsapp || "",
+      storeLatitude: settings.storeLatitude || -23.5505,
+      storeLongitude: settings.storeLongitude || -46.6333
     }
     settingsLoaded.value = true
   } catch (error) {
@@ -270,6 +287,14 @@ const finalizeOrder = () => {
   navigateTo('/checkout');
 };
 
+const openStoreInfoModal = () => {
+  showStoreInfoModal.value = true;
+};
+
+const closeStoreInfoModal = () => {
+  showStoreInfoModal.value = false;
+};
+
 const applyCoupon = () => {
   const subtotal = cartSubtotal.value;
   if (couponCode.value.toUpperCase() === "DESCONTO10") {
@@ -290,6 +315,8 @@ const handleKeydown = (event) => {
       closeModal();
     } else if (showSidebar.value) {
       closeSidebar();
+    } else if (showStoreInfoModal.value) {
+      closeStoreInfoModal();
     }
   }
 };
@@ -337,14 +364,34 @@ watch(showSidebar, (newVal) => {
 
 watch(showImageOverlay, (newVal) => {
   // Ajusta o overflow apenas se o modal não estiver aberto
-  if (!selectedItem.value) {
+  if (!selectedItem.value && !showStoreInfoModal.value) {
     document.body.style.overflow = newVal ? "hidden" : "";
   }
+});
+
+watch(showStoreInfoModal, (newVal) => {
+  document.body.style.overflow = newVal ? "hidden" : "";
 });
 
 // Watchers do carrinho já são gerenciados pelo composable
 
 // Watchers do carrinho já são gerenciados pelo composable
+
+// Listener de scroll para controlar barra fixa
+let scrollTimeout = null
+const handleScroll = () => {
+  if (scrollTimeout) return
+  
+  scrollTimeout = requestAnimationFrame(() => {
+    const categoryTabs = document.querySelector('.category-tabs')
+    if (categoryTabs) {
+      const rect = categoryTabs.getBoundingClientRect()
+      // Mostrar barra fixa quando a barra original sair da tela (com margem de 10px)
+      showFixedCategoryBar.value = rect.top < -10
+    }
+    scrollTimeout = null
+  })
+}
 
 // Lifecycle
 onMounted(async () => {
@@ -361,11 +408,15 @@ onMounted(async () => {
   checkMobile();
   window.addEventListener("resize", checkMobile);
   document.addEventListener("keydown", handleKeydown);
+  
+  // Adicionar listener de scroll para barra fixa
+  window.addEventListener('scroll', handleScroll);
 });
 
 onUnmounted(() => {
   if (observer) observer.disconnect();
   window.removeEventListener("resize", checkMobile);
+  window.removeEventListener('scroll', handleScroll);
   document.body.style.overflow = "";
   document.removeEventListener("keydown", handleKeydown);
 });
@@ -428,7 +479,7 @@ useHead({
           </div>
           
           
-          <!-- Pedido Mínimo (se houver) -->
+            <!-- Pedido Mínimo (se houver) -->
           <div class="info-row" v-if="storeSettings.minimumOrder > 0">
             <svg
               class="info-icon"
@@ -447,6 +498,27 @@ useHead({
             <span class="info-text">
               <strong>Pedido mínimo:</strong> R$ {{ storeSettings.minimumOrder.toFixed(2) }}
             </span>
+          </div>
+          
+          <!-- Botão Ver Mais -->
+          <div class="info-row">
+            <button class="ver-mais-btn" @click="openStoreInfoModal">
+              <svg
+                class="btn-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              Ver Mais
+            </button>
           </div>
         </div>
       </div>
@@ -475,6 +547,22 @@ useHead({
 
     <!-- Category Tabs -->
     <div class="category-tabs" v-if="!loadingCategories && filteredCategories.length">
+      <button
+        v-for="category in filteredCategories"
+        :key="category.id"
+        class="tab"
+        :class="{ active: selectedCategory === category.id }"
+        @click="scrollToCategory(category.id)"
+      >
+        {{ category.name }}
+      </button>
+    </div>
+    
+    <!-- Barra de categorias fixa -->
+    <div 
+      class="category-tabs-fixed" 
+      v-if="!loadingCategories && filteredCategories.length && showFixedCategoryBar"
+    >
       <button
         v-for="category in filteredCategories"
         :key="category.id"
@@ -768,6 +856,13 @@ useHead({
     :alt="selectedItem?.name || 'Imagem do item'"
     @close="closeImageOverlay"
   />
+
+  <!-- Store Info Modal -->
+  <StoreInfoModal
+    :show="showStoreInfoModal"
+    :storeSettings="storeSettings"
+    @close="closeStoreInfoModal"
+  />
 </template>
 
 <style scoped>
@@ -933,6 +1028,32 @@ body {
   font-weight: 600;
 }
 
+.ver-mais-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #ff8e24;
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 0.5rem;
+}
+
+.ver-mais-btn:hover {
+  background: #e67e22;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(255, 142, 36, 0.3);
+}
+
+.btn-icon {
+  flex-shrink: 0;
+}
+
 .status.open {
   background-color: rgba(0, 255, 0, 0.2);
   color: #009a00;
@@ -989,6 +1110,39 @@ body {
 
 .category-tabs::-webkit-scrollbar {
   display: none;
+}
+
+.category-tabs-fixed {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  width: 100%;
+  max-width: 1400px;
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding: 1rem 2rem;
+  background: rgba(248, 250, 252, 0.95);
+  backdrop-filter: blur(10px);
+  scrollbar-width: none;
+  animation: slideDown 0.15s ease-in-out;
+}
+
+.category-tabs-fixed::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateX(-50%) translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
 }
 
 .loading-categories {
@@ -1981,6 +2135,11 @@ body {
     height: 75px;
   }
 
+  .ver-mais-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
   .items {
     grid-template-columns: 1fr;
   }
@@ -2023,6 +2182,16 @@ body {
   }
 
   .tab {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .category-tabs-fixed {
+    padding: 0.75rem 1rem;
+    gap: 0.75rem;
+  }
+
+  .category-tabs-fixed .tab {
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
   }
@@ -2267,6 +2436,15 @@ body {
   .profile img {
     width: 65px;
     height: 65px;
+  }
+
+  .ver-mais-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .category-tabs-fixed {
+    padding: 0.75rem 0.5rem;
   }
 
   .item-image {
