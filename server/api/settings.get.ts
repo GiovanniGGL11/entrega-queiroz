@@ -90,10 +90,11 @@ export default defineEventHandler(async (event) => {
       await settings.insertOne(config);
     }
     
-    // Calcular se está aberto agora
-    const now = new Date();
-    const currentDay = now.getDay();
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    // Calcular se está aberto agora respeitando fuso horário
+    const timeZone = process.env.TZ || 'America/Sao_Paulo'
+    const nowLocal = new Date(new Date().toLocaleString('en-US', { timeZone }))
+    const currentDay = nowLocal.getDay();
+    const currentTime = `${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}`;
     
     const todaySchedule = config.openingHours?.find((h: any) => h.day === currentDay);
     let isOpen = false;

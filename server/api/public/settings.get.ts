@@ -61,10 +61,11 @@ export default defineEventHandler(async (event) => {
       };
     }
     
-    // Calcular se está aberto agora baseado nos horários
-    const now = new Date();
-    const currentDay = now.getDay();
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    // Calcular se está aberto agora baseado nos horários, respeitando fuso horário
+    const timeZone = process.env.TZ || 'America/Sao_Paulo'
+    const nowLocal = new Date(new Date().toLocaleString('en-US', { timeZone }))
+    const currentDay = nowLocal.getDay();
+    const currentTime = `${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}`;
     
     const todaySchedule = storeSettings.openingHours?.find((h: any) => h.day === currentDay);
     let isOpen = false;
