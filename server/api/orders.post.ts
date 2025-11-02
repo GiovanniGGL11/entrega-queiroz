@@ -272,6 +272,7 @@ export default defineEventHandler(async (event) => {
       items: validatedItems,
       deliveryInfo: {
         address: deliveryInfo.address.trim(),
+        number: deliveryInfo.number?.trim() || '',
         neighborhood: deliveryInfo.neighborhood?.trim() || '',
         city: deliveryInfo.city?.trim() || '',
         zipCode: deliveryInfo.zipCode?.trim() || '',
@@ -291,6 +292,28 @@ export default defineEventHandler(async (event) => {
     };
 
     const result = await orders.insertOne(order);
+
+    // Notificar clientes conectados sobre o novo pedido (em tempo real)
+    try {
+      // Adicionar _id ao pedido para a notificação
+      const orderWithId = {
+        ...order,
+        _id: result.insertedId
+      }
+      
+      // Importar função de notificação do utilitário compartilhado
+      const { notifyNewOrder } = await import('../utils/sse-notifications.js')
+      
+      if (notifyNewOrder && typeof notifyNewOrder === 'function') {
+        await notifyNewOrder(orderWithId)
+        console.log('[Orders POST] Notificação de novo pedido enviada via SSE')
+      } else {
+        console.warn('[Orders POST] Função notifyNewOrder não encontrada')
+      }
+    } catch (error) {
+      console.error('[Orders POST] Erro ao notificar sobre novo pedido:', error)
+      // Não falhar a criação do pedido se a notificação falhar
+    }
 
     // Atualizar estoque dos produtos usando dados validados
     for (const item of validatedItems) {

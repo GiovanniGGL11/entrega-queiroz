@@ -2,15 +2,6 @@
   <div class="dashboard-home">
     <!-- Skeleton Loading -->
     <div v-if="loading" class="skeleton-container">
-      <div class="loading-message">
-        <div class="loading-spinner">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12a9 9 0 11-6.219-8.56"/>
-          </svg>
-        </div>
-        <p>Carregando dados do dashboard...</p>
-      </div>
-      
       <!-- Skeleton para Cards de Estatísticas -->
       <div class="stats-grid">
         <div v-for="i in 4" :key="i" class="stat-card skeleton-card">
@@ -369,11 +360,20 @@
       </div>
     </div>
   </div>
+
+  <!-- Componente de Notificações -->
+  <OrderNotifications
+    :notifications="notifications"
+    @view-order="(order) => viewOrder(mapOrderFromNotification(order))"
+    @mark-read="markAsRead"
+    @clear-all="clearNotifications"
+  />
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import DashboardChart from '~/components/DashboardChart.vue'
+import OrderNotifications from '~/components/OrderNotifications.vue'
 
 // Definir layout
 definePageMeta({
@@ -642,6 +642,44 @@ const closeOrderModal = () => {
   selectedOrder.value = null
 }
 
+// Sistema de notificações em tempo real
+const {
+  notifications,
+  startNotifications,
+  stopNotifications,
+  markAsRead,
+  clearAll: clearNotifications
+} = useOrderNotifications()
+
+// Função para mapear pedido da notificação
+const mapOrderFromNotification = (order) => {
+  return {
+    id: order.orderNumber,
+    customer: order.customerInfo?.name,
+    status: order.status,
+    total: order.totalAmount,
+    createdAt: order.createdAt,
+    items: order.items?.map(item => ({
+      id: item.productId,
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price
+    })) || []
+  }
+}
+
+// Watcher para atualizar quando novos pedidos chegarem
+watch(notifications, async (newNotifs) => {
+  const unreadCount = newNotifs.filter(n => !n.read).length
+  if (unreadCount > 0) {
+    // Recarregar stats e pedidos automaticamente
+    await Promise.all([
+      loadStats(),
+      loadOrders()
+    ])
+  }
+}, { deep: true })
+
 // Lifecycle
 onMounted(async () => {
   // Aguardar um pouco para garantir que a autenticação seja verificada
@@ -652,9 +690,20 @@ onMounted(async () => {
       loadStats(),
       loadOrders()
     ])
+    
+    // Iniciar notificações em tempo real automaticamente (com delay para evitar múltiplas inicializações)
+    setTimeout(() => {
+      console.log('[Dashboard] Iniciando notificações...')
+      startNotifications()
+    }, 500)
   } catch (error) {
     console.error('Erro ao carregar dados do dashboard:', error)
   }
+})
+
+onUnmounted(() => {
+  // Parar notificações quando componente for desmontado
+  stopNotifications()
 })
 </script>
 
@@ -1531,43 +1580,6 @@ td {
 }
 
 /* Skeleton Loading Styles */
-/* Loading States */
-.loading-message {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  background: #f8fafc;
-  border-radius: 1rem;
-  border: 1px solid #e2e8f0;
-}
-
-.loading-spinner {
-  width: 3rem;
-  height: 3rem;
-  margin-bottom: 1rem;
-  color: #ff8e24;
-  animation: spin 1s linear infinite;
-}
-
-.loading-message p {
-  margin: 0;
-  color: #64748b;
-  font-size: 1rem;
-  font-weight: 500;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .skeleton-container {
   animation: skeleton-loading 1.5s ease-in-out infinite;
 }

@@ -14,6 +14,7 @@ const customerInfo = ref({
 
 const deliveryInfo = ref({
   address: '',
+  number: '',
   complement: '',
   neighborhood: '',
   city: '',
@@ -207,6 +208,7 @@ const isFormValid = computed(() => {
     { field: 'customerPhone', value: customerInfo.value.phone, enabled: fields.customerPhone.enabled, required: fields.customerPhone.required },
     { field: 'customerEmail', value: customerInfo.value.email, enabled: fields.customerEmail.enabled, required: fields.customerEmail.required },
     { field: 'deliveryAddress', value: deliveryInfo.value.address, enabled: fields.deliveryAddress.enabled, required: fields.deliveryAddress.required },
+    { field: 'deliveryNumber', value: deliveryInfo.value.number, enabled: true, required: true },
     { field: 'deliveryComplement', value: deliveryInfo.value.complement, enabled: fields.deliveryComplement.enabled, required: fields.deliveryComplement.required },
     { field: 'deliveryNeighborhood', value: deliveryInfo.value.neighborhood, enabled: fields.deliveryNeighborhood.enabled, required: fields.deliveryNeighborhood.required },
     { field: 'deliveryCity', value: deliveryInfo.value.city, enabled: fields.deliveryCity.enabled, required: fields.deliveryCity.required },
@@ -249,6 +251,7 @@ const submitOrder = async () => {
       },
       deliveryInfo: {
         address: deliveryInfo.value.address.trim(),
+        number: deliveryInfo.value.number.trim(),
         complement: deliveryInfo.value.complement.trim(),
         neighborhood: deliveryInfo.value.neighborhood.trim(),
         city: deliveryInfo.value.city.trim(),
@@ -370,7 +373,59 @@ useHead({
 
         <!-- Formulário de Checkout -->
         <div v-else class="checkout-content">
-          <div class="checkout-grid">
+          <div class="checkout-layout">
+            <!-- Itens do Pedido -->
+            <div class="order-items-section">
+              <div class="section-header">
+                <h3>Itens do Pedido</h3>
+                <span class="item-count">{{ cart.length }} item(s)</span>
+              </div>
+              
+              <div class="items-list">
+                <div v-for="item in cart" :key="item.variantKey" class="cart-item-card">
+                  <div class="item-image">
+                    <img :src="item.image" :alt="item.name" />
+                  </div>
+                  <div class="item-details">
+                    <h4>{{ item.name }}</h4>
+                    <div v-if="item.complements && item.complements.length > 0" class="item-complements">
+                      <span v-for="comp in item.complements" :key="comp.name" class="complement">
+                        + {{ comp.quantity }}x {{ comp.name }}
+                      </span>
+                    </div>
+                    <div v-if="item.observation" class="item-observation">
+                      <small>{{ item.observation }}</small>
+                    </div>
+                    <div class="item-quantity">Qtd: {{ item.quantity }}</div>
+                  </div>
+                  <div class="item-price">{{ formatPrice(item.totalPrice) }}</div>
+                </div>
+              </div>
+              
+              <div class="order-totals">
+                <div class="total-line">
+                  <span>Subtotal</span>
+                  <span>{{ formatPrice(cartSubtotal) }}</span>
+                </div>
+                <div v-if="deliveryInfo.zipCode && (isValidatingAddress || (deliveryInfo.canDeliver && deliveryInfo.deliveryFee > 0))" class="total-line">
+                  <span>Taxa de Entrega</span>
+                  <span v-if="isValidatingAddress" class="calculating-fee">
+                    <div class="spinner-small"></div>
+                    Calculando...
+                  </span>
+                  <span v-else>{{ formatPrice(deliveryInfo.deliveryFee) }}</span>
+                </div>
+                <div class="total-line total">
+                  <span>Total</span>
+                  <span v-if="isValidatingAddress" class="calculating-total">
+                    <div class="spinner-small"></div>
+                    Calculando...
+                  </span>
+                  <span v-else>{{ formatPrice(totalAmount) }}</span>
+                </div>
+              </div>
+            </div>
+
             <!-- Formulário -->
             <div class="checkout-form">
               <!-- Informações do Cliente -->
@@ -432,21 +487,46 @@ useHead({
                 <div v-if="storeSettings.checkoutFields.deliveryZipCode.enabled" class="form-group">
                   <label for="zipCode">CEP {{ storeSettings.checkoutFields.deliveryZipCode.required ? '*' : '' }}</label>
                   <div class="input-wrapper">
-                  <input
-                    id="zipCode"
-                    v-model="deliveryInfo.zipCode"
-                    @input="deliveryInfo.zipCode = formatZipCode($event.target.value); validateAddressAutomatically()"
-                    type="text"
-                    placeholder="00000-000"
-                    maxlength="9"
-                    :required="storeSettings.checkoutFields.deliveryZipCode.required"
-                    :class="{ 'validating': isValidatingAddress }"
-                  />
+                    <input
+                      id="zipCode"
+                      v-model="deliveryInfo.zipCode"
+                      @input="deliveryInfo.zipCode = formatZipCode($event.target.value); validateAddressAutomatically()"
+                      type="text"
+                      placeholder="00000-000"
+                      maxlength="9"
+                      :required="storeSettings.checkoutFields.deliveryZipCode.required"
+                      :class="{ 
+                        'validating': isValidatingAddress,
+                        'input-error': addressValidationError,
+                        'input-success': deliveryInfo.canDeliver && !addressValidationError && deliveryInfo.deliveryFee > 0
+                      }"
+                    />
                     <div v-if="isValidatingAddress" class="input-spinner">
                       <div class="spinner-small"></div>
                     </div>
+                    <div v-if="deliveryInfo.canDeliver && !addressValidationError && deliveryInfo.deliveryFee > 0 && !isValidatingAddress" class="input-success-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 12l2 2 4-4"></path>
+                        <circle cx="12" cy="12" r="10"></circle>
+                      </svg>
+                    </div>
+                    <div v-if="addressValidationError && !isValidatingAddress" class="input-error-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="15" y1="9" x2="9" y2="15"></line>
+                        <line x1="9" y1="9" x2="15" y2="15"></line>
+                      </svg>
+                    </div>
                   </div>
                   <small class="field-hint">Digite o CEP para calcular o frete automaticamente</small>
+                  <!-- Mensagem de Erro de Validação -->
+                  <div v-if="addressValidationError && !isValidatingAddress" class="input-error-message">
+                    {{ addressValidationError }}
+                  </div>
+                  <!-- Informações de Entrega Validadas -->
+                  <div v-if="deliveryInfo.canDeliver && !addressValidationError && deliveryInfo.deliveryFee > 0 && !isValidatingAddress" class="input-success-message">
+                    Frete: {{ formatPrice(deliveryInfo.deliveryFee) }}
+                  </div>
                 </div>
                 
                 <div v-if="storeSettings.checkoutFields.deliveryAddress.enabled" class="form-group">
@@ -455,8 +535,19 @@ useHead({
                     id="address"
                     v-model="deliveryInfo.address"
                     type="text"
-                    placeholder="Rua, Número"
+                    placeholder="Rua, Avenida, Logradouro"
                     :required="storeSettings.checkoutFields.deliveryAddress.required"
+                  />
+                </div>
+                
+                <div class="form-group">
+                  <label for="number">Número *</label>
+                  <input
+                    id="number"
+                    v-model="deliveryInfo.number"
+                    type="text"
+                    placeholder="123"
+                    required
                   />
                 </div>
                 
@@ -493,32 +584,6 @@ useHead({
                       :required="storeSettings.checkoutFields.deliveryCity.required"
                     />
                   </div>
-                </div>
-                <!-- Status de Validação Automática -->
-                <div v-if="isValidatingAddress" class="validation-status">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinner">
-                    <path d="M21 12a9 9 0 11-6.219-8.56"></path>
-                  </svg>
-                  <span>Calculando frete...</span>
-                </div>
-
-                <!-- Mensagem de Erro de Validação -->
-                <div v-if="addressValidationError" class="address-error">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="15" y1="9" x2="9" y2="15"></line>
-                    <line x1="9" y1="9" x2="15" y2="15"></line>
-                  </svg>
-                  {{ addressValidationError }}
-                </div>
-
-                <!-- Informações de Entrega Validadas -->
-                <div v-if="deliveryInfo.canDeliver && !addressValidationError && deliveryInfo.deliveryFee > 0" class="delivery-success">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 12l2 2 4-4"></path>
-                    <circle cx="12" cy="12" r="10"></circle>
-                  </svg>
-                  <span>Frete calculado: {{ formatPrice(deliveryInfo.deliveryFee) }} - {{ deliveryInfo.deliveryZone }}</span>
                 </div>
               </div>
 
@@ -607,72 +672,23 @@ useHead({
                   ></textarea>
                 </div>
               </div>
-            </div>
-
-            <!-- Resumo do Pedido -->
-            <div class="order-summary">
-              <div class="summary-header">
-                <h3>Resumo do Pedido</h3>
-                <span class="item-count">{{ cart.length }} item(s)</span>
-              </div>
               
-              <div class="summary-items">
-                <div v-for="item in cart" :key="item.variantKey" class="summary-item">
-                  <div class="item-image">
-                    <img :src="item.image" :alt="item.name" />
-                  </div>
-                  <div class="item-details">
-                    <h4>{{ item.name }}</h4>
-                    <div v-if="item.complements && item.complements.length > 0" class="item-complements">
-                      <span v-for="comp in item.complements" :key="comp.name" class="complement">
-                        + {{ comp.quantity }}x {{ comp.name }}
-                      </span>
-                    </div>
-                    <div v-if="item.observation" class="item-observation">
-                      <small>{{ item.observation }}</small>
-                    </div>
-                    <div class="item-quantity">Qtd: {{ item.quantity }}</div>
-                  </div>
-                  <div class="item-price">{{ formatPrice(item.totalPrice) }}</div>
-                </div>
-              </div>
-              
-              <div class="summary-totals">
-                <div class="total-line">
-                  <span>Subtotal</span>
-                  <span>{{ formatPrice(cartSubtotal) }}</span>
-                </div>
-                <div v-if="deliveryInfo.zipCode && (isValidatingAddress || (deliveryInfo.canDeliver && deliveryInfo.deliveryFee > 0))" class="total-line">
-                  <span>Taxa de Entrega</span>
-                  <span v-if="isValidatingAddress" class="calculating-fee">
-                    <div class="spinner-small"></div>
-                    Calculando...
+              <!-- Botão Finalizar -->
+              <div class="submit-section">
+                <button
+                  @click="submitOrder"
+                  :disabled="!isFormValid || isSubmitting"
+                  class="submit-order-btn"
+                >
+                  <div v-if="isSubmitting" class="loading-spinner-small"></div>
+                  <span v-else class="btn-content">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
+                      <path fill="currentColor" d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2s-.9-2-2-2m10 0c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2s2-.9 2-2s-.9-2-2-2m-8.9-5h7.45c.75 0 1.41-.41 1.75-1.03L21 4.96L19.25 4l-3.7 7H8.53L4.27 2H1v2h2l3.6 7.59l-1.35 2.44C4.52 15.37 5.48 17 7 17h12v-2H7zM12 2l4 4l-4 4l-1.41-1.41L12.17 7H8V5h4.17l-1.59-1.59z"/>
+                    </svg>
+                    Finalizar Pedido
                   </span>
-                  <span v-else>{{ formatPrice(deliveryInfo.deliveryFee) }}</span>
-                </div>
-                <div class="total-line total">
-                  <span>Total</span>
-                  <span v-if="isValidatingAddress" class="calculating-total">
-                    <div class="spinner-small"></div>
-                    Calculando...
-                  </span>
-                  <span v-else>{{ formatPrice(totalAmount) }}</span>
-                </div>
+                </button>
               </div>
-              
-              <button
-                @click="submitOrder"
-                :disabled="!isFormValid || isSubmitting"
-                class="submit-order-btn"
-              >
-                <div v-if="isSubmitting" class="loading-spinner-small"></div>
-                <span v-else class="btn-content">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2s-.9-2-2-2m10 0c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2s2-.9 2-2s-.9-2-2-2m-8.9-5h7.45c.75 0 1.41-.41 1.75-1.03L21 4.96L19.25 4l-3.7 7H8.53L4.27 2H1v2h2l3.6 7.59l-1.35 2.44C4.52 15.37 5.48 17 7 17h12v-2H7zM12 2l4 4l-4 4l-1.41-1.41L12.17 7H8V5h4.17l-1.59-1.59z"/>
-                  </svg>
-                  Finalizar Pedido
-                </span>
-              </button>
             </div>
           </div>
         </div>
@@ -883,18 +899,88 @@ useHead({
   flex: 1;
 }
 
-.checkout-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 3rem;
-  align-items: start;
+.checkout-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
 }
 
-@media (max-width: 1024px) {
-  .checkout-grid {
-    grid-template-columns: 1fr;
-    gap: 2rem;
-  }
+/* Seção de Itens do Pedido */
+.order-items-section {
+  background: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.section-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.items-list {
+  margin-bottom: 1.5rem;
+}
+
+.cart-item-card {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.cart-item-card:last-child {
+  border-bottom: none;
+}
+
+.cart-item-card .item-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.cart-item-card .item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cart-item-card .item-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.cart-item-card .item-details h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.5rem 0;
+  overflow-wrap: break-word;
+}
+
+.order-totals {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #f3f4f6;
+}
+
+.submit-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px solid #f3f4f6;
 }
 
 /* Formulário */
@@ -983,13 +1069,40 @@ useHead({
 .input-wrapper input.validating {
   border-color: #f59e0b;
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+  padding-right: 2.5rem;
 }
 
-.input-spinner {
+.input-wrapper input.input-error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  padding-right: 2.5rem;
+}
+
+.input-wrapper input.input-success {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  padding-right: 2.5rem;
+}
+
+.input-spinner,
+.input-success-icon,
+.input-error-icon {
   position: absolute;
   right: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.input-success-icon {
+  color: #10b981;
+}
+
+.input-error-icon {
+  color: #ef4444;
 }
 
 .spinner-small {
@@ -1001,41 +1114,6 @@ useHead({
   animation: spin 0.8s linear infinite;
 }
 
-/* Estilos para Validação de Endereço */
-.btn-validate-address {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: linear-gradient(135deg, #ff8e24 0%, #ff6b00 100%);
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.btn-validate-address:hover:not(:disabled) {
-  background: linear-gradient(135deg, #ff6b00 0%, #e55a00 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
-}
-
-.btn-validate-address:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.btn-validate-address .spinner {
-  animation: spin 1s linear infinite;
-}
-
 .field-hint {
   display: block;
   margin-top: 0.25rem;
@@ -1044,67 +1122,32 @@ useHead({
   font-style: italic;
 }
 
-.validation-status {
+.input-error-message {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem;
-  background: #fef3c7;
-  border: 1px solid #fde68a;
-  border-radius: 0.5rem;
-  color: #92400e;
-  font-size: 0.875rem;
-  font-weight: 500;
   margin-top: 0.5rem;
-}
-
-.validation-status .spinner {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.address-error {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem;
   background: #fee2e2;
   border: 1px solid #fecaca;
   border-radius: 0.5rem;
   color: #991b1b;
   font-size: 0.875rem;
   font-weight: 500;
-  margin-top: 0.5rem;
 }
 
-.delivery-info {
-  margin-top: 1rem;
-}
-
-.delivery-success {
+.input-success-message {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
   border-radius: 0.5rem;
   color: #166534;
   font-size: 0.875rem;
   font-weight: 500;
-}
-
-.delivery-success svg {
-  color: #16a34a;
-  flex-shrink: 0;
 }
 
 .delivery-details {
@@ -1426,9 +1469,17 @@ useHead({
     padding: 1.5rem;
   }
   
-  .order-summary {
+  .order-items-section {
     padding: 1.5rem;
-    position: static;
+  }
+  
+  .cart-item-card {
+    gap: 0.75rem;
+  }
+  
+  .cart-item-card .item-image {
+    width: 60px;
+    height: 60px;
   }
   
   .form-section h3 {

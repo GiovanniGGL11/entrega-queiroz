@@ -8,44 +8,54 @@ if (!uri) {
   console.error('[DB] ERRO CRÍTICO:', errorMsg);
   throw new Error(errorMsg);
 }
+
 const options = {
   maxPoolSize: 10,
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
+  minPoolSize: 1,
+  serverSelectionTimeoutMS: 5000, // Reduzido para 5s
+  socketTimeoutMS: 30000,
+  connectTimeoutMS: 5000,
+  maxIdleTimeMS: 30000,
 };
+
+// Para ambientes serverless (Vercel), usar globalThis
+const globalForMongo = globalThis;
 
 let client;
 let clientPromise;
 
-// Em ambientes serverless como Vercel, precisamos usar cache global
-if (process.env.NODE_ENV === 'development') {
-  // Em desenvolvimento, use uma variável global para preservar o valor através dos reloads
-  if (!global._mongoClientPromise) {
-    client = new MongoClient(uri, options);
-    global._mongoClientPromise = client.connect();
-  } else {
-  }
-  clientPromise = global._mongoClientPromise;
-} else {
-  // Em produção, é melhor não usar variáveis globais
+// Reutilizar conexão em ambientes serverless (Vercel)
+if (!globalForMongo._mongoClientPromise) {
   client = new MongoClient(uri, options);
-  clientPromise = client.connect();
+  globalForMongo._mongoClientPromise = client.connect();
 }
+
+clientPromise = globalForMongo._mongoClientPromise;
 
 export async function getDB() {
   try {
+    // Se a conexão foi perdida, criar nova
+    if (!globalForMongo._mongoClientPromise) {
+      client = new MongoClient(uri, options);
+      globalForMongo._mongoClientPromise = client.connect();
+      clientPromise = globalForMongo._mongoClientPromise;
+    }
+    
     const connectedClient = await clientPromise;
     const db = connectedClient.db("queiroz_hamburgueria");
     return db;
   } catch (error) {
     console.error("[DB] ❌ ERRO DE CONEXÃO:", {
       message: error.message,
-      stack: error.stack,
       name: error.name,
       code: error.code,
-      uri: uri ? uri.substring(0, 30) + '...' : 'undefined'
     });
-    throw new Error(`Failed to connect to MongoDB: ${error.message}`);
+    
+    // Limpar conexão em caso de erro para tentar reconectar
+    globalForMongo._mongoClientPromise = null;
+    clientPromise = null;
+    
+    throw error;
   }
 }
 

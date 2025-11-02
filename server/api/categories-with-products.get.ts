@@ -8,7 +8,7 @@ export default defineEventHandler(async () => {
     const categories = db.collection("categories");
     const products = db.collection("products");
     
-    // OTIMIZAÇÃO: Usar aggregation para fazer join e reduzir queries
+    // OTIMIZAÇÃO: Usar aggregation para fazer join e reduzir queries (com timeout)
     const categoriesWithProducts = await categories.aggregate([
       {
         $match: {
@@ -54,7 +54,9 @@ export default defineEventHandler(async () => {
         }
       },
       { $sort: { order: 1, createdAt: -1 } }
-    ]).toArray();
+    ], {
+      maxTimeMS: 10000 // Timeout de 10 segundos
+    }).toArray();
     
     return categoriesWithProducts;
   } catch (error: any) {

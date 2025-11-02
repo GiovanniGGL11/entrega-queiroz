@@ -35,8 +35,10 @@ export default defineEventHandler(async (event) => {
     
     const settings = db.collection("settings");
     
-    // Buscar as configurações (sempre haverá apenas um documento)
-    let config = await settings.findOne({ _id: "store-config" });
+    // Buscar as configurações (sempre haverá apenas um documento) com timeout
+    let config = await settings.findOne({ _id: "store-config" }, {
+      maxTimeMS: 5000 // Timeout de 5 segundos
+    });
     
     // Se não existir, criar com valores padrão
     if (!config) {

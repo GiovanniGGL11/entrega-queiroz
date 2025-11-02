@@ -20,6 +20,17 @@
           </svg>
           {{ loading ? 'Carregando...' : 'Atualizar' }}
         </button>
+        <button @click="syncEnabled = !syncEnabled; syncEnabled ? startNotifications() : stopNotifications(); testSound()" class="btn-sync-toggle" :class="{ 'active': syncEnabled }" :title="syncEnabled ? 'Sincronização ativa (clique para testar som)' : 'Sincronização pausada'">
+          <svg v-if="syncEnabled" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="9" y1="9" x2="15" y2="15"></line>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -105,7 +116,23 @@
               </div>
               <div class="detail-row" v-if="selectedOrder.address">
                 <span class="label">Endereço:</span>
-                <span class="value">{{ selectedOrder.address }}</span>
+                <span class="value">
+                  {{ selectedOrder.address }}
+                  <span v-if="selectedOrder.number">, nº {{ selectedOrder.number }}</span>
+                  <span v-if="selectedOrder.complement">, {{ selectedOrder.complement }}</span>
+                </span>
+              </div>
+              <div class="detail-row" v-if="selectedOrder.neighborhood || selectedOrder.city">
+                <span class="label">Bairro/Cidade:</span>
+                <span class="value">
+                  <span v-if="selectedOrder.neighborhood">{{ selectedOrder.neighborhood }}</span>
+                  <span v-if="selectedOrder.neighborhood && selectedOrder.city">, </span>
+                  <span v-if="selectedOrder.city">{{ selectedOrder.city }}</span>
+                </span>
+              </div>
+              <div class="detail-row" v-if="selectedOrder.zipCode">
+                <span class="label">CEP:</span>
+                <span class="value">{{ selectedOrder.zipCode }}</span>
               </div>
             </div>
             
@@ -208,12 +235,21 @@
       :message="alert.message"
       @close="alert.show = false"
     />
+
+    <!-- Componente de Notificações -->
+    <OrderNotifications
+      :notifications="notifications"
+      @view-order="viewOrderFromNotification"
+      @mark-read="markAsRead"
+      @clear-all="clearNotifications"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import Alert from '~/components/Alert.vue'
+import OrderNotifications from '~/components/OrderNotifications.vue'
 import { useAlert } from '~/composables/useAlert'
 
 // Definir layout
@@ -238,6 +274,80 @@ const confirmationModal = ref({
   message: '',
   action: null
 })
+
+// Sistema de notificações em tempo real
+const {
+  notifications,
+  startNotifications,
+  stopNotifications,
+  markAsRead,
+  clearAll: clearNotifications,
+  playNotificationSound,
+  setOnNewOrderCallback
+} = useOrderNotifications()
+
+const syncEnabled = ref(true)
+
+// Callback para atualizar lista imediatamente quando novo pedido chegar
+setOnNewOrderCallback((order) => {
+  console.log('[Orders] Callback executado - recarregando lista imediatamente...', order?.orderNumber || order?._id)
+  // Usar nextTick para garantir que a atualização aconteça após o Vue processar a notificação
+  nextTick(() => {
+    loadOrders(false, true)
+  })
+})
+
+// Watcher adicional como fallback
+watch(notifications, (newNotifs, oldNotifs) => {
+  const unreadCount = newNotifs.filter(n => !n.read).length
+  const hasNewNotifications = newNotifs.length > (oldNotifs?.length || 0)
+  
+  // Se há notificações não lidas OU há novas notificações, atualizar
+  if (hasNewNotifications && unreadCount > 0) {
+    console.log('[Orders] Watcher detectou nova notificação, recarregando lista...')
+    loadOrders(false, true)
+  }
+}, { deep: true, immediate: false })
+
+// Função para ver pedido da notificação
+const viewOrderFromNotification = (order) => {
+  // Mapear para o formato esperado
+  const mappedOrder = {
+    id: order.orderNumber,
+    _id: order._id,
+    customer: order.customerInfo?.name,
+    phone: order.customerInfo?.phone,
+    email: order.customerInfo?.email,
+    address: order.deliveryInfo?.address,
+    number: order.deliveryInfo?.number || '',
+    neighborhood: order.deliveryInfo?.neighborhood,
+    city: order.deliveryInfo?.city,
+    zipCode: order.deliveryInfo?.zipCode,
+    complement: order.deliveryInfo?.complement,
+    status: order.status,
+    total: order.totalAmount,
+    subtotal: order.totalAmount - (order.deliveryInfo?.deliveryFee || 0),
+    deliveryFee: order.deliveryInfo?.deliveryFee,
+    paymentMethod: order.paymentMethod,
+    notes: order.notes,
+    createdAt: order.createdAt,
+    items: order.items?.map(item => ({
+      id: item.productId,
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+      subtotal: item.subtotal,
+      complements: item.complements || []
+    })) || []
+  }
+  
+  viewOrderDetails(mappedOrder)
+}
+
+// Função para testar som
+const testSound = () => {
+  playNotificationSound()
+}
 
 // Funções
 const formatCurrency = (value) => {
@@ -269,59 +379,90 @@ const getStatusText = (status) => {
   return statusMap[status] || status
 }
 
-const { authenticatedFetch } = useAuthenticatedFetch()
+const { authenticatedFetch, clearCache } = useAuthenticatedFetch()
 
-const loadOrders = async () => {
+const loadOrders = async (showLoading = true, forceRefresh = false) => {
   try {
-    loading.value = true
+    if (showLoading) {
+      loading.value = true
+    }
+    
+    // Limpar cache se for refresh forçado (quando nova notificação chega)
+    if (forceRefresh) {
+      clearCache('/api/orders')
+    }
     
     const url = statusFilter.value 
-      ? `/api/orders?status=${statusFilter.value}&page=1&limit=100`
-      : '/api/orders?page=1&limit=100'
-    const response = await authenticatedFetch(url)
+      ? `/api/orders?status=${statusFilter.value}&page=1&limit=100&_t=${Date.now()}`
+      : `/api/orders?page=1&limit=100&_t=${Date.now()}`
+    
+    // Forçar busca sem cache usando query param único
+    const response = await authenticatedFetch(url, {
+      headers: {
+        'Cache-Control': 'no-cache'
+      }
+    })
     
     // Adaptar para nova estrutura de resposta com paginação
     const ordersData = response.orders || response
     
-    orders.value = ordersData.map(order => ({
-      id: order.orderNumber,
-      _id: order._id,
-      customer: order.customerInfo.name,
-      phone: order.customerInfo.phone,
-      email: order.customerInfo.email,
-      address: order.deliveryInfo.address,
-      neighborhood: order.deliveryInfo.neighborhood,
-      city: order.deliveryInfo.city,
-      zipCode: order.deliveryInfo.zipCode,
-      complement: order.deliveryInfo.complement,
-      status: order.status,
-      total: order.totalAmount,
-      subtotal: order.totalAmount - order.deliveryInfo.deliveryFee,
-      deliveryFee: order.deliveryInfo.deliveryFee,
-      paymentMethod: order.paymentMethod,
-      notes: order.notes,
-      createdAt: order.createdAt,
-      items: order.items.map(item => ({
-        id: item.productId,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        subtotal: item.subtotal,
-        complements: item.complements || []
-      }))
-    }))
+    if (!Array.isArray(ordersData)) {
+      console.error('[Orders] Resposta inválida:', response)
+      return
+    }
+    
+    orders.value = ordersData.map(order => {
+      // Validação e tratamento seguro dos dados
+      const customerInfo = order.customerInfo || {}
+      const deliveryInfo = order.deliveryInfo || {}
+      const items = order.items || []
+      
+      return {
+        id: order.orderNumber || order._id?.toString() || 'N/A',
+        _id: order._id,
+        customer: customerInfo.name || 'Cliente não informado',
+        phone: customerInfo.phone || '',
+        email: customerInfo.email || '',
+        address: deliveryInfo.address || '',
+        number: deliveryInfo.number || '',
+        neighborhood: deliveryInfo.neighborhood || '',
+        city: deliveryInfo.city || '',
+        zipCode: deliveryInfo.zipCode || '',
+        complement: deliveryInfo.complement || '',
+        status: order.status || 'pending',
+        total: order.totalAmount || 0,
+        subtotal: (order.totalAmount || 0) - (deliveryInfo.deliveryFee || 0),
+        deliveryFee: deliveryInfo.deliveryFee || 0,
+        paymentMethod: order.paymentMethod || 'dinheiro',
+        notes: order.notes || '',
+        createdAt: order.createdAt || new Date(),
+        items: items.map(item => ({
+          id: item.productId || item._id?.toString() || '',
+          name: item.name || 'Produto sem nome',
+          quantity: item.quantity || 0,
+          price: item.price || 0,
+          subtotal: item.subtotal || 0,
+          complements: item.complements || []
+        }))
+      }
+    })
+    
+    console.log('[Orders] Lista atualizada:', orders.value.length, 'pedidos')
     
   } catch (error) {
     console.error('Erro ao carregar pedidos:', error)
     const errorMessage = error.data?.message || error.message || 'Erro ao carregar pedidos'
     showAlert(errorMessage, 'error')
   } finally {
-    loading.value = false
+    if (showLoading) {
+      loading.value = false
+    }
   }
 }
 
 const refreshOrders = () => {
-  loadOrders()
+  console.log('[Orders] Atualização manual acionada')
+  loadOrders(true, true) // Mostrar loading e forçar refresh
 }
 
 // Função para mostrar modal de confirmação
@@ -428,6 +569,19 @@ const showAlert = (message, type = 'success') => {
 // Lifecycle
 onMounted(() => {
   loadOrders()
+  // Iniciar notificações em tempo real automaticamente
+  if (process.client) {
+    // Aguardar um pouco para garantir que a página está completamente carregada
+    setTimeout(() => {
+      console.log('[Orders Page] Iniciando notificações...')
+      startNotifications()
+    }, 500)
+  }
+})
+
+onUnmounted(() => {
+  // Parar notificações quando componente for desmontado
+  stopNotifications()
 })
 </script>
 
@@ -458,6 +612,93 @@ onMounted(() => {
   display: flex;
   gap: 1rem;
   align-items: center;
+}
+
+.new-orders-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #FF6B35 0%, #ff8e24 100%);
+  color: white;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+  animation: pulse 2s infinite;
+}
+
+.new-orders-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+}
+
+.badge-count {
+  background: rgba(255, 255, 255, 0.3);
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+.badge-text {
+  text-transform: lowercase;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.btn-sync-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.btn-sync-toggle:hover {
+  background: #f3f4f6;
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+.btn-sync-toggle.active {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: white;
+}
+
+.btn-sync-toggle.active:hover {
+  background: #b91c1c;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .filter-select {

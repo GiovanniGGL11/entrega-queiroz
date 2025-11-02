@@ -3,11 +3,44 @@ import { getDB } from "../../utils/db";
 
 export default defineEventHandler(async (event) => {
   try {
-    const db = await getDB();
+    // Timeout geral de 2 segundos para toda a operação
+    const dbPromise = getDB();
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout ao conectar MongoDB')), 2000)
+    );
+    
+    let db;
+    try {
+      db = await Promise.race([dbPromise, timeoutPromise]) as any;
+    } catch (dbError) {
+      console.error('Erro/timeout ao conectar MongoDB, usando valores padrão');
+      throw dbError; // Vai cair no catch principal e retornar valores padrão
+    }
+    
     const settings = db.collection("settings");
     
-    // Buscar configurações da loja
-    let storeSettings = await settings.findOne({});
+    // Timeout de 2 segundos para a query
+    const queryPromise = settings.findOne({ _id: "store-config" }, {
+      maxTimeMS: 2000
+    });
+    const queryTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout na query')), 2000)
+    );
+    
+    let storeSettings;
+    try {
+      storeSettings = await Promise.race([queryPromise, queryTimeout]) as any;
+      
+      // Se não encontrar pelo _id, tenta sem filtro (só se a primeira query funcionou)
+      if (!storeSettings) {
+        storeSettings = await settings.findOne({}, {
+          maxTimeMS: 1000
+        });
+      }
+    } catch (queryError) {
+      console.error('Erro/timeout na query, usando valores padrão');
+      storeSettings = null; // Forçar valores padrão
+    }
     
     // Se não existir configurações, retornar valores padrão
     if (!storeSettings) {

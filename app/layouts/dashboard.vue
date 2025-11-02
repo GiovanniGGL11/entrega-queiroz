@@ -2,7 +2,7 @@
   <div class="dashboard" :style="{ '--sidebar-width': sidebarCollapsed ? '80px' : '280px' }">
     <!-- Overlay para mobile -->
     <div 
-      v-if="!sidebarCollapsed && isMobile" 
+      v-if="isMobile && !sidebarCollapsed" 
       class="sidebar-overlay" 
       @click="toggleSidebar"
     ></div>
@@ -28,7 +28,8 @@
         </div>
         <button @click="toggleSidebar" class="sidebar-toggle" :class="{ 'collapsed': sidebarCollapsed }" :title="sidebarCollapsed ? 'Expandir' : 'Recolher'">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path :d="sidebarCollapsed ? 'M5 12h14M12 5l7 7-7 7' : 'M19 12H5M12 19l-7-7 7-7'"/>
+            <path v-if="sidebarCollapsed" d="M5 12h14M12 5l7 7-7 7"/>
+            <path v-else d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
         </button>
       </div>
@@ -129,18 +130,29 @@
 </template>
 
 <script setup>
+import { watch } from 'vue'
 const router = useRouter()
+
+// Estado inicial: sempre false no SSR, será ajustado no cliente
+const sidebarCollapsed = ref(false)
+const isMobile = ref(false)
+const isToggling = ref(false) // Prevenir múltiplos toggles
+const isInitialized = ref(false) // Flag para evitar salvamento durante inicialização
+
 // Carregar estado da sidebar do localStorage
 const getSavedSidebarState = () => {
   if (process.client) {
-    const saved = localStorage.getItem('sidebarCollapsed')
-    return saved === 'true'
+    try {
+      const saved = localStorage.getItem('sidebarCollapsed')
+      if (saved !== null) {
+        return saved === 'true'
+      }
+    } catch (e) {
+      console.warn('Erro ao ler localStorage:', e)
+    }
   }
-  return false
+  return false // Valor padrão: expandido
 }
-
-const sidebarCollapsed = ref(getSavedSidebarState())
-const isMobile = ref(false)
 
 // Logo e nome da loja
 const loadingSettings = ref(true)
@@ -162,18 +174,45 @@ const loadStoreSettings = async () => {
 }
 
 const toggleSidebar = () => {
+  // Prevenir múltiplos cliques rápidos
+  if (isToggling.value) return
+  
+  isToggling.value = true
+  
+  // Alternar estado
   sidebarCollapsed.value = !sidebarCollapsed.value
   
-  // Salvar estado no localStorage
-  if (process.client) {
-    localStorage.setItem('sidebarCollapsed', sidebarCollapsed.value.toString())
+  // Salvar no localStorage (apenas desktop e após inicialização)
+  if (process.client && !isMobile.value && isInitialized.value) {
+    try {
+      localStorage.setItem('sidebarCollapsed', sidebarCollapsed.value.toString())
+    } catch (e) {
+      console.warn('Erro ao salvar no localStorage:', e)
+    }
   }
+  
+  // Permitir novo toggle após a transição (300ms)
+  setTimeout(() => {
+    isToggling.value = false
+  }, 300)
 }
+
+// Watcher para salvar automaticamente quando o estado mudar (apenas desktop, após inicialização)
+watch(sidebarCollapsed, (newValue) => {
+  // Não salvar durante a inicialização ou se for mobile
+  if (process.client && !isMobile.value && isInitialized.value) {
+    try {
+      localStorage.setItem('sidebarCollapsed', newValue.toString())
+    } catch (e) {
+      console.warn('Erro ao salvar no localStorage:', e)
+    }
+  }
+})
 
 // Função para fechar sidebar no mobile após navegação
 const closeSidebarOnMobile = () => {
   if (isMobile.value) {
-    sidebarCollapsed.value = true
+    sidebarCollapsed.value = true // true = escondido no mobile
   }
 }
 
@@ -228,20 +267,54 @@ onMounted(() => {
   // Carregar configurações da loja
   loadStoreSettings()
   
-  const checkMobile = () => {
+  // Inicializar estado apenas no cliente
+  if (process.client) {
     const isMobileDevice = window.innerWidth <= 768
     isMobile.value = isMobileDevice
     
-    // No mobile, sempre recolher
+    // Inicializar estado da sidebar
     if (isMobileDevice) {
+      // Mobile: sempre iniciar fechado (não salvar)
       sidebarCollapsed.value = true
     } else {
-      // No desktop, usar o estado salvo no localStorage
-      sidebarCollapsed.value = getSavedSidebarState()
+      // Desktop: carregar do localStorage
+      const savedState = getSavedSidebarState()
+      sidebarCollapsed.value = savedState
+      // Se não existe, criar com valor padrão
+      if (localStorage.getItem('sidebarCollapsed') === null) {
+        localStorage.setItem('sidebarCollapsed', 'false')
+      }
+    }
+    
+    // Marcar como inicializado após um pequeno delay para evitar salvamento durante inicialização
+    setTimeout(() => {
+      isInitialized.value = true
+    }, 100)
+  }
+  
+  const checkMobile = () => {
+    const wasMobile = isMobile.value
+    const isMobileDevice = window.innerWidth <= 768
+    
+    // Se não mudou de tipo de dispositivo, não fazer nada
+    if (wasMobile === isMobileDevice) {
+      return
+    }
+    
+    isMobile.value = isMobileDevice
+    
+    // Se mudou de desktop para mobile
+    if (!wasMobile && isMobileDevice) {
+      sidebarCollapsed.value = true // Esconder no mobile (não salvar)
+    } 
+    // Se mudou de mobile para desktop
+    else if (wasMobile && !isMobileDevice) {
+      // Restaurar estado salvo no desktop
+      const savedState = getSavedSidebarState()
+      sidebarCollapsed.value = savedState
     }
   }
   
-  checkMobile()
   window.addEventListener('resize', checkMobile)
   
   onUnmounted(() => {
@@ -608,13 +681,18 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .admin-sidebar {
-    transform: translateX(-100%);
     width: 280px;
     z-index: 1001;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   .admin-sidebar:not(.sidebar-collapsed) {
     transform: translateX(0);
+  }
+  
+  .admin-sidebar.sidebar-collapsed {
+    transform: translateX(-100%);
   }
   
   .main-wrapper {

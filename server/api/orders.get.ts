@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
   }
   
   const query = getQuery(event);
-  const { status, page = 1, limit = 50 } = query;
+  const { status, page = 1, limit = 50, since } = query;
 
   try {
     const db = await getDB();
@@ -42,6 +42,19 @@ export default defineEventHandler(async (event) => {
     
     // Construir filtro
     const filter = status ? { status } : {};
+    
+    // Se since for fornecido, filtrar apenas pedidos criados após essa data
+    if (since) {
+      try {
+        const sinceDate = new Date(since)
+        // Garantir que estamos procurando pedidos criados DEPOIS da data fornecida
+        filter.createdAt = { $gt: sinceDate }
+        console.log('[API Orders] Filtrando pedidos após:', sinceDate.toISOString())
+      } catch (e) {
+        console.error('[API Orders] Erro ao parsear data since:', e)
+        // Ignorar erro de parsing da data
+      }
+    }
     
     // Buscar pedidos com paginação e ordenação otimizada
     const [ordersData, totalCount] = await Promise.all([

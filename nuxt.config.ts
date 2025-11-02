@@ -34,17 +34,35 @@ export default defineNuxtConfig({
         target: "es2022",
       },
     },
-    // Configurações de segurança
+    // Configurações de cache e performance
     routeRules: {
-      // APIs públicas (não precisam de autenticação)
+      // APIs públicas com cache (melhora performance)
+      '/api/public/**': { 
+        cors: true,
+        headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=600' }, // 5 min cache, 10 min stale
+        prerender: false
+      },
+      '/api/categories-with-products': { 
+        cors: true,
+        headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' }
+      },
+      '/api/categories': { 
+        cors: true,
+        headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' }
+      },
+      '/api/products': { 
+        cors: true,
+        headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' }
+      },
+      '/api/product': { 
+        cors: true,
+        headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' }
+      },
+      
+      // APIs sem cache (mudam frequentemente)
       '/api/auth/**': { cors: true },
       '/api/orders': { cors: true },
       '/api/calculate-delivery': { cors: true },
-      '/api/categories-with-products': { cors: true },
-      '/api/product': { cors: true },
-      '/api/products': { cors: true },
-      '/api/categories': { cors: true },
-      '/api/public/**': { cors: true },
       
       // APIs administrativas (protegidas por middleware)
       '/api/dashboard/**': { cors: true },
@@ -53,22 +71,4 @@ export default defineNuxtConfig({
       '/api/upload-image': { cors: true },
     },
   },
-  // Configurações de segurança
-  security: {
-    headers: {
-      crossOriginEmbedderPolicy: process.env.NODE_ENV === 'development' ? 'unsafe-none' : 'require-corp',
-      contentSecurityPolicy: {
-        'base-uri': ["'self'"],
-        'font-src': ["'self'", 'https:', 'data:'],
-        'form-action': ["'self'"],
-        'frame-ancestors': ["'none'"],
-        'img-src': ["'self'", 'data:', 'https:'],
-        'object-src': ["'none'"],
-        'script-src-attr': ["'none'"],
-        'style-src': ["'self'", 'https:', "'unsafe-inline'"],
-        'script-src': ["'self'", 'https:', "'unsafe-inline'"],
-        'upgrade-insecure-requests': true
-      }
-    }
-  }
 });

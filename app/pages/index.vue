@@ -66,7 +66,13 @@ const categoriesLoaded = ref(false)
 // Carregar configurações da loja
 const loadStoreSettings = async () => {
   try {
-    const settings = await $fetch('/api/public/settings')
+    // Timeout de 5 segundos no cliente também
+    const settingsPromise = $fetch('/api/public/settings');
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout')), 5000)
+    );
+    const settings = await Promise.race([settingsPromise, timeoutPromise]);
+    
     storeSettings.value = {
       storeName: settings.storeName || "",
       logo: settings.logo || "",
@@ -85,6 +91,22 @@ const loadStoreSettings = async () => {
     settingsLoaded.value = true
   } catch (error) {
     console.error('Erro ao carregar configurações da loja:', error)
+    // Usar valores padrão em caso de erro
+    storeSettings.value = {
+      storeName: "Queiroz Hamburgueria",
+      logo: "/logo.jpg",
+      banner: "",
+      isOpen: false,
+      deliveryMinTime: 30,
+      deliveryMaxTime: 60,
+      deliveryFee: 0,
+      minimumOrder: 0,
+      storeAddress: "",
+      storePhone: "",
+      whatsapp: "",
+      storeLatitude: -23.5505,
+      storeLongitude: -46.6333
+    }
     settingsLoaded.value = true
   }
 }
