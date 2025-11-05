@@ -185,16 +185,41 @@ export default defineEventHandler(async (event) => {
     }
     
     // Calcular se está aberto agora baseado nos horários, respeitando fuso horário
-    const timeZone = process.env.TZ || 'America/Sao_Paulo'
-    const nowLocal = new Date(new Date().toLocaleString('en-US', { timeZone }))
-    const currentDay = nowLocal.getDay();
-    const currentTime = `${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}`;
+    // Sanitizar e validar o timezone para evitar erros
+    let timeZone = 'America/Sao_Paulo'; // Fallback padrão
+    try {
+      const envTZ = process.env.TZ;
+      if (envTZ && envTZ.trim() && !envTZ.startsWith(':')) {
+        // Validar se o timezone é válido tentando usá-lo
+        try {
+          new Date().toLocaleString('en-US', { timeZone: envTZ.trim() });
+          timeZone = envTZ.trim();
+        } catch (tzError) {
+          console.warn('[public/settings] ⚠️ Timezone inválido do env:', envTZ, 'usando fallback');
+        }
+      }
+    } catch (tzParseError) {
+      console.warn('[public/settings] ⚠️ Erro ao processar TZ:', tzParseError);
+    }
     
-    const todaySchedule = storeSettings.openingHours?.find((h: any) => h.day === currentDay);
     let isOpen = false;
-    
-    if (todaySchedule && todaySchedule.enabled) {
-      isOpen = currentTime >= todaySchedule.open && currentTime <= todaySchedule.close;
+    try {
+      const nowLocal = new Date(new Date().toLocaleString('en-US', { timeZone }));
+      const currentDay = nowLocal.getDay();
+      const currentTime = `${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}`;
+      
+      const todaySchedule = storeSettings.openingHours?.find((h: any) => h.day === currentDay);
+      
+      if (todaySchedule && todaySchedule.enabled) {
+        isOpen = currentTime >= todaySchedule.open && currentTime <= todaySchedule.close;
+      }
+    } catch (timeCalcError: any) {
+      console.error('[public/settings] ⚠️ Erro ao calcular horário de abertura:', {
+        message: timeCalcError?.message,
+        timeZone: timeZone
+      });
+      // Se houver erro, assumir que está fechado por segurança
+      isOpen = false;
     }
     
     // Retornar apenas as configurações públicas necessárias
