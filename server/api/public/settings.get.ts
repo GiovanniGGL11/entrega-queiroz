@@ -2,7 +2,18 @@
 import { getDB } from "../../utils/db";
 
 export default defineEventHandler(async (event) => {
+  // Adicionar headers para evitar cache
+  setHeader(event, 'Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  setHeader(event, 'Pragma', 'no-cache');
+  setHeader(event, 'Expires', '0');
+  
   try {
+    // Log da URI do MongoDB (sem senha) para debug
+    const mongoUri = process.env.MONGODB_URI || 'NÃO DEFINIDA';
+    const mongoUriMasked = mongoUri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@');
+    console.log('[public/settings] 🔍 MongoDB URI:', mongoUriMasked);
+    console.log('[public/settings] 🔍 Ambiente:', process.env.NODE_ENV || 'development');
+    
     // Timeout geral de 10 segundos para conectar (Vercel pode ter cold start)
     const dbPromise = getDB();
     const timeoutPromise = new Promise((_, reject) => 
@@ -13,45 +24,109 @@ export default defineEventHandler(async (event) => {
     try {
       db = await Promise.race([dbPromise, timeoutPromise]) as any;
       console.log('[public/settings] ✅ Conexão com MongoDB estabelecida');
+      console.log('[public/settings] 🔍 Nome do banco:', db.databaseName);
     } catch (dbError: any) {
       console.error('[public/settings] ❌ Erro/timeout ao conectar MongoDB:', {
         message: dbError?.message,
-        name: dbError?.name
+        name: dbError?.name,
+        stack: dbError?.stack
       });
       throw dbError; // Vai cair no catch principal e retornar valores padrão
     }
     
     const settings = db.collection("settings");
     
-    // Timeout de 5 segundos para a query
-    const queryPromise = settings.findOne({ _id: "store-config" }, {
-      maxTimeMS: 5000
-    });
-    const queryTimeout = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout na query')), 5000)
-    );
-    
-    let storeSettings;
+    // Primeiro, verificar quantos documentos existem na coleção (para debug)
+    let allDocs: any[] = [];
     try {
-      storeSettings = await Promise.race([queryPromise, queryTimeout]) as any;
+      const count = await settings.countDocuments({});
+      console.log(`[public/settings] 📊 Total de documentos na coleção: ${count}`);
       
-      // Se não encontrar pelo _id, tenta sem filtro (só se a primeira query funcionou)
-      if (!storeSettings) {
-        console.log('[public/settings] ⚠️ Não encontrado com _id, tentando buscar sem filtro...');
-        storeSettings = await settings.findOne({}, {
-          maxTimeMS: 3000
-        });
+      if (count > 0) {
+        // Listar todos os documentos para debug
+        allDocs = await settings.find({}).limit(5).toArray();
+        console.log('[public/settings] 📋 Documentos encontrados:', allDocs.map(doc => ({
+          _id: doc._id,
+          _idType: typeof doc._id,
+          _idString: String(doc._id),
+          storeName: doc.storeName || 'N/A',
+          hasDeliveryZones: !!doc.deliveryZones,
+          hasCheckoutFields: !!doc.checkoutFields
+        })));
+      }
+    } catch (countError: any) {
+      console.error('[public/settings] ⚠️ Erro ao contar documentos:', countError?.message);
+    }
+    
+    // Timeout de 5 segundos para a query
+    let storeSettings = null;
+    
+    try {
+      // Tentar buscar com _id como string primeiro
+      const queryPromise1 = settings.findOne({ _id: "store-config" }, {
+        maxTimeMS: 5000
+      });
+      const queryTimeout1 = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout na query 1')), 5000)
+      );
+      
+      storeSettings = await Promise.race([queryPromise1, queryTimeout1]) as any;
+      
+      if (storeSettings) {
+        console.log('[public/settings] ✅ Configurações encontradas com _id="store-config"');
+      } else {
+        // Se não encontrar, usar o primeiro documento da lista se existir
+        if (allDocs.length > 0) {
+          console.log('[public/settings] ⚠️ Não encontrado com _id="store-config", usando primeiro documento da lista...');
+          storeSettings = allDocs[0];
+          console.log('[public/settings] ✅ Usando primeiro documento encontrado');
+        } else {
+          // Se não houver documentos na lista, tentar buscar qualquer documento
+          console.log('[public/settings] ⚠️ Nenhum documento na lista, tentando buscar qualquer documento...');
+          const queryPromise2 = settings.findOne({}, {
+            maxTimeMS: 3000
+          });
+          const queryTimeout2 = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout na query 2')), 3000)
+          );
+          
+          storeSettings = await Promise.race([queryPromise2, queryTimeout2]) as any;
+          
+          if (storeSettings) {
+            console.log('[public/settings] ✅ Configurações encontradas sem filtro');
+          } else {
+            console.log('[public/settings] ⚠️ Nenhuma configuração encontrada no banco');
+          }
+        }
       }
       
       if (storeSettings) {
-        console.log('[public/settings] ✅ Configurações encontradas no banco');
-      } else {
-        console.log('[public/settings] ⚠️ Nenhuma configuração encontrada no banco');
+        console.log('[public/settings] 📦 Dados encontrados:', {
+          _id: storeSettings._id,
+          _idType: typeof storeSettings._id,
+          _idString: String(storeSettings._id),
+          storeName: storeSettings.storeName,
+          hasDeliveryZones: Array.isArray(storeSettings.deliveryZones),
+          deliveryZonesCount: Array.isArray(storeSettings.deliveryZones) ? storeSettings.deliveryZones.length : 0,
+          hasCheckoutFields: !!storeSettings.checkoutFields,
+          hasLocation: !!storeSettings.location,
+          deliveryZonesType: typeof storeSettings.deliveryZones,
+          checkoutFieldsType: typeof storeSettings.checkoutFields
+        });
+        
+        // Log completo do documento (sem _id para evitar problemas de serialização)
+        const { _id, ...docWithoutId } = storeSettings;
+        console.log('[public/settings] 📋 Documento completo (sem _id):', JSON.stringify(docWithoutId, null, 2));
+        
+        // Log específico dos campos críticos
+        console.log('[public/settings] 🎯 deliveryZones raw:', JSON.stringify(storeSettings.deliveryZones));
+        console.log('[public/settings] 🎯 checkoutFields raw:', JSON.stringify(storeSettings.checkoutFields));
       }
     } catch (queryError: any) {
       console.error('[public/settings] ❌ Erro/timeout na query:', {
         message: queryError?.message,
-        name: queryError?.name
+        name: queryError?.name,
+        stack: queryError?.stack
       });
       storeSettings = null; // Forçar valores padrão
     }
@@ -138,20 +213,22 @@ export default defineEventHandler(async (event) => {
       whatsapp: storeSettings.whatsapp || "",
       storeLatitude: storeSettings.location?.latitude || storeSettings.storeLatitude || -23.5505,
       storeLongitude: storeSettings.location?.longitude || storeSettings.storeLongitude || -46.6333,
-      checkoutFields: storeSettings.checkoutFields || {
-        customerName: { enabled: true, required: true },
-        customerPhone: { enabled: true, required: true },
-        customerEmail: { enabled: true, required: false },
-        deliveryAddress: { enabled: true, required: true },
-        deliveryComplement: { enabled: true, required: false },
-        deliveryNeighborhood: { enabled: true, required: true },
-        deliveryCity: { enabled: true, required: true },
-        deliveryZipCode: { enabled: true, required: true },
-        paymentMethod: { enabled: true, required: true },
-        notes: { enabled: true, required: false }
-      },
-      deliveryZones: Array.isArray(storeSettings.deliveryZones) && storeSettings.deliveryZones.length > 0
-        ? storeSettings.deliveryZones
+      checkoutFields: (storeSettings.checkoutFields && typeof storeSettings.checkoutFields === 'object')
+        ? storeSettings.checkoutFields
+        : {
+            customerName: { enabled: true, required: true },
+            customerPhone: { enabled: true, required: true },
+            customerEmail: { enabled: true, required: false },
+            deliveryAddress: { enabled: true, required: true },
+            deliveryComplement: { enabled: true, required: false },
+            deliveryNeighborhood: { enabled: true, required: true },
+            deliveryCity: { enabled: true, required: true },
+            deliveryZipCode: { enabled: true, required: true },
+            paymentMethod: { enabled: true, required: true },
+            notes: { enabled: true, required: false }
+          },
+      deliveryZones: Array.isArray(storeSettings.deliveryZones)
+        ? storeSettings.deliveryZones  // Usar os dados do banco mesmo se estiver vazio
         : [
             {
               name: "Zona 1",
@@ -174,13 +251,55 @@ export default defineEventHandler(async (event) => {
           ]
     };
     
+    // Garantir que os dados sejam serializáveis (remover _id e outros campos do MongoDB)
+    const serializedResult = {
+      storeName: String(result.storeName || "Minha Loja"),
+      logo: String(result.logo || ""),
+      banner: String(result.banner || ""),
+      isOpen: Boolean(result.isOpen),
+      deliveryMinTime: Number(result.deliveryMinTime || 30),
+      deliveryMaxTime: Number(result.deliveryMaxTime || 60),
+      deliveryFee: Number(result.deliveryFee || 0),
+      minimumOrder: Number(result.minimumOrder || 0),
+      storeAddress: String(result.storeAddress || ""),
+      storePhone: String(result.storePhone || ""),
+      whatsapp: String(result.whatsapp || ""),
+      storeLatitude: Number(result.storeLatitude || -23.5505),
+      storeLongitude: Number(result.storeLongitude || -46.6333),
+      checkoutFields: (result.checkoutFields && typeof result.checkoutFields === 'object') 
+        ? JSON.parse(JSON.stringify(result.checkoutFields)) // Garantir serialização
+        : {
+            customerName: { enabled: true, required: true },
+            customerPhone: { enabled: true, required: true },
+            customerEmail: { enabled: true, required: false },
+            deliveryAddress: { enabled: true, required: true },
+            deliveryComplement: { enabled: true, required: false },
+            deliveryNeighborhood: { enabled: true, required: true },
+            deliveryCity: { enabled: true, required: true },
+            deliveryZipCode: { enabled: true, required: true },
+            paymentMethod: { enabled: true, required: true },
+            notes: { enabled: true, required: false }
+          },
+      deliveryZones: Array.isArray(result.deliveryZones) ? result.deliveryZones.map((zone: any) => ({
+        name: String(zone.name || ""),
+        maxDistance: Number(zone.maxDistance || 0),
+        fee: Number(zone.fee || 0),
+        cepRanges: Array.isArray(zone.cepRanges) ? zone.cepRanges.map((r: any) => String(r)) : []
+      })) : []
+    };
+    
     console.log('[public/settings] ✅ Retornando configurações:', {
-      hasDeliveryZones: Array.isArray(result.deliveryZones) && result.deliveryZones.length > 0,
-      hasCheckoutFields: !!result.checkoutFields,
-      storeName: result.storeName
+      hasDeliveryZones: Array.isArray(serializedResult.deliveryZones) && serializedResult.deliveryZones.length > 0,
+      hasCheckoutFields: !!serializedResult.checkoutFields,
+      storeName: serializedResult.storeName,
+      deliveryZonesCount: serializedResult.deliveryZones.length,
+      deliveryZonesSample: serializedResult.deliveryZones.length > 0 ? serializedResult.deliveryZones[0] : null
     });
     
-    return result;
+    // Log do resultado serializado completo para debug
+    console.log('[public/settings] 📤 Resultado final serializado:', JSON.stringify(serializedResult, null, 2));
+    
+    return serializedResult;
   } catch (error: any) {
     console.error('[public/settings] ❌ Erro ao buscar configurações públicas:', {
       message: error?.message,
