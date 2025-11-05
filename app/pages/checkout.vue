@@ -48,6 +48,11 @@ const storeSettings = ref({
   deliveryMaxTime: 0,
   deliveryFee: 0,
   minimumOrder: 0,
+  storeAddress: "",
+  storePhone: "",
+  whatsapp: "",
+  storeLatitude: -23.5505,
+  storeLongitude: -46.6333,
   checkoutFields: {
     customerName: { enabled: true, required: true },
     customerPhone: { enabled: true, required: true },
@@ -59,7 +64,8 @@ const storeSettings = ref({
     deliveryZipCode: { enabled: true, required: true },
     paymentMethod: { enabled: true, required: true },
     notes: { enabled: true, required: false }
-  }
+  },
+  deliveryZones: []
 })
 
 // Carregar configurações da loja
@@ -75,6 +81,11 @@ const loadStoreSettings = async () => {
       deliveryMaxTime: settings.deliveryMaxTime || 0,
       deliveryFee: settings.deliveryFee !== undefined ? settings.deliveryFee : 0,
       minimumOrder: settings.minimumOrder !== undefined ? settings.minimumOrder : 0,
+      storeAddress: settings.storeAddress || "",
+      storePhone: settings.storePhone || "",
+      whatsapp: settings.whatsapp || "",
+      storeLatitude: settings.storeLatitude || -23.5505,
+      storeLongitude: settings.storeLongitude || -46.6333,
       checkoutFields: settings.checkoutFields || {
         customerName: { enabled: true, required: true },
         customerPhone: { enabled: true, required: true },
@@ -86,7 +97,8 @@ const loadStoreSettings = async () => {
         deliveryZipCode: { enabled: true, required: true },
         paymentMethod: { enabled: true, required: true },
         notes: { enabled: true, required: false }
-      }
+      },
+      deliveryZones: settings.deliveryZones || []
     }
     
     // Não definir taxa de entrega padrão - será calculada via CEP
