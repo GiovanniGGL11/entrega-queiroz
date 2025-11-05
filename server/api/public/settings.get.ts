@@ -3,28 +3,32 @@ import { getDB } from "../../utils/db";
 
 export default defineEventHandler(async (event) => {
   try {
-    // Timeout geral de 2 segundos para toda a operação
+    // Timeout geral de 10 segundos para conectar (Vercel pode ter cold start)
     const dbPromise = getDB();
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout ao conectar MongoDB')), 2000)
+      setTimeout(() => reject(new Error('Timeout ao conectar MongoDB')), 10000)
     );
     
     let db;
     try {
       db = await Promise.race([dbPromise, timeoutPromise]) as any;
-    } catch (dbError) {
-      console.error('Erro/timeout ao conectar MongoDB, usando valores padrão');
+      console.log('[public/settings] ✅ Conexão com MongoDB estabelecida');
+    } catch (dbError: any) {
+      console.error('[public/settings] ❌ Erro/timeout ao conectar MongoDB:', {
+        message: dbError?.message,
+        name: dbError?.name
+      });
       throw dbError; // Vai cair no catch principal e retornar valores padrão
     }
     
     const settings = db.collection("settings");
     
-    // Timeout de 2 segundos para a query
+    // Timeout de 5 segundos para a query
     const queryPromise = settings.findOne({ _id: "store-config" }, {
-      maxTimeMS: 2000
+      maxTimeMS: 5000
     });
     const queryTimeout = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout na query')), 2000)
+      setTimeout(() => reject(new Error('Timeout na query')), 5000)
     );
     
     let storeSettings;
@@ -33,17 +37,28 @@ export default defineEventHandler(async (event) => {
       
       // Se não encontrar pelo _id, tenta sem filtro (só se a primeira query funcionou)
       if (!storeSettings) {
+        console.log('[public/settings] ⚠️ Não encontrado com _id, tentando buscar sem filtro...');
         storeSettings = await settings.findOne({}, {
-          maxTimeMS: 1000
+          maxTimeMS: 3000
         });
       }
-    } catch (queryError) {
-      console.error('Erro/timeout na query, usando valores padrão');
+      
+      if (storeSettings) {
+        console.log('[public/settings] ✅ Configurações encontradas no banco');
+      } else {
+        console.log('[public/settings] ⚠️ Nenhuma configuração encontrada no banco');
+      }
+    } catch (queryError: any) {
+      console.error('[public/settings] ❌ Erro/timeout na query:', {
+        message: queryError?.message,
+        name: queryError?.name
+      });
       storeSettings = null; // Forçar valores padrão
     }
     
     // Se não existir configurações, retornar valores padrão
     if (!storeSettings) {
+      console.log('[public/settings] ⚠️ Retornando valores padrão');
       // Calcular status baseado em horários padrão (fechado por segurança)
       return {
         storeName: "Minha Loja",
@@ -108,7 +123,8 @@ export default defineEventHandler(async (event) => {
     }
     
     // Retornar apenas as configurações públicas necessárias
-    return {
+    // Mapear corretamente os dados do banco
+    const result = {
       storeName: storeSettings.storeName || "Minha Loja",
       logo: storeSettings.logo || "",
       banner: storeSettings.banner || "",
@@ -117,11 +133,11 @@ export default defineEventHandler(async (event) => {
       deliveryMaxTime: storeSettings.deliveryMaxTime || 60,
       deliveryFee: storeSettings.deliveryFee !== undefined ? storeSettings.deliveryFee : 0,
       minimumOrder: storeSettings.minimumOrder !== undefined ? storeSettings.minimumOrder : 0,
-      storeAddress: storeSettings.location?.address || "",
+      storeAddress: storeSettings.location?.address || storeSettings.storeAddress || "",
       storePhone: storeSettings.storePhone || "",
       whatsapp: storeSettings.whatsapp || "",
-      storeLatitude: storeSettings.location?.latitude || -23.5505,
-      storeLongitude: storeSettings.location?.longitude || -46.6333,
+      storeLatitude: storeSettings.location?.latitude || storeSettings.storeLatitude || -23.5505,
+      storeLongitude: storeSettings.location?.longitude || storeSettings.storeLongitude || -46.6333,
       checkoutFields: storeSettings.checkoutFields || {
         customerName: { enabled: true, required: true },
         customerPhone: { enabled: true, required: true },
@@ -134,29 +150,43 @@ export default defineEventHandler(async (event) => {
         paymentMethod: { enabled: true, required: true },
         notes: { enabled: true, required: false }
       },
-      deliveryZones: storeSettings.deliveryZones || [
-        {
-          name: "Zona 1",
-          maxDistance: 5,
-          fee: 5,
-          cepRanges: ["01", "02", "03", "04", "05", "06", "07"]
-        },
-        {
-          name: "Zona 2", 
-          maxDistance: 10,
-          fee: 10,
-          cepRanges: ["08"]
-        },
-        {
-          name: "Zona 3",
-          maxDistance: 15,
-          fee: 15,
-          cepRanges: []
-        }
-      ]
+      deliveryZones: Array.isArray(storeSettings.deliveryZones) && storeSettings.deliveryZones.length > 0
+        ? storeSettings.deliveryZones
+        : [
+            {
+              name: "Zona 1",
+              maxDistance: 5,
+              fee: 5,
+              cepRanges: ["01", "02", "03", "04", "05", "06", "07"]
+            },
+            {
+              name: "Zona 2", 
+              maxDistance: 10,
+              fee: 10,
+              cepRanges: ["08"]
+            },
+            {
+              name: "Zona 3",
+              maxDistance: 15,
+              fee: 15,
+              cepRanges: []
+            }
+          ]
     };
-  } catch (error) {
-    console.error('Erro ao buscar configurações públicas:', error);
+    
+    console.log('[public/settings] ✅ Retornando configurações:', {
+      hasDeliveryZones: Array.isArray(result.deliveryZones) && result.deliveryZones.length > 0,
+      hasCheckoutFields: !!result.checkoutFields,
+      storeName: result.storeName
+    });
+    
+    return result;
+  } catch (error: any) {
+    console.error('[public/settings] ❌ Erro ao buscar configurações públicas:', {
+      message: error?.message,
+      name: error?.name,
+      stack: error?.stack
+    });
     
     // Em caso de erro, retornar valores padrão (fechado por segurança)
     return {
