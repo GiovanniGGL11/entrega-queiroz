@@ -102,8 +102,9 @@ export default defineEventHandler(async (event) => {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const thisWeek = new Date(today.getTime() - (today.getDay() * 24 * 60 * 60 * 1000));
     const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisYear = new Date(now.getFullYear(), 0, 1);
     
-    const [periodStats, itemSalesStats, weekStats, monthStats] = await Promise.all([
+    const [periodStats, itemSalesStats, weekStats, monthStats, yearStats] = await Promise.all([
       // Estatísticas por período
       db.collection("orders").aggregate([
         {
@@ -135,6 +136,15 @@ export default defineEventHandler(async (event) => {
                   0
                 ]
               }
+            },
+            revenueThisYear: {
+              $sum: {
+                $cond: [
+                  { $gte: ["$createdAt", thisYear] },
+                  "$totalAmount",
+                  0
+                ]
+              }
             }
           }
         }
@@ -154,11 +164,11 @@ export default defineEventHandler(async (event) => {
         { $limit: 10 }
       ]).toArray(),
       
-      // Estatísticas da semana
+      // Estatísticas da semana (incluindo hoje)
       db.collection("orders").aggregate([
         {
           $match: {
-            createdAt: { $gte: thisWeek, $lt: today }
+            createdAt: { $gte: thisWeek }
           }
         },
         {
@@ -170,11 +180,27 @@ export default defineEventHandler(async (event) => {
         }
       ]).toArray(),
       
-      // Estatísticas do mês
+      // Estatísticas do mês (incluindo hoje)
       db.collection("orders").aggregate([
         {
           $match: {
-            createdAt: { $gte: thisMonth, $lt: today }
+            createdAt: { $gte: thisMonth }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            orders: { $sum: 1 },
+            revenue: { $sum: "$totalAmount" }
+          }
+        }
+      ]).toArray(),
+      
+      // Estatísticas do ano
+      db.collection("orders").aggregate([
+        {
+          $match: {
+            createdAt: { $gte: thisYear }
           }
         },
         {
@@ -187,9 +213,10 @@ export default defineEventHandler(async (event) => {
       ]).toArray()
     ]);
     
-    const periodData = periodStats[0] || { revenueToday: 0, revenueThisWeek: 0, revenueThisMonth: 0 };
+    const periodData = periodStats[0] || { revenueToday: 0, revenueThisWeek: 0, revenueThisMonth: 0, revenueThisYear: 0 };
     const weekData = weekStats[0] || { orders: 0, revenue: 0 };
     const monthData = monthStats[0] || { orders: 0, revenue: 0 };
+    const yearData = yearStats[0] || { orders: 0, revenue: 0 };
     
     // Calcular item mais vendido
     const mostSoldItem = itemSalesStats[0] || { _id: 'Nenhum', totalQuantity: 0 };
@@ -197,6 +224,7 @@ export default defineEventHandler(async (event) => {
     // Calcular ticket médio para cada período
     const weekAverageTicket = weekData.orders > 0 ? weekData.revenue / weekData.orders : 0;
     const monthAverageTicket = monthData.orders > 0 ? monthData.revenue / monthData.orders : 0;
+    const yearAverageTicket = yearData.orders > 0 ? yearData.revenue / yearData.orders : 0;
     
     // Preparar resposta otimizada
     return {
@@ -227,9 +255,9 @@ export default defineEventHandler(async (event) => {
           growth: 0 
         },
         year: { 
-          orders: 0, 
-          revenue: 0, 
-          averageTicket: 0 
+          orders: yearData.orders, 
+          revenue: periodData.revenueThisYear, 
+          averageTicket: yearAverageTicket 
         }
       },
       insights: {

@@ -58,19 +58,35 @@ export default defineEventHandler(async (event) => {
     
     for (const item of items) {
       // Validar estrutura básica do item
-      if (!item.name || !item.quantity) {
+      if (!item.quantity) {
         throw createError({
           statusCode: 400,
-          message: "Nome e quantidade do produto são obrigatórios",
+          message: "Quantidade do produto é obrigatória",
         });
       }
       
-      // Buscar produto real no banco de dados pelo nome
-      const realProduct = await products.findOne({ name: item.name.trim() });
+      // Buscar produto real no banco de dados pelo ID (prioridade) ou pelo nome (fallback)
+      let realProduct = null;
+      
+      if (item.productId) {
+        // Tentar buscar pelo ID primeiro (mais seguro e preciso)
+        try {
+          realProduct = await products.findOne({ _id: new ObjectId(item.productId) });
+        } catch (err) {
+          // Se o ID for inválido, continuar para buscar pelo nome
+          console.warn(`ID de produto inválido: ${item.productId}`);
+        }
+      }
+      
+      // Se não encontrou pelo ID, buscar pelo nome (fallback para compatibilidade)
+      if (!realProduct && item.name) {
+        realProduct = await products.findOne({ name: item.name.trim() });
+      }
+      
       if (!realProduct) {
         throw createError({
           statusCode: 400,
-          message: `Produto "${item.name}" não encontrado`,
+          message: `Produto não encontrado${item.productId ? ` (ID: ${item.productId})` : item.name ? ` (Nome: ${item.name})` : ''}`,
         });
       }
       
@@ -286,7 +302,7 @@ export default defineEventHandler(async (event) => {
       paymentMethod: paymentMethod || 'dinheiro',
       totalAmount: calculatedTotal,
       notes: notes?.trim() || '',
-      status: 'pending', // pending, confirmed, preparing, ready, delivered, cancelled
+      status: 'pending', // pending, confirmed, preparing, ready, out_for_delivery, delivered, cancelled
       createdAt: new Date(),
       updatedAt: new Date(),
     };

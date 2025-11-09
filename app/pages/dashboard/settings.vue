@@ -279,6 +279,38 @@
           <h2>Localização da Loja</h2>
         </div>
 
+        <!-- Opção 1: Buscar por CEP -->
+        <div class="form-group">
+          <label for="storeCep">Buscar por CEP</label>
+          <div class="cep-input-wrapper">
+            <input
+              id="storeCep"
+              v-model="storeCep"
+              type="text"
+              placeholder="00000-000"
+              maxlength="9"
+              @input="formatCep"
+              @blur="searchByCep"
+              class="cep-input"
+            />
+            <button 
+              @click="searchByCep" 
+              type="button"
+              class="btn-search-cep"
+              :disabled="searchingCep || !storeCep"
+            >
+              <svg v-if="!searchingCep" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+              <div v-else class="loading-spinner-inline"></div>
+              {{ searchingCep ? 'Buscando...' : 'Buscar' }}
+            </button>
+          </div>
+          <small>Digite o CEP para preencher automaticamente o endereço</small>
+        </div>
+
+        <!-- Opção 2: Endereço Completo -->
         <div class="form-group">
           <label for="storeAddress">Endereço Completo *</label>
           <div class="address-input-wrapper">
@@ -290,11 +322,10 @@
               @blur="geocodeAddress"
             />
             <button 
-              v-if="form.location.address" 
               @click="geocodeAddress" 
               type="button"
               class="btn-geocode"
-              :disabled="geocoding"
+              :disabled="geocoding || !form.location.address"
             >
               <svg v-if="!geocoding" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -305,6 +336,81 @@
             </button>
           </div>
           <small>Digite o endereço completo da loja (Rua, Número, Bairro, Cidade, Estado)</small>
+        </div>
+
+        <!-- Campos Separados (Opcional) -->
+        <div class="address-fields-group">
+          <div class="form-group">
+            <label for="storeStreet">Rua</label>
+            <input
+              id="storeStreet"
+              v-model="addressFields.street"
+              type="text"
+              placeholder="Ex: Avenida Paulista"
+            />
+          </div>
+          <div class="form-group">
+            <label for="storeNumber">Número</label>
+            <input
+              id="storeNumber"
+              v-model="addressFields.number"
+              type="text"
+              placeholder="Ex: 1578"
+            />
+          </div>
+          <div class="form-group">
+            <label for="storeNeighborhood">Bairro</label>
+            <input
+              id="storeNeighborhood"
+              v-model="addressFields.neighborhood"
+              type="text"
+              placeholder="Ex: Bela Vista"
+            />
+          </div>
+          <div class="form-group">
+            <label for="storeCity">Cidade</label>
+            <input
+              id="storeCity"
+              v-model="addressFields.city"
+              type="text"
+              placeholder="Ex: São Paulo"
+            />
+          </div>
+          <div class="form-group">
+            <label for="storeState">Estado (UF)</label>
+            <input
+              id="storeState"
+              v-model="addressFields.state"
+              type="text"
+              placeholder="Ex: SP"
+              maxlength="2"
+              style="text-transform: uppercase;"
+            />
+          </div>
+        </div>
+
+        <!-- Coordenadas -->
+        <div v-if="form.location.latitude && form.location.longitude" class="coordinates-display">
+          <div class="coordinate-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <div class="coordinate-info">
+              <span class="coordinate-label">Latitude:</span>
+              <span class="coordinate-value">{{ form.location.latitude.toFixed(6) }}</span>
+            </div>
+          </div>
+          <div class="coordinate-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <div class="coordinate-info">
+              <span class="coordinate-label">Longitude:</span>
+              <span class="coordinate-value">{{ form.location.longitude.toFixed(6) }}</span>
+            </div>
+          </div>
         </div>
 
         <div v-if="form.location.latitude && form.location.longitude" class="info-banner success">
@@ -764,7 +870,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import ImageOverlay from '~/components/ImageOverlay.vue'
 import { useImageOverlay } from '~/composables/useImageOverlay'
 
@@ -778,12 +884,23 @@ definePageMeta({
 const loading = ref(true)
 const submitting = ref(false)
 const geocoding = ref(false)
+const searchingCep = ref(false)
+const storeCep = ref('')
 const originalForm = ref(null)
 const uploadingLogo = ref(false)
 const uploadingBanner = ref(false)
 let map = null
 let mapCircles = []
 let storeMarker = null
+
+// Campos de endereço separados
+const addressFields = ref({
+  street: '',
+  number: '',
+  neighborhood: '',
+  city: '',
+  state: ''
+})
 
 const form = ref({
   storeName: '',
@@ -852,6 +969,79 @@ const zoneColors = [
 
 const getZoneColor = (index) => {
   return zoneColors[index % zoneColors.length]
+}
+
+// Formatar CEP
+const formatCep = (event) => {
+  let value = event.target.value.replace(/\D/g, '')
+  if (value.length <= 5) {
+    storeCep.value = value
+  } else {
+    storeCep.value = value.substring(0, 5) + '-' + value.substring(5, 8)
+  }
+}
+
+// Buscar endereço por CEP
+const searchByCep = async () => {
+  if (!storeCep.value || storeCep.value.replace(/\D/g, '').length !== 8) {
+    showAlert('CEP inválido. Digite um CEP com 8 dígitos', 'error')
+    return
+  }
+  
+  searchingCep.value = true
+  
+  try {
+    const cleanCep = storeCep.value.replace(/\D/g, '')
+    const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+    const data = await response.json()
+    
+    if (data.erro) {
+      showAlert('CEP não encontrado', 'error')
+      return
+    }
+    
+    // Preencher campos separados
+    addressFields.value = {
+      street: data.logradouro || '',
+      number: '',
+      neighborhood: data.bairro || '',
+      city: data.localidade || '',
+      state: data.uf || ''
+    }
+    
+    // Montar endereço completo
+    const addressParts = []
+    if (data.logradouro) addressParts.push(data.logradouro)
+    if (data.bairro) addressParts.push(data.bairro)
+    if (data.localidade) addressParts.push(data.localidade)
+    if (data.uf) addressParts.push(data.uf)
+    
+    form.value.location.address = addressParts.join(', ')
+    
+    // Geocodificar automaticamente
+    await geocodeAddress()
+    
+    showAlert('Endereço encontrado e localizado no mapa!', 'success')
+  } catch (error) {
+    console.error('Erro ao buscar CEP:', error)
+    showAlert('Erro ao buscar CEP', 'error')
+  } finally {
+    searchingCep.value = false
+  }
+}
+
+// Sincronizar campos separados com endereço completo
+const syncAddressFromFields = () => {
+  const parts = []
+  if (addressFields.value.street) parts.push(addressFields.value.street)
+  if (addressFields.value.number) parts.push(addressFields.value.number)
+  if (addressFields.value.neighborhood) parts.push(addressFields.value.neighborhood)
+  if (addressFields.value.city) parts.push(addressFields.value.city)
+  if (addressFields.value.state) parts.push(addressFields.value.state)
+  
+  if (parts.length > 0) {
+    form.value.location.address = parts.join(', ')
+  }
 }
 
 // Função para geocodificar endereço usando Nominatim (OpenStreetMap)
@@ -1346,6 +1536,11 @@ watch(() => form.value.deliveryZones, () => {
   }
 }, { deep: true })
 
+// Watcher para sincronizar campos separados quando mudarem
+watch(() => addressFields.value, () => {
+  syncAddressFromFields()
+}, { deep: true })
+
 // Fechar modal com ESC
 const handleEscKey = (event) => {
   if (event.key === 'Escape') {
@@ -1375,6 +1570,41 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2xl);
+}
+
+/* Page Header - Padronizado */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header-left {
+  flex: 1;
+}
+
+.header-left h1 {
+  margin: 0;
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.page-description {
+  color: #6b7280;
+  font-size: 1rem;
+  margin: 0.5rem 0 0 0;
+  line-height: 1.5;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
 }
 
 .settings-section {
@@ -1650,6 +1880,7 @@ onUnmounted(() => {
 .btn-upload {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-md) var(--spacing-xl);
   background: var(--color-primary);
@@ -1661,6 +1892,13 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all var(--transition-base);
   white-space: nowrap;
+  line-height: 1;
+}
+
+.btn-upload svg,
+.btn-upload .loading-spinner-inline {
+  flex-shrink: 0;
+  vertical-align: middle;
 }
 
 .btn-upload:hover:not(:disabled) {
@@ -1704,6 +1942,108 @@ onUnmounted(() => {
 
 .address-input-wrapper input {
   flex: 1;
+}
+
+/* CEP Input */
+.cep-input-wrapper {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: flex-start;
+}
+
+.cep-input {
+  flex: 1;
+  max-width: 200px;
+}
+
+.btn-search-cep {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  white-space: nowrap;
+  min-height: 45px;
+  line-height: 1;
+}
+
+.btn-search-cep:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-search-cep:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-search-cep svg,
+.btn-search-cep .loading-spinner-inline {
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+/* Address Fields Group */
+.address-fields-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-lg);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+}
+
+/* Coordinates Display */
+.coordinates-display {
+  display: flex;
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-lg);
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: var(--radius-md);
+  border: 1px solid #bae6fd;
+}
+
+.coordinate-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+}
+
+.coordinate-item svg {
+  color: #0284c7;
+  flex-shrink: 0;
+}
+
+.coordinate-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.coordinate-label {
+  font-size: var(--font-size-xs);
+  color: #64748b;
+  font-weight: 500;
+}
+
+.coordinate-value {
+  font-size: var(--font-size-sm);
+  color: #0c4a6e;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
 }
 
 .btn-geocode {
@@ -1780,6 +2120,44 @@ onUnmounted(() => {
 
 .settings-content {
   padding-bottom: 80px; /* Espaço para o botão fixo */
+}
+
+/* Botões Padronizados */
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #ff8e24;
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(255, 142, 36, 0.3);
+  white-space: nowrap;
+  min-height: 44px;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #e67e22;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 142, 36, 0.4);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(255, 142, 36, 0.3);
+}
+
+.btn-primary:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* Loading */
@@ -1992,6 +2370,25 @@ input:checked + .toggle-slider:before {
   
   .settings-section {
     padding: var(--spacing-lg);
+  }
+  
+  .page-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  
+  .header-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .header-left h1 {
+    font-size: 1.5rem;
+  }
+  
+  .page-description {
+    font-size: 0.875rem;
   }
   
   .section-header {
@@ -2388,13 +2785,28 @@ input:checked + .toggle-slider:before {
     height: 350px;
   }
   
-  .address-input-wrapper {
+  .address-input-wrapper,
+  .cep-input-wrapper {
     flex-direction: column;
   }
   
-  .btn-geocode {
+  .cep-input {
+    max-width: 100%;
+  }
+  
+  .btn-geocode,
+  .btn-search-cep {
     width: 100%;
     justify-content: center;
+  }
+  
+  .address-fields-group {
+    grid-template-columns: 1fr;
+  }
+  
+  .coordinates-display {
+    flex-direction: column;
+    gap: var(--spacing-md);
   }
   
   .zone-fields {

@@ -960,6 +960,11 @@ button,
 }
 
 .status-badge.ready {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.out_for_delivery {
   background: #e0e7ff;
   color: #3730a3;
 }

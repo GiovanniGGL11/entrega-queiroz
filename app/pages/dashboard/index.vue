@@ -52,7 +52,9 @@
     <div v-else>
       <!-- Header do Dashboard -->
       <div class="page-header">
-        <h1>Dashboard</h1>
+        <div class="header-left">
+          <h1>Dashboard</h1>
+        </div>
         <div class="header-actions">
           <button 
             @click="refreshOrders" 
@@ -171,7 +173,7 @@
       </div>
 
       <!-- Pedidos Recentes -->
-      <div class="content-card">
+      <div class="content-card orders-full-width">
         <div class="card-header">
           <h2>Pedidos Recentes</h2>
           <button 
@@ -188,7 +190,7 @@
             {{ loadingOrders ? 'Carregando...' : 'Atualizar' }}
           </button>
         </div>
-        <div class="orders-table">
+        <div class="orders-grid-container">
           <div v-if="loadingOrders" class="loading">
             <p>Carregando pedidos...</p>
           </div>
@@ -219,41 +221,50 @@
               </div>
             </div>
           </div>
-          <div v-else class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Cliente</th>
-                  <th>Status</th>
-                  <th>Total</th>
-                  <th>Data</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="order in recentOrders" :key="order.id">
-                  <td>#{{ order.id }}</td>
-                  <td>{{ order.customer }}</td>
-                  <td>
-                    <span class="status-badge" :class="order.status">
-                      {{ getStatusText(order.status) }}
-                    </span>
-                  </td>
-                  <td>{{ formatCurrency(order.total) }}</td>
-                  <td>{{ formatDate(order.createdAt) }}</td>
-                  <td>
-                    <button 
-                      @click="viewOrder(order)" 
-                      class="btn-view"
-                      :title="`Ver detalhes do pedido #${order.id}`"
-                    >
-                      Ver Detalhes
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div v-else class="orders-grid">
+            <div v-for="order in recentOrders" :key="order.id" class="order-card">
+              <div class="order-card-header">
+                <div class="order-id">#{{ order.id }}</div>
+                <span class="status-badge" :class="order.status">
+                  {{ getStatusText(order.status) }}
+                </span>
+              </div>
+              <div class="order-card-body">
+                <div class="order-info-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                  <span class="order-label">Cliente:</span>
+                  <span class="order-value">{{ order.customer }}</span>
+                </div>
+                <div class="order-info-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="1" x2="12" y2="23"></line>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                  </svg>
+                  <span class="order-label">Total:</span>
+                  <span class="order-value order-total">{{ formatCurrency(order.total) }}</span>
+                </div>
+                <div class="order-info-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12,6 12,12 16,14"></polyline>
+                  </svg>
+                  <span class="order-label">Data:</span>
+                  <span class="order-value">{{ formatDate(order.createdAt) }}</span>
+                </div>
+              </div>
+              <div class="order-card-footer">
+                <button 
+                  @click="viewOrder(order)" 
+                  class="btn-view"
+                  :title="`Ver detalhes do pedido #${order.id}`"
+                >
+                  Ver Detalhes
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -553,6 +564,7 @@ const getStatusText = (status) => {
     confirmed: 'Confirmado',
     preparing: 'Preparando',
     ready: 'Pronto',
+    out_for_delivery: 'Saiu para entrega',
     delivered: 'Entregue',
     cancelled: 'Cancelado'
   }
@@ -723,17 +735,29 @@ onUnmounted(() => {
   border-bottom: 1px solid #e2e8f0;
 }
 
-.page-header h1 {
+.header-left {
+  flex: 1;
+}
+
+.header-left h1 {
   margin: 0;
   font-size: 1.875rem;
   font-weight: 700;
   color: #1e293b;
 }
 
+.page-description {
+  color: #6b7280;
+  font-size: 1rem;
+  margin: 0.5rem 0 0 0;
+  line-height: 1.5;
+}
+
 .header-actions {
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex-shrink: 0;
 }
 
 .stats-grid {
@@ -887,7 +911,7 @@ onUnmounted(() => {
 
 .dashboard-content {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1fr;
   gap: 2rem;
 }
 
@@ -896,7 +920,13 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 0;
+}
+
+/* Pedidos Recentes ocupam toda largura */
+.orders-full-width {
+  grid-column: 1 / -1;
+  width: 100%;
 }
 
 .chart-card {
@@ -1010,7 +1040,7 @@ onUnmounted(() => {
   box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
 }
 
-.orders-table {
+.orders-grid-container {
   padding: 1.5rem;
 }
 
@@ -1033,6 +1063,91 @@ onUnmounted(() => {
 .empty-state p {
   margin: 0;
   font-size: 0.875rem;
+}
+
+/* Grid de Pedidos - Ocupa toda largura disponível */
+.orders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.order-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+.order-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border-color: #ff8e24;
+}
+
+.order-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.order-id {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.order-card-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.order-info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.order-info-item svg {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.order-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.order-value {
+  color: #1e293b;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.order-total {
+  color: #ff8e24;
+  font-size: 1rem;
+}
+
+.order-card-footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.order-card-footer .btn-view {
+  width: 100%;
+  justify-content: center;
 }
 
 /* Enhanced Empty States */
@@ -1123,31 +1238,6 @@ onUnmounted(() => {
   }
 }
 
-.table-container {
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  text-align: left;
-  padding: 0.75rem;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-th {
-  background: #f8fafc;
-  font-weight: 600;
-  color: #475569;
-  font-size: 0.875rem;
-}
-
-td {
-  color: #64748b;
-}
 
 .status-badge {
   display: inline-block;
@@ -1177,6 +1267,11 @@ td {
 .status-badge.ready {
   background: #d1fae5;
   color: #065f46;
+}
+
+.status-badge.out_for_delivery {
+  background: #e0e7ff;
+  color: #3730a3;
 }
 
 .status-badge.delivered {
@@ -1524,6 +1619,16 @@ td {
 .content-card:nth-child(1) { animation-delay: 0.5s; }
 .content-card:nth-child(2) { animation-delay: 0.6s; }
 
+.order-card {
+  animation: slideInUp 0.6s ease-out;
+}
+
+.order-card:nth-child(1) { animation-delay: 0.1s; }
+.order-card:nth-child(2) { animation-delay: 0.2s; }
+.order-card:nth-child(3) { animation-delay: 0.3s; }
+.order-card:nth-child(4) { animation-delay: 0.4s; }
+.order-card:nth-child(5) { animation-delay: 0.5s; }
+
 /* Responsividade */
 @media (max-width: 1024px) {
   .dashboard-home {
@@ -1554,6 +1659,19 @@ td {
     align-items: stretch;
   }
   
+  .header-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .header-left h1 {
+    font-size: 1.5rem;
+  }
+  
+  .page-description {
+    font-size: 0.875rem;
+  }
+  
   .card-header {
     flex-direction: column;
     gap: 1rem;
@@ -1564,12 +1682,12 @@ td {
     grid-template-columns: 1fr;
   }
   
-  .table-container {
-    font-size: 0.875rem;
+  .orders-grid {
+    grid-template-columns: 1fr;
   }
   
-  th, td {
-    padding: 0.5rem;
+  .orders-grid-container {
+    padding: 1rem;
   }
 }
 

@@ -379,7 +379,7 @@ useHead({
             Tempo estimado de entrega: {{ storeSettings.deliveryMinTime }}-{{ storeSettings.deliveryMaxTime }} minutos.
           </p>
           <button @click="goBackToMenu" class="continue-shopping-btn">
-            Continuar Comprando
+            Acompanhar pedido
           </button>
         </div>
 

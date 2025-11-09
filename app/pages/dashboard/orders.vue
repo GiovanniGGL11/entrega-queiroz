@@ -1,7 +1,9 @@
 <template>
   <div class="orders-page">
     <div class="page-header">
-      <h1>Gerenciar Pedidos</h1>
+      <div class="header-left">
+        <h1>Gerenciar Pedidos</h1>
+      </div>
       <div class="header-actions">
         <select v-model="statusFilter" @change="loadOrders" class="filter-select">
           <option value="">Todos os status</option>
@@ -9,6 +11,7 @@
           <option value="confirmed">Confirmados</option>
           <option value="preparing">Preparando</option>
           <option value="ready">Prontos</option>
+          <option value="out_for_delivery">Saiu para entrega</option>
           <option value="delivered">Entregues</option>
           <option value="cancelled">Cancelados</option>
         </select>
@@ -212,6 +215,7 @@
               <option value="confirmed">Confirmado</option>
               <option value="preparing">Preparando</option>
               <option value="ready">Pronto</option>
+              <option value="out_for_delivery">Saiu para entrega</option>
               <option value="delivered">Entregue</option>
               <option value="cancelled">Cancelado</option>
             </select>
@@ -373,6 +377,7 @@ const getStatusText = (status) => {
     confirmed: 'Confirmado',
     preparing: 'Preparando',
     ready: 'Pronto',
+    out_for_delivery: 'Saiu para entrega',
     delivered: 'Entregue',
     cancelled: 'Cancelado'
   }
@@ -601,17 +606,29 @@ onUnmounted(() => {
   border-bottom: 1px solid #e2e8f0;
 }
 
-.page-header h1 {
+.header-left {
+  flex: 1;
+}
+
+.header-left h1 {
   margin: 0;
   font-size: 1.875rem;
   font-weight: 700;
   color: #1e293b;
 }
 
+.page-description {
+  color: #6b7280;
+  font-size: 1rem;
+  margin: 0.5rem 0 0 0;
+  line-height: 1.5;
+}
+
 .header-actions {
   display: flex;
-  gap: 1rem;
   align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
 }
 
 .new-orders-badge {
@@ -674,18 +691,18 @@ onUnmounted(() => {
 
 .btn-sync-toggle:hover {
   background: #f3f4f6;
-  border-color: #dc2626;
-  color: #dc2626;
+  border-color: #ff8e24;
+  color: #ff8e24;
 }
 
 .btn-sync-toggle.active {
-  background: #dc2626;
-  border-color: #dc2626;
+  background: #ff8e24;
+  border-color: #ff8e24;
   color: white;
 }
 
 .btn-sync-toggle.active:hover {
-  background: #b91c1c;
+  background: #e67e22;
 }
 
 .spinning {
@@ -722,8 +739,8 @@ onUnmounted(() => {
 
 .filter-select:focus {
   outline: none;
-  border-color: #dc2626;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  border-color: #ff8e24;
+  box-shadow: 0 0 0 3px rgba(255, 142, 36, 0.1);
 }
 
 .btn-refresh {
@@ -731,28 +748,38 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  background: white;
-  border: 1px solid #dc2626;
-  border-radius: 0.5rem;
-  color: #dc2626;
+  padding: 0.75rem 1.25rem;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  color: #475569;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-  min-height: 44px; /* Touch-friendly */
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   white-space: nowrap;
+  min-height: 44px;
   flex-shrink: 0;
 }
 
 .btn-refresh:hover:not(:disabled) {
-  background: #dc2626;
-  color: white;
+  background: #e2e8f0;
+  color: #334155;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-refresh:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .btn-refresh:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .loading, .empty-state {
@@ -794,7 +821,7 @@ onUnmounted(() => {
 .order-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border-color: #dc2626;
+  border-color: #ff8e24;
 }
 
 .order-header {
@@ -844,6 +871,11 @@ onUnmounted(() => {
 .status-badge.ready {
   background: #d1fae5;
   color: #065f46;
+}
+
+.status-badge.out_for_delivery {
+  background: #e0e7ff;
+  color: #3730a3;
 }
 
 .status-badge.delivered {
@@ -942,12 +974,12 @@ onUnmounted(() => {
 
 .btn-edit {
   background: white;
-  color: #dc2626;
-  border-color: #dc2626;
+  color: #ff8e24;
+  border-color: #ff8e24;
 }
 
 .btn-edit:hover {
-  background: #dc2626;
+  background: #ff8e24;
   color: white;
 }
 
@@ -1134,9 +1166,9 @@ onUnmounted(() => {
 
 .btn-confirm-modal {
   padding: 0.5rem 1rem;
-  background: #dc2626;
+  background: #ff8e24;
   color: white;
-  border: 1px solid #dc2626;
+  border: 1px solid #ff8e24;
   border-radius: 0.375rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -1145,8 +1177,8 @@ onUnmounted(() => {
 }
 
 .btn-confirm-modal:hover {
-  background: #b91c1c;
-  border-color: #b91c1c;
+  background: #e67e22;
+  border-color: #e67e22;
 }
 
 .form-group {
@@ -1191,8 +1223,8 @@ onUnmounted(() => {
 
 .status-select:focus {
   outline: none;
-  border-color: #dc2626;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  border-color: #ff8e24;
+  box-shadow: 0 0 0 3px rgba(255, 142, 36, 0.1);
 }
 
 /* Alert */
@@ -1248,9 +1280,12 @@ onUnmounted(() => {
   }
   
   .header-actions {
-    flex-direction: column;
-    gap: 0.75rem;
-    align-items: stretch;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .header-left h1 {
+    font-size: 1.5rem;
   }
   
   .filter-select {

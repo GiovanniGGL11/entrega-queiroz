@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const validStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'];
+  const validStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'];
   if (!validStatuses.includes(status)) {
     throw createError({
       statusCode: 400,

@@ -199,7 +199,7 @@ export class InputValidator {
   
   // Validar status de pedido
   static validateOrderStatus(status: string): string {
-    const validStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled']
+    const validStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled']
     
     if (!status || typeof status !== 'string') {
       throw createError({
@@ -270,6 +270,7 @@ export class RateLimiter {
     return Math.max(0, maxRequests - current.count)
   }
 }
+
 
 
 
