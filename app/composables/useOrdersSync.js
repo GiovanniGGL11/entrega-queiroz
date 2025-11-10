@@ -60,7 +60,7 @@ export const useOrdersSync = (options = {}) => {
       const channelData = buffer.getChannelData(0)
       
       for (let i = 0; i < frames; i++) {
-        channelData[i] = Math.sin(2 * Math.PI * frequency * i / sampleRate) * 0.5
+        channelData[i] = Math.sin(2 * Math.PI * frequency * i / sampleRate) * 0.8
       }
       
       // Primeiro beep
@@ -76,7 +76,7 @@ export const useOrdersSync = (options = {}) => {
           const channelData2 = buffer2.getChannelData(0)
           const frequency2 = 1000 // Hz mais agudo
           for (let i = 0; i < channelData2.length; i++) {
-            channelData2[i] = Math.sin(2 * Math.PI * frequency2 * i / sampleRate) * 0.5
+            channelData2[i] = Math.sin(2 * Math.PI * frequency2 * i / sampleRate) * 0.8
           }
           const source2 = audioContext.createBufferSource()
           source2.buffer = buffer2
@@ -102,7 +102,7 @@ export const useOrdersSync = (options = {}) => {
         const channelData = buffer.getChannelData(0)
         
         for (let i = 0; i < frames; i++) {
-          channelData[i] = Math.sin(2 * Math.PI * frequency * i / sampleRate) * 0.5
+          channelData[i] = Math.sin(2 * Math.PI * frequency * i / sampleRate) * 0.8
         }
         
         const source = audioContext2.createBufferSource()

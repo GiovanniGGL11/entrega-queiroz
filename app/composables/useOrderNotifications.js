@@ -62,16 +62,25 @@ export const useOrderNotifications = () => {
 
   // Tocar som de notificação melhorado
   const playNotificationSound = async () => {
+    console.log('[Beep] Iniciando playNotificationSound')
     try {
       if (!audioContext.value) {
+        console.log('[Beep] AudioContext não existe, inicializando...')
         await initAudio()
       }
       
-      if (!audioContext.value) return
+      if (!audioContext.value) {
+        console.warn('[Beep] AudioContext ainda não disponível após inicialização')
+        return
+      }
+
+      console.log('[Beep] AudioContext state:', audioContext.value.state)
 
       // Se estiver suspenso, tentar resumir
       if (audioContext.value.state === 'suspended') {
+        console.log('[Beep] AudioContext suspenso, tentando resumir...')
         await audioContext.value.resume()
+        console.log('[Beep] AudioContext state após resume:', audioContext.value.state)
       }
 
       // Criar dois tons sequenciais (beep-beep)
@@ -79,6 +88,7 @@ export const useOrderNotifications = () => {
         return new Promise((resolve) => {
           setTimeout(() => {
             try {
+              console.log(`[Beep] Tocando beep: freq=${freq}Hz, duration=${duration}s, delay=${delay}ms`)
               const oscillator = audioContext.value.createOscillator()
               const gainNode = audioContext.value.createGain()
               
@@ -88,15 +98,18 @@ export const useOrderNotifications = () => {
               oscillator.frequency.value = freq
               oscillator.type = 'sine'
               
-              gainNode.gain.setValueAtTime(0.3, audioContext.value.currentTime)
+              gainNode.gain.setValueAtTime(0.8, audioContext.value.currentTime)
               gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.value.currentTime + duration)
               
               oscillator.start(audioContext.value.currentTime)
               oscillator.stop(audioContext.value.currentTime + duration)
               
-              oscillator.onended = () => resolve()
+              oscillator.onended = () => {
+                console.log(`[Beep] Beep finalizado: freq=${freq}Hz`)
+                resolve()
+              }
             } catch (e) {
-              console.warn('Erro ao tocar beep:', e)
+              console.error('[Beep] Erro ao tocar beep:', e)
               resolve()
             }
           }, delay)
@@ -104,10 +117,12 @@ export const useOrderNotifications = () => {
       }
 
       // Tocar dois beeps
+      console.log('[Beep] Iniciando sequência de beeps...')
       await playBeep(800, 0.2, 0)
       await playBeep(1000, 0.15, 150)
+      console.log('[Beep] Sequência de beeps concluída')
     } catch (error) {
-      console.warn('Erro ao tocar som de notificação:', error)
+      console.error('[Beep] Erro ao tocar som de notificação:', error)
     }
   }
 
@@ -175,7 +190,9 @@ export const useOrderNotifications = () => {
           
           if (data.type === 'new_order') {
             const order = data.order
+            const paymentMethod = order?.paymentMethod || 'N/A'
             console.log('[SSE] Novo pedido recebido instantaneamente:', order?.orderNumber || order?._id)
+            console.log('[SSE] Método de pagamento:', paymentMethod)
             console.log('[SSE] Dados do pedido:', JSON.stringify(order, null, 2))
             
             // Validar se o pedido tem dados básicos
@@ -200,8 +217,13 @@ export const useOrderNotifications = () => {
               console.warn('[SSE] Callback não registrado ou inválido - local:', !!onNewOrderCallback.value, 'global:', !!globalOnNewOrderCallback)
             }
             
-            // DEPOIS: Tocar som (não bloquear a atualização se falhar)
-            playNotificationSound().catch(err => {
+            // DEPOIS: Tocar som (sempre, independente do método de pagamento)
+            console.log('[SSE] Tentando tocar som de notificação...')
+            console.log('[SSE] AudioContext disponível:', !!audioContext.value)
+            console.log('[SSE] AudioContext state:', audioContext.value?.state)
+            playNotificationSound().then(() => {
+              console.log('[SSE] Som de notificação tocado com sucesso')
+            }).catch(err => {
               console.warn('[SSE] Erro ao tocar som (não crítico):', err)
             })
             

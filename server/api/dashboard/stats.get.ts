@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
     const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const thisYear = new Date(now.getFullYear(), 0, 1);
     
-    const [periodStats, itemSalesStats, weekStats, monthStats, yearStats] = await Promise.all([
+    const [periodStats, itemSalesStats, weekStats, monthStats, yearStats, paymentMethodStats] = await Promise.all([
       // Estatísticas por período
       db.collection("orders").aggregate([
         {
@@ -210,6 +210,69 @@ export default defineEventHandler(async (event) => {
             revenue: { $sum: "$totalAmount" }
           }
         }
+      ]).toArray(),
+      
+      // Estatísticas por forma de pagamento (todas)
+      db.collection("orders").aggregate([
+        {
+          $group: {
+            _id: "$paymentMethod",
+            totalRevenue: { $sum: "$totalAmount" },
+            totalOrders: { $sum: 1 }
+          }
+        }
+      ]).toArray()
+    ]);
+    
+    // Estatísticas por forma de pagamento por período
+    const [paymentToday, paymentWeek, paymentMonth, paymentYear] = await Promise.all([
+      db.collection("orders").aggregate([
+        {
+          $match: { createdAt: { $gte: today } }
+        },
+        {
+          $group: {
+            _id: "$paymentMethod",
+            totalRevenue: { $sum: "$totalAmount" },
+            totalOrders: { $sum: 1 }
+          }
+        }
+      ]).toArray(),
+      db.collection("orders").aggregate([
+        {
+          $match: { createdAt: { $gte: thisWeek } }
+        },
+        {
+          $group: {
+            _id: "$paymentMethod",
+            totalRevenue: { $sum: "$totalAmount" },
+            totalOrders: { $sum: 1 }
+          }
+        }
+      ]).toArray(),
+      db.collection("orders").aggregate([
+        {
+          $match: { createdAt: { $gte: thisMonth } }
+        },
+        {
+          $group: {
+            _id: "$paymentMethod",
+            totalRevenue: { $sum: "$totalAmount" },
+            totalOrders: { $sum: 1 }
+          }
+        }
+      ]).toArray(),
+      db.collection("orders").aggregate([
+        {
+          $match: { createdAt: { $gte: thisYear } }
+        },
+        {
+          $group: {
+            _id: "$paymentMethod",
+            totalRevenue: { $sum: "$totalAmount" },
+            totalOrders: { $sum: 1 }
+          }
+        }
       ]).toArray()
     ]);
     
@@ -218,13 +281,44 @@ export default defineEventHandler(async (event) => {
     const monthData = monthStats[0] || { orders: 0, revenue: 0 };
     const yearData = yearStats[0] || { orders: 0, revenue: 0 };
     
-    // Calcular item mais vendido
-    const mostSoldItem = itemSalesStats[0] || { _id: 'Nenhum', totalQuantity: 0 };
+    // Calcular item mais vendido (filtrar itens sem nome válido)
+    const validItemSalesStats = itemSalesStats.filter(item => item._id && item._id.trim())
+    const mostSoldItem = validItemSalesStats[0] || { _id: 'Nenhum', totalQuantity: 0 };
     
     // Calcular ticket médio para cada período
     const weekAverageTicket = weekData.orders > 0 ? weekData.revenue / weekData.orders : 0;
     const monthAverageTicket = monthData.orders > 0 ? monthData.revenue / monthData.orders : 0;
     const yearAverageTicket = yearData.orders > 0 ? yearData.revenue / yearData.orders : 0;
+    
+    // Função auxiliar para processar estatísticas de pagamento
+    const processPaymentStats = (statsArray) => {
+      const methods = {
+        pix: { revenue: 0, orders: 0 },
+        dinheiro: { revenue: 0, orders: 0 },
+        cartao: { revenue: 0, orders: 0 }
+      }
+      
+      statsArray.forEach(stat => {
+        const method = stat._id || 'dinheiro'
+        if (methods[method]) {
+          methods[method].revenue = stat.totalRevenue || 0
+          methods[method].orders = stat.totalOrders || 0
+        }
+      })
+      
+      return methods
+    }
+    
+    // Processar estatísticas por forma de pagamento (todas)
+    const paymentMethods = processPaymentStats(paymentMethodStats)
+    
+    // Processar estatísticas por período
+    const paymentMethodsByPeriod = {
+      today: processPaymentStats(paymentToday),
+      week: processPaymentStats(paymentWeek),
+      month: processPaymentStats(paymentMonth),
+      year: processPaymentStats(paymentYear)
+    }
     
     // Preparar resposta otimizada
     return {
@@ -262,15 +356,19 @@ export default defineEventHandler(async (event) => {
       },
       insights: {
         mostSoldItem: { 
-          name: mostSoldItem._id, 
-          quantity: mostSoldItem.totalQuantity 
+          name: mostSoldItem._id || 'Nenhum', 
+          quantity: mostSoldItem.totalQuantity || 0 
         },
-        topSellingItems: itemSalesStats.slice(0, 5).map(item => ({
-          name: item._id,
-          quantity: item.totalQuantity,
-          revenue: item.totalRevenue
-        }))
-      }
+        topSellingItems: validItemSalesStats
+          .slice(0, 5)
+          .map(item => ({
+            name: item._id || 'Sem nome',
+            quantity: item.totalQuantity || 0,
+            revenue: item.totalRevenue || 0
+          }))
+      },
+      paymentMethods: paymentMethods,
+      paymentMethodsByPeriod: paymentMethodsByPeriod
     };
     
   } catch (error) {

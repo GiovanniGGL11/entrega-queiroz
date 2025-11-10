@@ -19,7 +19,8 @@ import {
   Tooltip,
   Legend,
   ArcElement,
-  DoughnutController
+  DoughnutController,
+  Filler
 } from 'chart.js'
 
 // Registrar componentes do Chart.js
@@ -35,7 +36,8 @@ Chart.register(
   Tooltip,
   Legend,
   ArcElement,
-  DoughnutController
+  DoughnutController,
+  Filler
 )
 
 const props = defineProps({

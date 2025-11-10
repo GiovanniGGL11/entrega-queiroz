@@ -96,6 +96,29 @@
           </li>
         </ul>
       </nav>
+      
+      <!-- Status da Loja -->
+      <div class="store-status-section">
+        <div class="store-status-header" v-if="!sidebarCollapsed">
+          <span class="store-status-label">Status da Loja</span>
+        </div>
+        <div class="store-status-control">
+          <div class="store-status-indicator" :class="{ 'open': isStoreOpen, 'closed': !isStoreOpen }">
+            <div class="status-dot"></div>
+            <span v-if="!sidebarCollapsed" class="status-text">{{ isStoreOpen ? 'Aberta' : 'Fechada' }}</span>
+          </div>
+          <label class="store-toggle-switch" :title="sidebarCollapsed ? (isStoreOpen ? 'Loja Aberta' : 'Loja Fechada') : ''">
+            <input 
+              type="checkbox" 
+              v-model="isStoreOpen" 
+              @change="toggleStoreStatus"
+              :disabled="isTogglingStore"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      
       <div class="sidebar-footer">
         <button @click="handleLogoutAndCloseSidebar" class="logout-btn" :title="sidebarCollapsed ? 'Sair' : ''">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -131,6 +154,7 @@
 
 <script setup>
 import { watch } from 'vue'
+import { useAuthenticatedFetch } from '~/composables/useAuthenticatedFetch'
 const router = useRouter()
 
 // Estado inicial: sempre false no SSR, será ajustado no cliente
@@ -159,17 +183,75 @@ const loadingSettings = ref(true)
 const storeLogo = ref('')
 const storeName = ref('')
 
+// Status da loja
+const isStoreOpen = ref(false)
+const isTogglingStore = ref(false)
+const manualOverride = ref(null) // null = usar horário automático, true/false = override manual
+
 // Buscar configurações da loja
 const loadStoreSettings = async () => {
   try {
     const data = await $fetch('/api/public/settings')
     storeLogo.value = data.logo || ''
     storeName.value = data.storeName || 'Dashboard'
+    isStoreOpen.value = data.isOpen || false
   } catch (error) {
     console.error('Erro ao carregar configurações da loja:', error)
     storeName.value = 'Dashboard'
+    isStoreOpen.value = false
   } finally {
     loadingSettings.value = false
+  }
+}
+
+// Carregar status manual da loja
+const loadStoreManualStatus = async () => {
+  try {
+    const { authenticatedFetch } = useAuthenticatedFetch()
+    const data = await authenticatedFetch('/api/settings')
+    manualOverride.value = data.manualOverride !== undefined ? data.manualOverride : null
+    // Se houver override manual, usar ele; senão usar o isOpen calculado
+    if (manualOverride.value !== null) {
+      isStoreOpen.value = manualOverride.value
+    } else {
+      isStoreOpen.value = data.isOpen || false
+    }
+  } catch (error) {
+    console.error('Erro ao carregar status manual da loja:', error)
+  }
+}
+
+// Alternar status da loja
+const toggleStoreStatus = async () => {
+  if (isTogglingStore.value) return
+  
+  isTogglingStore.value = true
+  
+  try {
+    const { authenticatedFetch } = useAuthenticatedFetch()
+    const newStatus = isStoreOpen.value
+    
+    // Atualizar override manual
+    await authenticatedFetch('/api/settings', {
+      method: 'PUT',
+      body: {
+        manualOverride: newStatus
+      }
+    })
+    
+    manualOverride.value = newStatus
+    
+    // Atualizar status público também (com pequeno delay para garantir que o backend processou)
+    setTimeout(async () => {
+      await loadStoreSettings()
+    }, 500)
+  } catch (error) {
+    console.error('Erro ao atualizar status da loja:', error)
+    // Reverter mudança em caso de erro
+    isStoreOpen.value = !isStoreOpen.value
+    alert('Erro ao atualizar status da loja. Tente novamente.')
+  } finally {
+    isTogglingStore.value = false
   }
 }
 
@@ -262,10 +344,25 @@ const pageTitle = computed(() => {
   return titles[route.path] || 'Dashboard'
 })
 
+// Atualizar status da loja periodicamente (quando não há override manual)
+let storeStatusInterval = null
+
 // Responsividade
 onMounted(() => {
   // Carregar configurações da loja
   loadStoreSettings()
+  // Carregar status manual
+  loadStoreManualStatus()
+  
+  // Atualizar status periodicamente se não houver override manual
+  if (process.client) {
+    storeStatusInterval = setInterval(async () => {
+      if (manualOverride.value === null) {
+        // Se não há override manual, atualizar status baseado nos horários
+        await loadStoreSettings()
+      }
+    }, 30000) // Atualizar a cada 30 segundos
+  }
   
   // Inicializar estado apenas no cliente
   if (process.client) {
@@ -319,6 +416,10 @@ onMounted(() => {
   
   onUnmounted(() => {
     window.removeEventListener('resize', checkMobile)
+    if (storeStatusInterval) {
+      clearInterval(storeStatusInterval)
+      storeStatusInterval = null
+    }
   })
 })
 </script>
@@ -518,6 +619,161 @@ onMounted(() => {
   background: linear-gradient(135deg, #FF6B35 0%, #ff8e24 100%);
   color: white;
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+/* Status da Loja */
+.store-status-section {
+  padding: 1rem 0.75rem;
+  border-top: 2px solid #e5e7eb;
+  border-bottom: 2px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.store-status-header {
+  margin-bottom: 0.75rem;
+}
+
+.store-status-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.store-status-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.store-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.store-status-indicator.open .status-dot {
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+  animation: pulse-green 2s infinite;
+}
+
+.store-status-indicator.closed .status-dot {
+  background: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.status-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.store-status-indicator.open .status-text {
+  color: #10b981;
+}
+
+.store-status-indicator.closed .status-text {
+  color: #ef4444;
+}
+
+.store-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.store-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1;
+  transition: 0.3s;
+  border-radius: 26px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.store-toggle-switch input:checked + .toggle-slider {
+  background-color: #10b981;
+}
+
+.store-toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(22px);
+}
+
+.store-toggle-switch input:disabled + .toggle-slider {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@keyframes pulse-green {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.1);
+  }
+}
+
+.sidebar-collapsed .store-status-section {
+  padding: 1rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sidebar-collapsed .store-status-header,
+.sidebar-collapsed .status-text {
+  display: none;
+}
+
+.sidebar-collapsed .store-status-control {
+  flex-direction: column;
+  width: 100%;
+}
+
+.sidebar-collapsed .store-status-indicator {
+  justify-content: center;
 }
 
 .sidebar-footer {

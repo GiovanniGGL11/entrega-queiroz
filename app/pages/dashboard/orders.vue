@@ -5,16 +5,6 @@
         <h1>Gerenciar Pedidos</h1>
       </div>
       <div class="header-actions">
-        <select v-model="statusFilter" @change="loadOrders" class="filter-select">
-          <option value="">Todos os status</option>
-          <option value="pending">Pendentes</option>
-          <option value="confirmed">Confirmados</option>
-          <option value="preparing">Preparando</option>
-          <option value="ready">Prontos</option>
-          <option value="out_for_delivery">Saiu para entrega</option>
-          <option value="delivered">Entregues</option>
-          <option value="cancelled">Cancelados</option>
-        </select>
         <button @click="refreshOrders" class="btn-refresh" :disabled="loading">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="23 4 23 10 17 10"></polyline>
@@ -34,6 +24,69 @@
             <line x1="15" y1="9" x2="9" y2="15"></line>
           </svg>
         </button>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters-section">
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label for="statusFilter">Status</label>
+          <select id="statusFilter" v-model="statusFilter" @change="loadOrders" class="filter-select">
+            <option value="">Todos os status</option>
+            <option value="pending">Pendentes</option>
+            <option value="confirmed">Confirmados</option>
+            <option value="preparing">Preparando</option>
+            <option value="ready">Prontos</option>
+            <option value="out_for_delivery">Saiu para entrega</option>
+            <option value="delivered">Entregues</option>
+            <option value="cancelled">Cancelados</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="periodFilter">Período</label>
+          <select id="periodFilter" v-model="periodFilter" @change="onPeriodChange" class="filter-select">
+            <option value="all">Todos os pedidos</option>
+            <option value="today">Hoje</option>
+            <option value="week">Esta Semana</option>
+            <option value="month">Este Mês</option>
+            <option value="year">Este Ano</option>
+            <option value="custom">Período Personalizado</option>
+          </select>
+        </div>
+        
+        <div v-if="periodFilter === 'custom'" class="filter-group date-range-group">
+          <label for="startDate">Data Inicial</label>
+          <input 
+            id="startDate"
+            v-model="startDate" 
+            type="date" 
+            class="filter-date"
+            @change="loadOrders"
+          />
+        </div>
+        
+        <div v-if="periodFilter === 'custom'" class="filter-group date-range-group">
+          <label for="endDate">Data Final</label>
+          <input 
+            id="endDate"
+            v-model="endDate" 
+            type="date" 
+            class="filter-date"
+            @change="loadOrders"
+          />
+        </div>
+        
+        <div class="filter-group filter-actions">
+          <button @click="clearFilters" class="btn-clear-filters" :disabled="!hasActiveFilters">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+            Limpar Filtros
+          </button>
+        </div>
       </div>
     </div>
 
@@ -76,6 +129,17 @@
                 <span class="item-name">{{ item.name }}</span>
                 <span class="item-price">{{ formatCurrency(item.price) }}</span>
               </div>
+            </div>
+            
+            <div v-if="order.notes && order.notes.trim()" class="order-notes">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14,2 14,8 20,8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+              </svg>
+              <span class="notes-label">Observações:</span>
+              <span class="notes-text">{{ order.notes }}</span>
             </div>
             
             <div class="order-total">
@@ -170,6 +234,11 @@
                 <span class="value total">{{ formatCurrency(selectedOrder.total) }}</span>
               </div>
             </div>
+            
+            <div v-if="selectedOrder.notes && selectedOrder.notes.trim()" class="detail-section">
+              <h4>Observações</h4>
+              <p class="notes-content">{{ selectedOrder.notes }}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -251,7 +320,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import Alert from '~/components/Alert.vue'
 import OrderNotifications from '~/components/OrderNotifications.vue'
 import { useAlert } from '~/composables/useAlert'
@@ -268,6 +337,9 @@ const { alert, showSuccess, showError, showWarning, showInfo } = useAlert()
 const loading = ref(false)
 const orders = ref([])
 const statusFilter = ref('')
+const periodFilter = ref('all')
+const startDate = ref('')
+const endDate = ref('')
 const selectedOrder = ref(null)
 const showStatusModal = ref(false)
 const orderToUpdate = ref(null)
@@ -386,6 +458,67 @@ const getStatusText = (status) => {
 
 const { authenticatedFetch, clearCache } = useAuthenticatedFetch()
 
+// Computed para verificar se há filtros ativos
+const hasActiveFilters = computed(() => {
+  return statusFilter.value !== '' || periodFilter.value !== 'all'
+})
+
+// Calcular datas baseadas no período
+const getDateRange = () => {
+  const now = new Date()
+  let start = null
+  let end = new Date(now.getTime() + 24 * 60 * 60 * 1000) // Fim do dia de hoje
+  
+  switch (periodFilter.value) {
+    case 'today':
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      break
+    case 'week':
+      const dayOfWeek = now.getDay()
+      const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1) // Segunda-feira
+      start = new Date(now.getFullYear(), now.getMonth(), diff)
+      break
+    case 'month':
+      start = new Date(now.getFullYear(), now.getMonth(), 1)
+      break
+    case 'year':
+      start = new Date(now.getFullYear(), 0, 1)
+      break
+    case 'custom':
+      if (startDate.value) {
+        start = new Date(startDate.value)
+        start.setHours(0, 0, 0, 0)
+      }
+      if (endDate.value) {
+        end = new Date(endDate.value)
+        end.setHours(23, 59, 59, 999)
+      }
+      break
+    default:
+      return { start: null, end: null }
+  }
+  
+  return { start, end }
+}
+
+// Handler para mudança de período
+const onPeriodChange = () => {
+  if (periodFilter.value !== 'custom') {
+    startDate.value = ''
+    endDate.value = ''
+  }
+  loadOrders()
+}
+
+// Limpar todos os filtros
+const clearFilters = () => {
+  statusFilter.value = ''
+  periodFilter.value = 'all'
+  startDate.value = ''
+  endDate.value = ''
+  loadOrders()
+}
+
 const loadOrders = async (showLoading = true, forceRefresh = false) => {
   try {
     if (showLoading) {
@@ -397,9 +530,26 @@ const loadOrders = async (showLoading = true, forceRefresh = false) => {
       clearCache('/api/orders')
     }
     
-    const url = statusFilter.value 
-      ? `/api/orders?status=${statusFilter.value}&page=1&limit=100&_t=${Date.now()}`
-      : `/api/orders?page=1&limit=100&_t=${Date.now()}`
+    // Construir URL com filtros
+    const params = new URLSearchParams()
+    params.append('page', '1')
+    params.append('limit', '100')
+    params.append('_t', Date.now().toString())
+    
+    if (statusFilter.value) {
+      params.append('status', statusFilter.value)
+    }
+    
+    // Adicionar filtros de data
+    const dateRange = getDateRange()
+    if (dateRange.start) {
+      params.append('startDate', dateRange.start.toISOString())
+    }
+    if (dateRange.end && periodFilter.value !== 'all') {
+      params.append('endDate', dateRange.end.toISOString())
+    }
+    
+    const url = `/api/orders?${params.toString()}`
     
     // Forçar busca sem cache usando query param único
     const response = await authenticatedFetch(url, {
@@ -705,6 +855,100 @@ onUnmounted(() => {
   background: #e67e22;
 }
 
+/* Filtros */
+.filters-section {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.filter-date {
+  padding: 0.75rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background: white;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 44px;
+}
+
+.filter-date:focus {
+  outline: none;
+  border-color: #ff8e24;
+  box-shadow: 0 0 0 3px rgba(255, 142, 36, 0.1);
+}
+
+.date-range-group {
+  grid-column: span 1;
+}
+
+.filter-actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+.btn-clear-filters {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  color: #475569;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  min-height: 44px;
+}
+
+.btn-clear-filters:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #334155;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-clear-filters:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.btn-clear-filters:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .spinning {
   animation: spin 1s linear infinite;
 }
@@ -919,6 +1163,36 @@ onUnmounted(() => {
   font-size: 0.875rem;
 }
 
+.order-notes {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  margin: 0.75rem 0;
+  background: #f8fafc;
+  border-left: 3px solid #ff8e24;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.order-notes svg {
+  flex-shrink: 0;
+  color: #ff8e24;
+  margin-top: 0.125rem;
+}
+
+.notes-label {
+  font-weight: 600;
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.notes-text {
+  color: #64748b;
+  flex: 1;
+  line-height: 1.5;
+}
+
 .item-quantity {
   color: #64748b;
   margin-right: 0.5rem;
@@ -1057,6 +1331,19 @@ onUnmounted(() => {
 
 .detail-row:last-child {
   border-bottom: none;
+}
+
+.notes-content {
+  margin: 0;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-left: 3px solid #ff8e24;
+  border-radius: 0.375rem;
+  color: #64748b;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  width: 100%;
 }
 
 .detail-row .label {
@@ -1298,6 +1585,27 @@ onUnmounted(() => {
     width: 100%;
     padding: 0.875rem 1rem;
     justify-content: center;
+  }
+  
+  .filters-section {
+    padding: 1rem;
+  }
+  
+  .filters-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .date-range-group {
+    grid-column: span 1;
+  }
+  
+  .filter-actions {
+    align-items: stretch;
+  }
+  
+  .btn-clear-filters {
+    width: 100%;
   }
   
   .orders-grid {

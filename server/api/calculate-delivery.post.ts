@@ -46,6 +46,23 @@ export default defineEventHandler(async (event) => {
         });
       }
       
+      // Verificar se o CEP está na lista de restritos
+      const restrictedZipCodes = config.restrictedZipCodes || [];
+      if (restrictedZipCodes.length > 0) {
+        const formattedZipCode = cleanZipCode.substring(0, 5) + '-' + cleanZipCode.substring(5, 8);
+        const isRestricted = restrictedZipCodes.some((restricted: string) => {
+          const restrictedClean = restricted.replace(/\D/g, '');
+          return restrictedClean === cleanZipCode || restricted === formattedZipCode;
+        });
+        
+        if (isRestricted) {
+          throw createError({
+            statusCode: 403,
+            message: "Desculpe, não entregamos neste CEP. Entrega não disponível para esta região.",
+          });
+        }
+      }
+      
       // Definir zonas de entrega baseadas em CEP
       const deliveryZones = config.deliveryZones || [];
       const cepPrefix = cleanZipCode.substring(0, 5); // Primeiros 5 dígitos do CEP

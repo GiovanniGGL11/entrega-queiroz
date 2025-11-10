@@ -649,17 +649,25 @@ const filteredProducts = computed(() => {
   filtered.sort((a, b) => {
     switch (sortBy.value) {
       case 'name':
-        return a.name.localeCompare(b.name)
+        const nameA = a.name || ''
+        const nameB = b.name || ''
+        return nameA.localeCompare(nameB)
       case 'name-desc':
-        return b.name.localeCompare(a.name)
+        const nameADesc = a.name || ''
+        const nameBDesc = b.name || ''
+        return nameBDesc.localeCompare(nameADesc)
       case 'price':
-        return a.price - b.price
+        return (a.price || 0) - (b.price || 0)
       case 'price-desc':
-        return b.price - a.price
+        return (b.price || 0) - (a.price || 0)
       case 'createdAt':
-        return new Date(b.createdAt) - new Date(a.createdAt)
+        const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0)
+        const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0)
+        return dateB - dateA
       case 'createdAt-desc':
-        return new Date(a.createdAt) - new Date(b.createdAt)
+        const dateADesc = a.createdAt ? new Date(a.createdAt) : new Date(0)
+        const dateBDesc = b.createdAt ? new Date(b.createdAt) : new Date(0)
+        return dateADesc - dateBDesc
       default:
         return 0
     }

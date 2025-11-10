@@ -279,8 +279,8 @@
           </div>
           <div class="inventory-info">
             <div class="inventory-header">
-              <h3>{{ item.productName }}</h3>
-              <span class="cost-price">Custo: R$ {{ item.costPrice.toFixed(2) }}</span>
+              <h3>{{ item.productName || 'Produto sem nome' }}</h3>
+              <span class="cost-price">Custo: R$ {{ (item.costPrice || 0).toFixed(2) }}</span>
             </div>
             
             <div class="stock-info">
@@ -289,18 +289,18 @@
                   <path d="M3 3h18l-2 14H5L3 3z"></path>
                   <path d="M8 21h8"></path>
                 </svg>
-                <span class="stock-number">{{ item.currentStock }}</span>
+                <span class="stock-number">{{ item.currentStock || 0 }}</span>
                 <span class="stock-label">unidades</span>
               </div>
               
               <div class="stock-limits">
                 <div class="limit-item">
                   <span class="limit-label">Mín:</span>
-                  <span class="limit-value">{{ item.minStock }}</span>
+                  <span class="limit-value">{{ item.minStock || 0 }}</span>
                 </div>
                 <div class="limit-item">
                   <span class="limit-label">Máx:</span>
-                  <span class="limit-value">{{ item.maxStock }}</span>
+                  <span class="limit-value">{{ item.maxStock || 0 }}</span>
                 </div>
               </div>
             </div>
@@ -313,7 +313,7 @@
                   <line x1="20" y1="8" x2="20" y2="14"></line>
                   <line x1="23" y1="11" x2="17" y2="11"></line>
                 </svg>
-                <span>{{ item.totalSold }} vendidos</span>
+                <span>{{ item.totalSold || 0 }} vendidos</span>
               </div>
               <div class="stat-item">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -322,11 +322,11 @@
                   <line x1="20" y1="8" x2="20" y2="14"></line>
                   <line x1="17" y1="11" x2="23" y2="11"></line>
                 </svg>
-                <span>{{ item.totalPurchased }} comprados</span>
+                <span>{{ item.totalPurchased || 0 }} comprados</span>
               </div>
             </div>
             
-            <div class="last-updated">
+            <div class="last-updated" v-if="item.lastUpdated">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"></circle>
                 <polyline points="12,6 12,12 16,14"></polyline>
@@ -720,6 +720,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import ImageOverlay from '~/components/ImageOverlay.vue'
 import { useImageOverlay } from '~/composables/useImageOverlay'
 import { useAlert } from '~/composables/useAlert'
+import { useAuthenticatedFetch } from '~/composables/useAuthenticatedFetch'
 
 // Image overlay
 const { showImageOverlay, currentImageUrl, openImageOverlay, closeImageOverlay } = useImageOverlay()
@@ -849,13 +850,23 @@ const filteredInventory = computed(() => {
   filtered.sort((a, b) => {
     switch (filters.value.sortBy) {
       case 'productName':
-        return a.productName.localeCompare(b.productName)
+        const nameA = a.productName || ''
+        const nameB = b.productName || ''
+        return nameA.localeCompare(nameB)
+      case 'productName-desc':
+        const nameADesc = a.productName || ''
+        const nameBDesc = b.productName || ''
+        return nameBDesc.localeCompare(nameADesc)
       case 'currentStock':
-        return a.currentStock - b.currentStock
+        return (a.currentStock || 0) - (b.currentStock || 0)
+      case 'currentStock-desc':
+        return (b.currentStock || 0) - (a.currentStock || 0)
       case 'minStock':
-        return a.minStock - b.minStock
+        return (a.minStock || 0) - (b.minStock || 0)
       case 'lastUpdated':
-        return new Date(b.lastUpdated) - new Date(a.lastUpdated)
+        const dateA = a.lastUpdated ? new Date(a.lastUpdated) : new Date(0)
+        const dateB = b.lastUpdated ? new Date(b.lastUpdated) : new Date(0)
+        return dateB - dateA
       default:
         return 0
     }
@@ -1186,26 +1197,35 @@ const closeModal = () => {
 
 // Utilitários
 const getStockStatus = (current, min) => {
-  if (current === 0) return 'out-of-stock'
-  if (current <= min) return 'low-stock'
+  const currentStock = current || 0
+  const minStock = min || 0
+  if (currentStock === 0) return 'out-of-stock'
+  if (currentStock <= minStock) return 'low-stock'
   return 'normal-stock'
 }
 
 const getStockStatusText = (current, min) => {
-  if (current === 0) return 'Sem Estoque'
-  if (current <= min) return 'Estoque Baixo'
+  const currentStock = current || 0
+  const minStock = min || 0
+  if (currentStock === 0) return 'Sem Estoque'
+  if (currentStock <= minStock) return 'Estoque Baixo'
   return 'Normal'
 }
 
 // Formatar data
 const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  if (!date) return 'N/A'
+  try {
+    return new Date(date).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (error) {
+    return 'Data inválida'
+  }
 }
 
 // Lifecycle

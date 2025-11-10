@@ -149,6 +149,11 @@ export default defineEventHandler(async (event) => {
         whatsapp: "",
         storeLatitude: -23.5505,
         storeLongitude: -46.6333,
+        enabledPaymentMethods: {
+          pix: true,
+          dinheiro: true,
+          cartao: true
+        },
         checkoutFields: {
           customerName: { enabled: true, required: true },
           customerPhone: { enabled: true, required: true },
@@ -202,24 +207,31 @@ export default defineEventHandler(async (event) => {
       console.warn('[public/settings] ⚠️ Erro ao processar TZ:', tzParseError);
     }
     
+    // Verificar se há override manual primeiro
     let isOpen = false;
-    try {
-      const nowLocal = new Date(new Date().toLocaleString('en-US', { timeZone }));
-      const currentDay = nowLocal.getDay();
-      const currentTime = `${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}`;
-      
-      const todaySchedule = storeSettings.openingHours?.find((h: any) => h.day === currentDay);
-      
-      if (todaySchedule && todaySchedule.enabled) {
-        isOpen = currentTime >= todaySchedule.open && currentTime <= todaySchedule.close;
+    if (storeSettings.manualOverride !== undefined && storeSettings.manualOverride !== null) {
+      // Se houver override manual, usar ele diretamente
+      isOpen = storeSettings.manualOverride;
+    } else {
+      // Caso contrário, calcular baseado nos horários
+      try {
+        const nowLocal = new Date(new Date().toLocaleString('en-US', { timeZone }));
+        const currentDay = nowLocal.getDay();
+        const currentTime = `${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}`;
+        
+        const todaySchedule = storeSettings.openingHours?.find((h: any) => h.day === currentDay);
+        
+        if (todaySchedule && todaySchedule.enabled) {
+          isOpen = currentTime >= todaySchedule.open && currentTime <= todaySchedule.close;
+        }
+      } catch (timeCalcError: any) {
+        console.error('[public/settings] ⚠️ Erro ao calcular horário de abertura:', {
+          message: timeCalcError?.message,
+          timeZone: timeZone
+        });
+        // Se houver erro, assumir que está fechado por segurança
+        isOpen = false;
       }
-    } catch (timeCalcError: any) {
-      console.error('[public/settings] ⚠️ Erro ao calcular horário de abertura:', {
-        message: timeCalcError?.message,
-        timeZone: timeZone
-      });
-      // Se houver erro, assumir que está fechado por segurança
-      isOpen = false;
     }
     
     // Retornar apenas as configurações públicas necessárias

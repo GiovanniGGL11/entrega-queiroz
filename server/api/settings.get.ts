@@ -73,6 +73,11 @@ export default defineEventHandler(async (event) => {
         deliveryMaxTime: 60,
         deliveryFee: 5.00, // Taxa padrão (será calculada por distância)
         minimumOrder: 0,
+        enabledPaymentMethods: {
+          pix: true,
+          dinheiro: true,
+          cartao: true
+        },
         checkoutFields: {
           customerName: { enabled: true, required: true },
           customerPhone: { enabled: true, required: true },
@@ -85,6 +90,8 @@ export default defineEventHandler(async (event) => {
           paymentMethod: { enabled: true, required: true },
           notes: { enabled: true, required: false }
         },
+        restrictedZipCodes: [],
+        manualOverride: null, // null = usar horário automático, true/false = override manual
         updatedAt: new Date(),
         createdAt: new Date()
       };
@@ -110,24 +117,31 @@ export default defineEventHandler(async (event) => {
       console.warn('[settings.get] ⚠️ Erro ao processar TZ:', tzParseError);
     }
     
+    // Verificar se há override manual primeiro
     let isOpen = false;
-    try {
-      const nowLocal = new Date(new Date().toLocaleString('en-US', { timeZone }));
-      const currentDay = nowLocal.getDay();
-      const currentTime = `${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}`;
-      
-      const todaySchedule = config.openingHours?.find((h: any) => h.day === currentDay);
-      
-      if (todaySchedule && todaySchedule.enabled) {
-        isOpen = currentTime >= todaySchedule.open && currentTime <= todaySchedule.close;
+    if (config.manualOverride !== undefined && config.manualOverride !== null) {
+      // Se houver override manual, usar ele diretamente
+      isOpen = config.manualOverride;
+    } else {
+      // Caso contrário, calcular baseado nos horários
+      try {
+        const nowLocal = new Date(new Date().toLocaleString('en-US', { timeZone }));
+        const currentDay = nowLocal.getDay();
+        const currentTime = `${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}`;
+        
+        const todaySchedule = config.openingHours?.find((h: any) => h.day === currentDay);
+        
+        if (todaySchedule && todaySchedule.enabled) {
+          isOpen = currentTime >= todaySchedule.open && currentTime <= todaySchedule.close;
+        }
+      } catch (timeCalcError: any) {
+        console.error('[settings.get] ⚠️ Erro ao calcular horário de abertura:', {
+          message: timeCalcError?.message,
+          timeZone: timeZone
+        });
+        // Se houver erro, assumir que está fechado por segurança
+        isOpen = false;
       }
-    } catch (timeCalcError: any) {
-      console.error('[settings.get] ⚠️ Erro ao calcular horário de abertura:', {
-        message: timeCalcError?.message,
-        timeZone: timeZone
-      });
-      // Se houver erro, assumir que está fechado por segurança
-      isOpen = false;
     }
     
     

@@ -163,19 +163,25 @@ const loadCategoryProducts = async (categoryId) => {
 }
 // Computeds
 const filteredCategories = computed(() => {
-  if (!searchQuery.value.trim()) return categories.value;
+  // Filtrar categorias vazias primeiro
+  let filtered = categories.value.filter((cat) => cat.items && cat.items.length > 0);
 
-  const query = searchQuery.value.toLowerCase().trim();
-  return categories.value
-    .map((cat) => ({
-      ...cat,
-      items: cat.items.filter(
-        (item) =>
-          item.name.toLowerCase().includes(query) ||
-          item.description.toLowerCase().includes(query)
-      ),
-    }))
-    .filter((cat) => cat.items.length > 0);
+  // Se houver busca, filtrar também os produtos
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim();
+    filtered = filtered
+      .map((cat) => ({
+        ...cat,
+        items: cat.items.filter(
+          (item) =>
+            item.name.toLowerCase().includes(query) ||
+            item.description.toLowerCase().includes(query)
+        ),
+      }))
+      .filter((cat) => cat.items.length > 0);
+  }
+
+  return filtered;
 });
 
 // Remover computeds duplicados - já vêm do composable

@@ -50,6 +50,57 @@ export default defineEventHandler(async (event) => {
 
   try {
     const db = await getDB();
+    
+    // Verificar se a loja está aberta
+    const settings = db.collection("settings");
+    const storeConfig = await settings.findOne({ _id: "store-config" });
+    
+    if (storeConfig) {
+      let isOpen = false;
+      
+      // Verificar override manual primeiro
+      if (storeConfig.manualOverride !== undefined && storeConfig.manualOverride !== null) {
+        isOpen = storeConfig.manualOverride;
+      } else {
+        // Calcular baseado nos horários
+        const now = new Date();
+        const currentDay = now.getDay();
+        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        
+        const todaySchedule = storeConfig.openingHours?.find((h: any) => h.day === currentDay);
+        
+        if (todaySchedule && todaySchedule.enabled) {
+          isOpen = currentTime >= todaySchedule.open && currentTime <= todaySchedule.close;
+        }
+      }
+      
+      if (!isOpen) {
+        throw createError({
+          statusCode: 403,
+          message: "A loja está fechada no momento. Pedidos não podem ser realizados.",
+        });
+      }
+      
+      // Verificar se o CEP está na lista de restritos
+      const restrictedZipCodes = storeConfig.restrictedZipCodes || [];
+      if (restrictedZipCodes.length > 0 && deliveryInfo.zipCode) {
+        const cleanZipCode = deliveryInfo.zipCode.replace(/\D/g, '');
+        if (cleanZipCode.length === 8) {
+          const formattedZipCode = cleanZipCode.substring(0, 5) + '-' + cleanZipCode.substring(5, 8);
+          const isRestricted = restrictedZipCodes.some((restricted: string) => {
+            const restrictedClean = restricted.replace(/\D/g, '');
+            return restrictedClean === cleanZipCode || restricted === formattedZipCode;
+          });
+          
+          if (isRestricted) {
+            throw createError({
+              statusCode: 403,
+              message: "Desculpe, não entregamos neste CEP. Entrega não disponível para esta região.",
+            });
+          }
+        }
+      }
+    }
     const products = db.collection("products");
     
     // VALIDAÇÃO DE SEGURANÇA: Verificar preços e produtos reais
@@ -136,9 +187,8 @@ export default defineEventHandler(async (event) => {
     let deliveryZone = '';
     let estimatedTime = '30-45 min';
     
-    // Buscar configurações de entrega
-    const settings = db.collection("settings");
-    const storeSettings = await settings.findOne({ _id: "store-config" });
+    // Usar storeConfig que já foi obtido anteriormente
+    const storeSettings = storeConfig;
     
     
     if (deliveryInfo.latitude && deliveryInfo.longitude) {

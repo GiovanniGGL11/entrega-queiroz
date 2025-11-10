@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
   }
   
   const query = getQuery(event);
-  const { status, page = 1, limit = 50, since } = query;
+  const { status, page = 1, limit = 50, since, startDate, endDate } = query;
 
   try {
     const db = await getDB();
@@ -41,18 +41,37 @@ export default defineEventHandler(async (event) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
     // Construir filtro
-    const filter = status ? { status } : {};
+    const filter: any = status ? { status } : {};
     
-    // Se since for fornecido, filtrar apenas pedidos criados após essa data
-    if (since) {
+    // Filtro por data (suporta startDate e endDate, ou since para compatibilidade)
+    if (startDate || endDate) {
+      filter.createdAt = {}
+      
+      if (startDate) {
+        try {
+          const start = new Date(startDate)
+          filter.createdAt.$gte = start
+        } catch (e) {
+          console.error('[API Orders] Erro ao parsear startDate:', e)
+        }
+      }
+      
+      if (endDate) {
+        try {
+          const end = new Date(endDate)
+          filter.createdAt.$lte = end
+        } catch (e) {
+          console.error('[API Orders] Erro ao parsear endDate:', e)
+        }
+      }
+    } else if (since) {
+      // Compatibilidade com filtro since (deprecated, mas mantido)
       try {
         const sinceDate = new Date(since)
-        // Garantir que estamos procurando pedidos criados DEPOIS da data fornecida
         filter.createdAt = { $gt: sinceDate }
         console.log('[API Orders] Filtrando pedidos após:', sinceDate.toISOString())
       } catch (e) {
         console.error('[API Orders] Erro ao parsear data since:', e)
-        // Ignorar erro de parsing da data
       }
     }
     

@@ -65,7 +65,12 @@ const storeSettings = ref({
     paymentMethod: { enabled: true, required: true },
     notes: { enabled: true, required: false }
   },
-  deliveryZones: []
+  deliveryZones: [],
+  enabledPaymentMethods: {
+    pix: true,
+    dinheiro: true,
+    cartao: true
+  }
 })
 
 // Carregar configurações da loja
@@ -86,6 +91,11 @@ const loadStoreSettings = async () => {
       whatsapp: settings.whatsapp || "",
       storeLatitude: settings.storeLatitude || -23.5505,
       storeLongitude: settings.storeLongitude || -46.6333,
+      enabledPaymentMethods: settings.enabledPaymentMethods || {
+        pix: true,
+        dinheiro: true,
+        cartao: true
+      },
       checkoutFields: settings.checkoutFields || {
         customerName: { enabled: true, required: true },
         customerPhone: { enabled: true, required: true },
@@ -99,6 +109,17 @@ const loadStoreSettings = async () => {
         notes: { enabled: true, required: false }
       },
       deliveryZones: settings.deliveryZones || []
+    }
+    
+    // Selecionar automaticamente o primeiro método habilitado se houver apenas um
+    const enabledMethods = Object.entries(storeSettings.value.enabledPaymentMethods || {})
+      .filter(([_, enabled]) => enabled)
+      .map(([method]) => method)
+    
+    if (enabledMethods.length === 1) {
+      paymentMethod.value = enabledMethods[0]
+    } else if (enabledMethods.length > 0 && !enabledMethods.includes(paymentMethod.value)) {
+      paymentMethod.value = enabledMethods[0]
     }
     
     // Não definir taxa de entrega padrão - será calculada via CEP
@@ -203,6 +224,12 @@ const validateAddress = async () => {
 }
 
 // Computeds
+// Verificar se há métodos de pagamento habilitados
+const hasEnabledPaymentMethods = computed(() => {
+  const methods = storeSettings.value.enabledPaymentMethods || {}
+  return Object.values(methods).some(enabled => enabled === true)
+})
+
 const totalAmount = computed(() => {
   return cartSubtotal.value + deliveryInfo.value.deliveryFee
 })
@@ -225,13 +252,21 @@ const isFormValid = computed(() => {
     { field: 'deliveryNeighborhood', value: deliveryInfo.value.neighborhood, enabled: fields.deliveryNeighborhood.enabled, required: fields.deliveryNeighborhood.required },
     { field: 'deliveryCity', value: deliveryInfo.value.city, enabled: fields.deliveryCity.enabled, required: fields.deliveryCity.required },
     { field: 'deliveryZipCode', value: deliveryInfo.value.zipCode, enabled: fields.deliveryZipCode.enabled, required: fields.deliveryZipCode.required },
-    { field: 'paymentMethod', value: paymentMethod.value, enabled: fields.paymentMethod.enabled, required: fields.paymentMethod.required },
+    { field: 'paymentMethod', value: paymentMethod.value, enabled: fields.paymentMethod.enabled && hasEnabledPaymentMethods.value, required: fields.paymentMethod.required },
     { field: 'notes', value: notes.value, enabled: fields.notes.enabled, required: fields.notes.required }
   ]
   
   // Verificar se todos os campos obrigatórios habilitados estão preenchidos
-  const allRequiredFieldsFilled = requiredFields.every(({ enabled, required, value }) => {
+  const allRequiredFieldsFilled = requiredFields.every(({ enabled, required, value, field }) => {
     if (!enabled || !required) return true
+    
+    // Para paymentMethod, verificar se está entre os métodos habilitados
+    if (field === 'paymentMethod') {
+      const enabledMethods = storeSettings.value.enabledPaymentMethods || {}
+      const isMethodEnabled = enabledMethods[value] === true
+      return isMethodEnabled && value && value.trim() !== ''
+    }
+    
     return value && value.trim() !== ''
   })
   
@@ -293,20 +328,21 @@ const submitOrder = async () => {
     } else {
       throw new Error(response.message || 'Erro ao processar pedido')
     }
+  } catch (err) {
+    console.error('Erro ao submeter pedido:', err)
     
-  } catch (error) {
-    console.error('Erro ao submeter pedido:', error)
+    // Verificar se é erro de loja fechada
+    const errorStatus = err?.statusCode || err?.data?.statusCode
+    const errorMessage = err?.message || err?.data?.message
     
-    // Verificar se é um erro de validação ou de rede
-    let errorMessage = 'Erro ao processar pedido. Tente novamente.'
-    
-    if (error.data?.message) {
-      errorMessage = error.data.message
-    } else if (error.message) {
-      errorMessage = error.message
+    if (errorStatus === 403 || errorMessage?.includes('fechada')) {
+      alert('A loja está fechada no momento. Pedidos não podem ser realizados.')
+      // Recarregar configurações para atualizar status
+      await loadStoreSettings()
+    } else {
+      const finalErrorMessage = errorMessage || 'Erro ao processar pedido. Tente novamente.'
+      alert(finalErrorMessage)
     }
-    
-    alert(errorMessage)
   } finally {
     isSubmitting.value = false
   }
@@ -600,7 +636,7 @@ useHead({
               </div>
 
               <!-- Forma de Pagamento -->
-              <div v-if="storeSettings.checkoutFields.paymentMethod.enabled" class="form-section">
+              <div v-if="storeSettings.checkoutFields.paymentMethod.enabled && hasEnabledPaymentMethods" class="form-section">
                 <h3>
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
@@ -610,7 +646,7 @@ useHead({
                 </h3>
                 
                 <div class="payment-options">
-                  <label class="payment-option">
+                  <label v-if="storeSettings.enabledPaymentMethods?.pix" class="payment-option">
                     <input
                       v-model="paymentMethod"
                       type="radio"
@@ -626,7 +662,7 @@ useHead({
                     </div>
                   </label>
                   
-                  <label class="payment-option">
+                  <label v-if="storeSettings.enabledPaymentMethods?.dinheiro" class="payment-option">
                     <input
                       v-model="paymentMethod"
                       type="radio"
@@ -642,7 +678,7 @@ useHead({
                     </div>
                   </label>
                   
-                  <label class="payment-option">
+                  <label v-if="storeSettings.enabledPaymentMethods?.cartao" class="payment-option">
                     <input
                       v-model="paymentMethod"
                       type="radio"

@@ -328,6 +328,103 @@
           </div>
         </div>
       </div>
+
+      <!-- Vendas por Forma de Pagamento -->
+      <div class="content-card">
+        <div class="card-header">
+          <h2>Vendas por Forma de Pagamento</h2>
+          <div class="period-selector">
+            <button 
+              v-for="period in ['today', 'week', 'month', 'year']" 
+              :key="period"
+              @click="selectedPaymentPeriod = period"
+              :class="['period-btn', { active: selectedPaymentPeriod === period }]"
+              :title="`Ver dados de ${getPeriodLabel(period).toLowerCase()}`"
+            >
+              {{ getPeriodLabel(period) }}
+            </button>
+          </div>
+        </div>
+        <div class="payment-methods-grid">
+          <div class="payment-method-card pix">
+            <div class="payment-method-header">
+              <div class="payment-method-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                  <line x1="1" y1="10" x2="23" y2="10"></line>
+                </svg>
+              </div>
+              <h3>PIX</h3>
+            </div>
+            <div class="payment-method-stats">
+              <div class="payment-stat-item">
+                <span class="payment-stat-label">Receita:</span>
+                <span class="payment-stat-value">{{ formatCurrency(currentPaymentData.pix.revenue) }}</span>
+              </div>
+              <div class="payment-stat-item">
+                <span class="payment-stat-label">Pedidos:</span>
+                <span class="payment-stat-value">{{ currentPaymentData.pix.orders }}</span>
+              </div>
+              <div class="payment-stat-item">
+                <span class="payment-stat-label">Ticket Médio:</span>
+                <span class="payment-stat-value">{{ formatCurrency(currentPaymentData.pix.orders > 0 ? currentPaymentData.pix.revenue / currentPaymentData.pix.orders : 0) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="payment-method-card dinheiro">
+            <div class="payment-method-header">
+              <div class="payment-method-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="1" x2="12" y2="23"></line>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+              </div>
+              <h3>Dinheiro</h3>
+            </div>
+            <div class="payment-method-stats">
+              <div class="payment-stat-item">
+                <span class="payment-stat-label">Receita:</span>
+                <span class="payment-stat-value">{{ formatCurrency(currentPaymentData.dinheiro.revenue) }}</span>
+              </div>
+              <div class="payment-stat-item">
+                <span class="payment-stat-label">Pedidos:</span>
+                <span class="payment-stat-value">{{ currentPaymentData.dinheiro.orders }}</span>
+              </div>
+              <div class="payment-stat-item">
+                <span class="payment-stat-label">Ticket Médio:</span>
+                <span class="payment-stat-value">{{ formatCurrency(currentPaymentData.dinheiro.orders > 0 ? currentPaymentData.dinheiro.revenue / currentPaymentData.dinheiro.orders : 0) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="payment-method-card cartao">
+            <div class="payment-method-header">
+              <div class="payment-method-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                  <line x1="1" y1="10" x2="23" y2="10"></line>
+                </svg>
+              </div>
+              <h3>Cartão</h3>
+            </div>
+            <div class="payment-method-stats">
+              <div class="payment-stat-item">
+                <span class="payment-stat-label">Receita:</span>
+                <span class="payment-stat-value">{{ formatCurrency(currentPaymentData.cartao.revenue) }}</span>
+              </div>
+              <div class="payment-stat-item">
+                <span class="payment-stat-label">Pedidos:</span>
+                <span class="payment-stat-value">{{ currentPaymentData.cartao.orders }}</span>
+              </div>
+              <div class="payment-stat-item">
+                <span class="payment-stat-label">Ticket Médio:</span>
+                <span class="payment-stat-value">{{ formatCurrency(currentPaymentData.cartao.orders > 0 ? currentPaymentData.cartao.revenue / currentPaymentData.cartao.orders : 0) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Modal de Detalhes do Pedido -->
@@ -395,6 +492,7 @@ definePageMeta({
 const loading = ref(true)
 const loadingOrders = ref(false)
 const selectedPeriod = ref('today')
+const selectedPaymentPeriod = ref('today')
 const selectedChartPeriod = ref('today')
 const selectedOrder = ref(null)
 
@@ -416,12 +514,28 @@ const stats = ref({
   insights: {
     mostSoldItem: { name: 'Nenhum', quantity: 0 },
     topSellingItems: []
+  },
+  paymentMethods: {
+    pix: { revenue: 0, orders: 0 },
+    dinheiro: { revenue: 0, orders: 0 },
+    cartao: { revenue: 0, orders: 0 }
+  },
+  paymentMethodsByPeriod: {
+    today: { pix: { revenue: 0, orders: 0 }, dinheiro: { revenue: 0, orders: 0 }, cartao: { revenue: 0, orders: 0 } },
+    week: { pix: { revenue: 0, orders: 0 }, dinheiro: { revenue: 0, orders: 0 }, cartao: { revenue: 0, orders: 0 } },
+    month: { pix: { revenue: 0, orders: 0 }, dinheiro: { revenue: 0, orders: 0 }, cartao: { revenue: 0, orders: 0 } },
+    year: { pix: { revenue: 0, orders: 0 }, dinheiro: { revenue: 0, orders: 0 }, cartao: { revenue: 0, orders: 0 } }
   }
 })
 
 // Dados do período atual selecionado
 const currentPeriodData = computed(() => {
   return stats.value.periods[selectedPeriod.value] || stats.value.periods.today
+})
+
+// Dados de pagamento do período atual selecionado
+const currentPaymentData = computed(() => {
+  return stats.value.paymentMethodsByPeriod[selectedPaymentPeriod.value] || stats.value.paymentMethodsByPeriod.today
 })
 
 // Dados para gráficos
@@ -455,11 +569,14 @@ const ticketChartData = computed(() => {
 })
 
 const productsChartData = computed(() => {
-  const topProducts = stats.value.insights.topSellingItems.slice(0, 5)
+  const topProducts = (stats.value.insights.topSellingItems || [])
+    .filter(p => p && p.name) // Filtrar itens válidos
+    .slice(0, 5)
+  
   return {
-    labels: topProducts.map(p => p.name),
+    labels: topProducts.map(p => p.name || 'Sem nome'),
     datasets: [{
-      data: topProducts.map(p => p.quantity),
+      data: topProducts.map(p => p.quantity || 0),
       backgroundColor: [
         'rgba(255, 142, 36, 0.8)',
         'rgba(59, 130, 246, 0.8)',
@@ -598,6 +715,17 @@ const loadStats = async () => {
       insights: {
         mostSoldItem: { name: 'Nenhum', quantity: 0 },
         topSellingItems: []
+      },
+      paymentMethods: {
+        pix: { revenue: 0, orders: 0 },
+        dinheiro: { revenue: 0, orders: 0 },
+        cartao: { revenue: 0, orders: 0 }
+      },
+      paymentMethodsByPeriod: {
+        today: { pix: { revenue: 0, orders: 0 }, dinheiro: { revenue: 0, orders: 0 }, cartao: { revenue: 0, orders: 0 } },
+        week: { pix: { revenue: 0, orders: 0 }, dinheiro: { revenue: 0, orders: 0 }, cartao: { revenue: 0, orders: 0 } },
+        month: { pix: { revenue: 0, orders: 0 }, dinheiro: { revenue: 0, orders: 0 }, cartao: { revenue: 0, orders: 0 } },
+        year: { pix: { revenue: 0, orders: 0 }, dinheiro: { revenue: 0, orders: 0 }, cartao: { revenue: 0, orders: 0 } }
       }
     }
   } finally {
@@ -1068,7 +1196,7 @@ onUnmounted(() => {
 /* Grid de Pedidos - Ocupa toda largura disponível */
 .orders-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
   width: 100%;
 }
@@ -1077,10 +1205,13 @@ onUnmounted(() => {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 0.75rem;
-  overflow: hidden;
+  overflow: visible;
   transition: all 0.3s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   width: 100%;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
 }
 
 .order-card:hover {
@@ -1096,58 +1227,78 @@ onUnmounted(() => {
   padding: 1rem 1.25rem;
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
 }
 
 .order-id {
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #1e293b;
+  word-break: break-word;
 }
 
 .order-card-body {
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: 1rem;
+  flex: 1;
+  min-height: 0;
 }
 
 .order-info-item {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: flex-start;
+  gap: 0.625rem;
   font-size: 0.875rem;
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .order-info-item svg {
   color: #64748b;
   flex-shrink: 0;
+  margin-top: 0.125rem;
+  width: 16px;
+  height: 16px;
 }
 
 .order-label {
   color: #64748b;
   font-weight: 500;
+  flex-shrink: 0;
+  min-width: fit-content;
 }
 
 .order-value {
   color: #1e293b;
   font-weight: 600;
   margin-left: auto;
+  text-align: right;
+  word-break: break-word;
+  flex: 1;
+  min-width: 0;
 }
 
 .order-total {
   color: #ff8e24;
   font-size: 1rem;
+  font-weight: 700;
 }
 
 .order-card-footer {
   padding: 1rem 1.25rem;
   border-top: 1px solid #e2e8f0;
   background: #f8fafc;
+  flex-shrink: 0;
 }
 
 .order-card-footer .btn-view {
   width: 100%;
   justify-content: center;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
 }
 
 /* Enhanced Empty States */
@@ -1344,6 +1495,132 @@ onUnmounted(() => {
   font-weight: 700;
   color: #1e293b;
   font-size: 1rem;
+}
+
+/* Vendas por Forma de Pagamento */
+.payment-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.payment-method-card {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.payment-method-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.payment-method-card.pix {
+  border-color: #32BCAD;
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%);
+}
+
+.payment-method-card.pix:hover {
+  border-color: #2A9D8F;
+  box-shadow: 0 12px 24px rgba(50, 188, 173, 0.2);
+}
+
+.payment-method-card.dinheiro {
+  border-color: #10B981;
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+}
+
+.payment-method-card.dinheiro:hover {
+  border-color: #059669;
+  box-shadow: 0 12px 24px rgba(16, 185, 129, 0.2);
+}
+
+.payment-method-card.cartao {
+  border-color: #3B82F6;
+  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+}
+
+.payment-method-card.cartao:hover {
+  border-color: #2563EB;
+  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.2);
+}
+
+.payment-method-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f1f5f9;
+}
+
+.payment-method-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 0.75rem;
+  flex-shrink: 0;
+}
+
+.payment-method-card.pix .payment-method-icon {
+  background: linear-gradient(135deg, #32BCAD 0%, #2A9D8F 100%);
+  color: white;
+}
+
+.payment-method-card.dinheiro .payment-method-icon {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: white;
+}
+
+.payment-method-card.cartao .payment-method-icon {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  color: white;
+}
+
+.payment-method-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.payment-method-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.payment-stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.payment-stat-item:hover {
+  background: #f1f5f9;
+  transform: translateX(4px);
+}
+
+.payment-stat-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.payment-stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2937;
 }
 
 /* Top Items Styles */
@@ -1684,9 +1961,36 @@ onUnmounted(() => {
   
   .orders-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .order-card {
+    min-height: auto;
+  }
+  
+  .order-card-body {
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+  
+  .order-info-item {
+    flex-wrap: wrap;
+  }
+  
+  .order-value {
+    margin-left: 0;
+    text-align: left;
+    width: 100%;
+    margin-top: 0.25rem;
   }
   
   .orders-grid-container {
+    padding: 1rem;
+  }
+  
+  .payment-methods-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
     padding: 1rem;
   }
 }

@@ -279,46 +279,15 @@
           <h2>Localização da Loja</h2>
         </div>
 
-        <!-- Opção 1: Buscar por CEP -->
         <div class="form-group">
-          <label for="storeCep">Buscar por CEP</label>
-          <div class="cep-input-wrapper">
-            <input
-              id="storeCep"
-              v-model="storeCep"
-              type="text"
-              placeholder="00000-000"
-              maxlength="9"
-              @input="formatCep"
-              @blur="searchByCep"
-              class="cep-input"
-            />
-            <button 
-              @click="searchByCep" 
-              type="button"
-              class="btn-search-cep"
-              :disabled="searchingCep || !storeCep"
-            >
-              <svg v-if="!searchingCep" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.35-4.35"></path>
-              </svg>
-              <div v-else class="loading-spinner-inline"></div>
-              {{ searchingCep ? 'Buscando...' : 'Buscar' }}
-            </button>
-          </div>
-          <small>Digite o CEP para preencher automaticamente o endereço</small>
-        </div>
-
-        <!-- Opção 2: Endereço Completo -->
-        <div class="form-group">
-          <label for="storeAddress">Endereço Completo *</label>
+          <label for="storeAddress">Endereço da Loja</label>
           <div class="address-input-wrapper">
             <input
               id="storeAddress"
               v-model="form.location.address"
               type="text"
               placeholder="Ex: Avenida Paulista, 1578 - Bela Vista, São Paulo - SP"
+              maxlength="200"
               @blur="geocodeAddress"
             />
             <button 
@@ -335,82 +304,7 @@
               {{ geocoding ? 'Localizando...' : 'Localizar no Mapa' }}
             </button>
           </div>
-          <small>Digite o endereço completo da loja (Rua, Número, Bairro, Cidade, Estado)</small>
-        </div>
-
-        <!-- Campos Separados (Opcional) -->
-        <div class="address-fields-group">
-          <div class="form-group">
-            <label for="storeStreet">Rua</label>
-            <input
-              id="storeStreet"
-              v-model="addressFields.street"
-              type="text"
-              placeholder="Ex: Avenida Paulista"
-            />
-          </div>
-          <div class="form-group">
-            <label for="storeNumber">Número</label>
-            <input
-              id="storeNumber"
-              v-model="addressFields.number"
-              type="text"
-              placeholder="Ex: 1578"
-            />
-          </div>
-          <div class="form-group">
-            <label for="storeNeighborhood">Bairro</label>
-            <input
-              id="storeNeighborhood"
-              v-model="addressFields.neighborhood"
-              type="text"
-              placeholder="Ex: Bela Vista"
-            />
-          </div>
-          <div class="form-group">
-            <label for="storeCity">Cidade</label>
-            <input
-              id="storeCity"
-              v-model="addressFields.city"
-              type="text"
-              placeholder="Ex: São Paulo"
-            />
-          </div>
-          <div class="form-group">
-            <label for="storeState">Estado (UF)</label>
-            <input
-              id="storeState"
-              v-model="addressFields.state"
-              type="text"
-              placeholder="Ex: SP"
-              maxlength="2"
-              style="text-transform: uppercase;"
-            />
-          </div>
-        </div>
-
-        <!-- Coordenadas -->
-        <div v-if="form.location.latitude && form.location.longitude" class="coordinates-display">
-          <div class="coordinate-item">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-              <circle cx="12" cy="10" r="3"></circle>
-            </svg>
-            <div class="coordinate-info">
-              <span class="coordinate-label">Latitude:</span>
-              <span class="coordinate-value">{{ form.location.latitude.toFixed(6) }}</span>
-            </div>
-          </div>
-          <div class="coordinate-item">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-              <circle cx="12" cy="10" r="3"></circle>
-            </svg>
-            <div class="coordinate-info">
-              <span class="coordinate-label">Longitude:</span>
-              <span class="coordinate-value">{{ form.location.longitude.toFixed(6) }}</span>
-            </div>
-          </div>
+          <small>Digite o endereço completo da loja e clique em "Localizar no Mapa" para visualizar no mapa</small>
         </div>
 
         <div v-if="form.location.latitude && form.location.longitude" class="info-banner success">
@@ -466,7 +360,7 @@
                   min="0"
                   step="0.5"
                   placeholder="5"
-                  @input="updateZoneLabel(index)"
+                  @input="updateZoneLabel(index); validateZones()"
                 />
               </div>
               <div class="form-group">
@@ -477,8 +371,12 @@
                   min="0"
                   step="0.50"
                   placeholder="5.00"
-                  @input="updateZoneLabel(index)"
+                  @input="updateZoneLabel(index); validateZones()"
+                  :class="{ 'input-error': zoneValidationErrors[index] }"
                 />
+                <small v-if="zoneValidationErrors[index]" class="error-message">
+                  {{ zoneValidationErrors[index] }}
+                </small>
               </div>
             </div>
             <button 
@@ -517,6 +415,64 @@
             <span>A taxa de entrega será calculada automaticamente baseada na distância do cliente até a loja. Configure zonas crescentes (ex: 0-3km, 3-5km, 5-10km)</span>
           </div>
         </div>
+      </div>
+
+      <!-- CEPs Restritos -->
+      <div class="settings-section card">
+        <div class="section-header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <h2>CEPs Restritos <span class="danger-badge">Área de Perigo</span></h2>
+        </div>
+
+        <div class="info-banner danger" style="margin-bottom: 1.5rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <div>
+            <strong>Atenção:</strong>
+            <span>CEPs adicionados aqui serão bloqueados no checkout. Clientes com esses CEPs não poderão finalizar pedidos.</span>
+          </div>
+        </div>
+
+        <div class="restricted-ceps-list">
+          <div v-for="(cep, index) in form.restrictedZipCodes" :key="index" class="restricted-cep-item">
+            <div class="cep-input-wrapper">
+              <input
+                v-model="form.restrictedZipCodes[index]"
+                type="text"
+                placeholder="00000-000"
+                maxlength="9"
+                @input="formatCepInput(index)"
+                class="cep-input"
+              />
+              <button 
+                @click="removeRestrictedCep(index)" 
+                class="btn-remove-cep"
+                type="button"
+                title="Remover CEP"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button @click="addRestrictedCep" type="button" class="btn-add-cep">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Adicionar CEP Restrito
+        </button>
       </div>
 
       <!-- Campos do Checkout -->
@@ -733,10 +689,54 @@
 
           <div class="field-group">
             <h3>Pagamento e Observações</h3>
+            
+            <!-- Métodos de Pagamento Habilitados -->
             <div class="field-item">
               <div class="field-info">
-                <label>Forma de Pagamento</label>
-                <span class="field-description">Método de pagamento escolhido</span>
+                <label>Métodos de Pagamento Disponíveis</label>
+                <span class="field-description">Selecione quais métodos de pagamento estarão disponíveis no checkout</span>
+              </div>
+              <div v-if="form.enabledPaymentMethods" class="payment-methods-config">
+                <label class="payment-method-checkbox">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.enabledPaymentMethods.pix"
+                  />
+                  <span class="payment-method-label">
+                    <span class="payment-method-icon">PIX</span>
+                    <span>PIX</span>
+                  </span>
+                </label>
+                <label class="payment-method-checkbox">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.enabledPaymentMethods.dinheiro"
+                  />
+                  <span class="payment-method-label">
+                    <span class="payment-method-icon">💵</span>
+                    <span>Dinheiro</span>
+                  </span>
+                </label>
+                <label class="payment-method-checkbox">
+                  <input 
+                    type="checkbox" 
+                    v-model="form.enabledPaymentMethods.cartao"
+                  />
+                  <span class="payment-method-label">
+                    <span class="payment-method-icon">💳</span>
+                    <span>Cartão</span>
+                  </span>
+                </label>
+              </div>
+              <div v-else class="loading">
+                <p>Carregando métodos de pagamento...</p>
+              </div>
+            </div>
+            
+            <div class="field-item">
+              <div class="field-info">
+                <label>Campo de Forma de Pagamento</label>
+                <span class="field-description">Exibir campo de seleção de método de pagamento no checkout</span>
               </div>
               <div class="field-controls">
                 <label class="toggle-switch">
@@ -919,6 +919,7 @@ const form = ref({
     { maxDistance: 10, fee: 10.00, label: "5-10km - R$ 10,00" },
     { maxDistance: 15, fee: 15.00, label: "10-15km - R$ 15,00" }
   ],
+  restrictedZipCodes: [],
   openingHours: [
     { day: 0, open: "11:00", close: "22:00", enabled: false },
     { day: 1, open: "11:00", close: "22:00", enabled: true },
@@ -932,6 +933,11 @@ const form = ref({
   deliveryMaxTime: 60,
   deliveryFee: 5.00,
   minimumOrder: 0,
+  enabledPaymentMethods: {
+    pix: true,
+    dinheiro: true,
+    cartao: true
+  },
   checkoutFields: {
     customerName: { enabled: true, required: true },
     customerPhone: { enabled: true, required: true },
@@ -1155,6 +1161,13 @@ const initMap = () => {
     map.remove()
   }
   
+  // Verificar se o container do mapa existe
+  const mapContainer = document.getElementById('delivery-map')
+  if (!mapContainer) {
+    console.warn('[Settings] Container do mapa não encontrado')
+    return
+  }
+  
   const lat = form.value.location.latitude
   const lng = form.value.location.longitude
   
@@ -1331,9 +1344,21 @@ const loadSettings = async () => {
       deliveryMaxTime: response.deliveryMaxTime || 60,
       deliveryFee: response.deliveryFee || 0,
       minimumOrder: response.minimumOrder || 0,
-      checkoutFields: response.checkoutFields || form.value.checkoutFields
+      enabledPaymentMethods: response.enabledPaymentMethods || {
+        pix: true,
+        dinheiro: true,
+        cartao: true
+      },
+      checkoutFields: response.checkoutFields || form.value.checkoutFields,
+      restrictedZipCodes: response.restrictedZipCodes || []
     }
     originalForm.value = JSON.parse(JSON.stringify(form.value))
+    
+    // Atualizar labels das zonas e validar
+    form.value.deliveryZones.forEach((zone, index) => {
+      updateZoneLabel(index)
+    })
+    validateZones()
   } catch (error) {
     showAlert('Erro ao carregar configurações', 'error')
   } finally {
@@ -1342,6 +1367,12 @@ const loadSettings = async () => {
 }
 
 const saveSettings = async () => {
+  // Validar zonas antes de salvar
+  if (!validateZones()) {
+    showAlert('Corrija os erros nas zonas de entrega antes de salvar', 'error')
+    return
+  }
+  
   try {
     submitting.value = true
     await authenticatedFetch('/api/settings', {
@@ -1379,9 +1410,10 @@ const addZone = () => {
     label: newLabel
   })
   
-  // Atualizar mapa
+  // Atualizar mapa e validar
   nextTick(() => {
     updateMapCircles()
+    validateZones()
   })
 }
 
@@ -1422,8 +1454,91 @@ const removeZone = (index) => {
     // Atualizar mapa
     nextTick(() => {
       updateMapCircles()
+      validateZones()
     })
   }
+}
+
+// Erros de validação das zonas
+const zoneValidationErrors = ref({})
+
+// Atualizar label da zona
+const updateZoneLabel = (index) => {
+  const zone = form.value.deliveryZones[index]
+  if (zone) {
+    zone.label = zone.fee === 0 
+      ? `Até ${zone.maxDistance}km - Grátis` 
+      : `Até ${zone.maxDistance}km - R$ ${zone.fee.toFixed(2)}`
+  }
+}
+
+// Funções para gerenciar CEPs restritos
+const addRestrictedCep = () => {
+  if (!form.value.restrictedZipCodes) {
+    form.value.restrictedZipCodes = []
+  }
+  form.value.restrictedZipCodes.push('')
+}
+
+const removeRestrictedCep = (index) => {
+  if (form.value.restrictedZipCodes && form.value.restrictedZipCodes.length > 0) {
+    form.value.restrictedZipCodes.splice(index, 1)
+  }
+}
+
+const formatCepInput = (index) => {
+  let cep = form.value.restrictedZipCodes[index]
+  if (!cep) return
+  
+  // Remove tudo que não é número
+  cep = cep.replace(/\D/g, '')
+  
+  // Aplica máscara
+  if (cep.length > 5) {
+    cep = cep.substring(0, 5) + '-' + cep.substring(5, 8)
+  }
+  
+  form.value.restrictedZipCodes[index] = cep
+}
+
+// Validar zonas de entrega
+const validateZones = () => {
+  zoneValidationErrors.value = {}
+  
+  if (form.value.deliveryZones.length < 1) {
+    return true
+  }
+  
+  // Criar cópia ordenada por distância
+  const sortedZones = [...form.value.deliveryZones]
+    .map((zone, index) => ({ ...zone, originalIndex: index }))
+    .sort((a, b) => a.maxDistance - b.maxDistance)
+  
+  let hasError = false
+  
+  // Validar que distâncias maiores têm valores maiores ou iguais
+  for (let i = 1; i < sortedZones.length; i++) {
+    const prevZone = sortedZones[i - 1]
+    const currentZone = sortedZones[i]
+    
+    // Se a distância atual é maior que a anterior, o valor deve ser maior ou igual
+    if (currentZone.maxDistance > prevZone.maxDistance && currentZone.fee < prevZone.fee) {
+      const errorKey = currentZone.originalIndex
+      zoneValidationErrors.value[errorKey] = 
+        `A taxa de entrega (R$ ${currentZone.fee.toFixed(2)}) não pode ser menor que a zona anterior (R$ ${prevZone.fee.toFixed(2)}) já que a distância é maior.`
+      hasError = true
+    }
+    
+    // Se a distância atual é menor que a anterior, o valor deve ser menor ou igual
+    if (currentZone.maxDistance < prevZone.maxDistance && currentZone.fee > prevZone.fee) {
+      const errorKey = currentZone.originalIndex
+      zoneValidationErrors.value[errorKey] = 
+        `A taxa de entrega (R$ ${currentZone.fee.toFixed(2)}) não pode ser maior que a zona anterior (R$ ${prevZone.fee.toFixed(2)}) já que a distância é menor.`
+      hasError = true
+    }
+  }
+  
+  return !hasError
 }
 
 const handleFileUpload = async (event, type) => {
@@ -1507,13 +1622,14 @@ const handleFileUpload = async (event, type) => {
 onMounted(async () => {
   await loadSettings()
   
-  // Aguardar o Leaflet carregar
+  // Aguardar o Leaflet carregar e o DOM estar pronto
   const checkLeaflet = setInterval(() => {
     if (typeof window !== 'undefined' && window.L) {
       clearInterval(checkLeaflet)
       nextTick(() => {
-        // Só inicializar mapa se tiver coordenadas
-        if (form.value.location.latitude && form.value.location.longitude) {
+        // Verificar se o container do mapa existe no DOM
+        const mapContainer = document.getElementById('delivery-map')
+        if (mapContainer && form.value.location.latitude && form.value.location.longitude) {
           initMap()
         }
       })
@@ -1652,6 +1768,16 @@ onUnmounted(() => {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   margin-top: var(--spacing-sm);
+}
+
+.form-group small.error-message {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.input-error {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
 }
 
 .char-count {
@@ -2083,6 +2209,109 @@ onUnmounted(() => {
   color: var(--color-success);
 }
 
+.info-banner.danger {
+  background: linear-gradient(135deg, #dc262620, #dc262610);
+  border-color: #dc2626;
+}
+
+.info-banner.danger svg {
+  color: #dc2626;
+}
+
+.danger-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: #dc2626;
+  color: white;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-left: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* CEPs Restritos */
+.restricted-ceps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.restricted-cep-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cep-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.cep-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.cep-input:focus {
+  outline: none;
+  border-color: #ff8e24;
+  box-shadow: 0 0 0 3px rgba(255, 142, 36, 0.1);
+}
+
+.btn-remove-cep {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #fee2e2;
+  border: 2px solid #fecaca;
+  border-radius: 0.5rem;
+  color: #dc2626;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-remove-cep:hover {
+  background: #fecaca;
+  border-color: #f87171;
+  transform: scale(1.05);
+}
+
+.btn-add-cep {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #fee2e2;
+  border: 2px solid #fecaca;
+  border-radius: 0.5rem;
+  color: #dc2626;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.btn-add-cep:hover {
+  background: #fecaca;
+  border-color: #f87171;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+}
+
 .delivery-preview {
   margin-top: var(--spacing-xl);
 }
@@ -2278,6 +2507,62 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 0.25rem;
   flex: 1;
+}
+
+.payment-methods-config {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.payment-method-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.payment-method-checkbox:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.payment-method-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #ff8e24;
+}
+
+.payment-method-checkbox input[type="checkbox"]:checked + .payment-method-label {
+  color: #1e293b;
+}
+
+.payment-method-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.payment-method-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #f3f4f6;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
 }
 
 .field-info label {

@@ -44,7 +44,10 @@ export default defineEventHandler(async (event) => {
       deliveryMaxTime,
       deliveryFee,
       minimumOrder,
-      checkoutFields
+      enabledPaymentMethods,
+      checkoutFields,
+      restrictedZipCodes,
+      manualOverride
     } = body;
     
     // Validações
@@ -171,7 +174,42 @@ export default defineEventHandler(async (event) => {
     if (deliveryMaxTime !== undefined) updateFields.deliveryMaxTime = parseInt(deliveryMaxTime);
     if (deliveryFee !== undefined) updateFields.deliveryFee = parseFloat(deliveryFee);
     if (minimumOrder !== undefined) updateFields.minimumOrder = parseFloat(minimumOrder);
+    if (enabledPaymentMethods !== undefined) {
+      // Validar estrutura de enabledPaymentMethods
+      if (typeof enabledPaymentMethods !== 'object' || enabledPaymentMethods === null) {
+        throw createError({
+          statusCode: 400,
+          message: "Métodos de pagamento habilitados devem ser um objeto válido",
+        });
+      }
+      updateFields.enabledPaymentMethods = enabledPaymentMethods;
+    }
     if (checkoutFields !== undefined) updateFields.checkoutFields = checkoutFields;
+    if (manualOverride !== undefined) {
+      // Validar que é um booleano ou null
+      if (manualOverride !== null && typeof manualOverride !== 'boolean') {
+        throw createError({
+          statusCode: 400,
+          message: "Override manual deve ser um booleano ou null",
+        });
+      }
+      updateFields.manualOverride = manualOverride;
+    }
+    if (restrictedZipCodes !== undefined) {
+      // Validar que é um array
+      if (!Array.isArray(restrictedZipCodes)) {
+        throw createError({
+          statusCode: 400,
+          message: "CEPs restritos devem ser um array",
+        });
+      }
+      // Limpar e validar CEPs (remover hífen e espaços)
+      const cleanedZipCodes = restrictedZipCodes
+        .map((zip: string) => (zip || '').replace(/\D/g, ''))
+        .filter((zip: string) => zip.length === 8)
+        .map((zip: string) => zip.substring(0, 5) + '-' + zip.substring(5, 8));
+      updateFields.restrictedZipCodes = cleanedZipCodes;
+    }
 
     const result = await settings.updateOne(
       { _id: "store-config" },
@@ -185,16 +223,22 @@ export default defineEventHandler(async (event) => {
     // Buscar a configuração atualizada
     const updatedConfig = await settings.findOne({ _id: "store-config" });
     
-    // Calcular se está aberto agora
-    const now = new Date();
-    const currentDay = now.getDay();
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    
-    const todaySchedule = updatedConfig.openingHours?.find((h: any) => h.day === currentDay);
+    // Calcular se está aberto agora (considerando override manual)
     let isOpen = false;
-    
-    if (todaySchedule && todaySchedule.enabled) {
-      isOpen = currentTime >= todaySchedule.open && currentTime <= todaySchedule.close;
+    if (updatedConfig.manualOverride !== undefined && updatedConfig.manualOverride !== null) {
+      // Se houver override manual, usar ele diretamente
+      isOpen = updatedConfig.manualOverride;
+    } else {
+      // Caso contrário, calcular baseado nos horários
+      const now = new Date();
+      const currentDay = now.getDay();
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      
+      const todaySchedule = updatedConfig.openingHours?.find((h: any) => h.day === currentDay);
+      
+      if (todaySchedule && todaySchedule.enabled) {
+        isOpen = currentTime >= todaySchedule.open && currentTime <= todaySchedule.close;
+      }
     }
     
     return { 

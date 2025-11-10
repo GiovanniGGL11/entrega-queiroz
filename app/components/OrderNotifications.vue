@@ -46,14 +46,14 @@
             </div>
             <div class="notification-content">
               <div class="notification-title">
-                Novo Pedido #{{ notification.order.orderNumber }}
+                Pedido #{{ notification.order.orderNumber }}
               </div>
               <div class="notification-details">
                 <span class="customer-name">{{ notification.order.customerInfo?.name || 'Cliente' }}</span>
                 <span class="notification-time">{{ formatTime(notification.createdAt) }}</span>
               </div>
               <div class="notification-total">
-                Total: {{ formatCurrency(notification.order.totalAmount) }}
+                {{ formatCurrency(notification.order.totalAmount) }}
               </div>
             </div>
             <div v-if="!notification.read" class="unread-indicator"></div>
@@ -219,17 +219,17 @@ const formatTime = (date) => {
 }
 
 .panel-header {
-  padding: 1.25rem;
+  padding: 1rem 1.25rem;
   border-bottom: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #f9fafb;
+  background: white;
 }
 
 .panel-header h3 {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
   color: #1e293b;
 }
@@ -264,10 +264,10 @@ const formatTime = (date) => {
 }
 
 .notification-item {
-  padding: 1rem 1.25rem;
+  padding: 0.875rem 1rem;
   border-bottom: 1px solid #f1f5f9;
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
@@ -278,14 +278,14 @@ const formatTime = (date) => {
 }
 
 .notification-item.unread {
-  background: #fef3c7;
-  border-left: 4px solid #FF6B35;
+  background: #fffbeb;
+  border-left: 3px solid #ff8e24;
 }
 
 .notification-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #FF6B35 0%, #ff8e24 100%);
+  width: 36px;
+  height: 36px;
+  background: #ff8e24;
   border-radius: 0.5rem;
   display: flex;
   align-items: center;
@@ -302,7 +302,7 @@ const formatTime = (date) => {
 .notification-title {
   font-weight: 600;
   color: #1e293b;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.375rem;
   font-size: 0.875rem;
 }
 
@@ -322,11 +322,12 @@ const formatTime = (date) => {
 
 .notification-time {
   color: #94a3b8;
+  font-size: 0.7rem;
 }
 
 .notification-total {
-  font-weight: 600;
-  color: #FF6B35;
+  font-weight: 700;
+  color: #ff8e24;
   font-size: 0.875rem;
 }
 
