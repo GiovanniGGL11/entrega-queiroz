@@ -203,10 +203,12 @@ export default defineEventHandler(async (event) => {
         );
         
         // Encontrar zona de entrega baseada na distância
-        const zone = storeSettings.deliveryZones.find(z => distance <= z.maxDistance);
+        // Ordenar zonas por distância máxima (menor primeiro) para pegar a zona mais próxima
+        const sortedZones = [...storeSettings.deliveryZones].sort((a, b) => a.maxDistance - b.maxDistance);
+        const zone = sortedZones.find(z => distance <= z.maxDistance);
         if (zone) {
           realDeliveryFee = zone.fee;
-          deliveryZone = zone.name;
+          deliveryZone = zone.name || zone.label;
           estimatedTime = `${storeSettings.deliveryMinTime || 30}-${storeSettings.deliveryMaxTime || 60} min`;
         } else {
           throw createError({
@@ -315,7 +317,12 @@ export default defineEventHandler(async (event) => {
     // Verificar estoque dos produtos usando dados validados
     for (const item of validatedItems) {
       if (item.productId) {
-        const inventoryItem = await inventory.findOne({ productId: item.productId });
+        // O productId no inventário é armazenado como string, então converter ObjectId para string
+        const productIdString = item.productId instanceof ObjectId 
+          ? item.productId.toString() 
+          : String(item.productId);
+        
+        const inventoryItem = await inventory.findOne({ productId: productIdString });
         if (inventoryItem && inventoryItem.currentStock < item.quantity) {
           throw createError({
             statusCode: 400,
@@ -384,19 +391,36 @@ export default defineEventHandler(async (event) => {
     // Atualizar estoque dos produtos usando dados validados
     for (const item of validatedItems) {
       if (item.productId) {
-        await inventory.updateOne(
-          { productId: item.productId },
-          { 
-            $inc: { 
-              currentStock: -item.quantity,
-              totalSold: item.quantity
-            },
-            $set: { 
-              lastUpdated: new Date(),
-              updatedAt: new Date()
+        try {
+          // O productId no inventário é armazenado como string, então converter ObjectId para string
+          const productIdString = item.productId instanceof ObjectId 
+            ? item.productId.toString() 
+            : String(item.productId);
+          
+          const updateResult = await inventory.updateOne(
+            { productId: productIdString },
+            { 
+              $inc: { 
+                currentStock: -item.quantity,
+                totalSold: item.quantity
+              },
+              $set: { 
+                lastUpdated: new Date(),
+                updatedAt: new Date()
+              }
             }
+          );
+          
+          // Log para debug se não encontrou o produto no inventário
+          if (updateResult.matchedCount === 0) {
+            console.warn(`[Orders POST] Produto ${productIdString} não encontrado no inventário para atualização de estoque`);
+          } else {
+            console.log(`[Orders POST] Estoque atualizado para produto ${productIdString}: -${item.quantity} unidades`);
           }
-        );
+        } catch (stockError) {
+          // Log do erro mas não falhar o pedido
+          console.error(`[Orders POST] Erro ao atualizar estoque do produto ${item.productId}:`, stockError);
+        }
       }
     }
     

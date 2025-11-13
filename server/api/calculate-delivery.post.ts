@@ -171,7 +171,8 @@ export default defineEventHandler(async (event) => {
       let deliveryZone = null;
       let canDeliver = false;
       
-      // Ordenar zonas por distância máxima
+      // Ordenar zonas por distância máxima (menor primeiro) para garantir que pegamos a zona mais próxima
+      // Isso garante que uma distância de 1km use a zona de 1km (se existir) e não uma zona maior
       const sortedZones = [...deliveryZones].sort((a, b) => a.maxDistance - b.maxDistance);
       
       for (const zone of sortedZones) {

@@ -250,6 +250,13 @@ export default defineEventHandler(async (event) => {
       whatsapp: storeSettings.whatsapp || "",
       storeLatitude: storeSettings.location?.latitude || storeSettings.storeLatitude || -23.5505,
       storeLongitude: storeSettings.location?.longitude || storeSettings.storeLongitude || -46.6333,
+      enabledPaymentMethods: (storeSettings.enabledPaymentMethods && typeof storeSettings.enabledPaymentMethods === 'object')
+        ? storeSettings.enabledPaymentMethods
+        : {
+            pix: true,
+            dinheiro: true,
+            cartao: true
+          },
       checkoutFields: (storeSettings.checkoutFields && typeof storeSettings.checkoutFields === 'object')
         ? storeSettings.checkoutFields
         : {
@@ -303,6 +310,13 @@ export default defineEventHandler(async (event) => {
       whatsapp: String(result.whatsapp || ""),
       storeLatitude: Number(result.storeLatitude || -23.5505),
       storeLongitude: Number(result.storeLongitude || -46.6333),
+      enabledPaymentMethods: (result.enabledPaymentMethods && typeof result.enabledPaymentMethods === 'object')
+        ? JSON.parse(JSON.stringify(result.enabledPaymentMethods)) // Garantir serialização
+        : {
+            pix: true,
+            dinheiro: true,
+            cartao: true
+          },
       checkoutFields: (result.checkoutFields && typeof result.checkoutFields === 'object') 
         ? JSON.parse(JSON.stringify(result.checkoutFields)) // Garantir serialização
         : {

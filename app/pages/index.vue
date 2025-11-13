@@ -18,7 +18,7 @@ const { cart, cartCount, cartSubtotal, cartTotal, addToCart: addToCartComposable
 const showSidebar = ref(false);
 
 // Estado da navegação
-const selectedCategory = ref("artesanal");
+const selectedCategory = ref(null);
 const searchQuery = ref("");
 
 // Estado do cupom
@@ -120,21 +120,38 @@ const loadCategories = async () => {
     const apiCategories = await $fetch('/api/categories-with-products')
     
     // Mapear categorias da API para o formato esperado
-    categories.value = apiCategories.map(cat => ({
-      id: cat._id,
-      name: cat.name,
-      items: cat.items || [] // Já vem com os produtos
-    }))
+    // Filtrar categorias e produtos ocultos no frontend também (segurança dupla)
+    categories.value = apiCategories
+      .filter(cat => cat.isVisible !== false) // Filtrar categorias ocultas
+      .map(cat => ({
+        id: cat._id,
+        name: cat.name,
+        items: (cat.items || [])
+          .filter(item => item.isVisible !== false) // Filtrar produtos ocultos
+          .map(item => ({
+            ...item,
+            id: item.id || item._id || item._id?.toString() // Garantir que tem id
+          }))
+      }))
+      .filter(cat => cat.items && cat.items.length > 0) // Remover categorias vazias
     
-    // Selecionar a primeira categoria se houver
+    // Selecionar a primeira categoria visível se houver
     if (categories.value.length > 0) {
-      selectedCategory.value = categories.value[0].id
+      // Verificar se a categoria selecionada ainda existe, senão selecionar a primeira
+      const currentCategoryExists = categories.value.some(cat => cat.id === selectedCategory.value)
+      if (!currentCategoryExists) {
+        selectedCategory.value = categories.value[0].id
+      }
+    } else {
+      // Se não há categorias, limpar seleção
+      selectedCategory.value = null
     }
     
     categoriesLoaded.value = true
   } catch (error) {
     console.error('Erro ao carregar categorias:', error)
     categories.value = []
+    selectedCategory.value = null
     categoriesLoaded.value = true
   } finally {
     loadingCategories.value = false
@@ -150,10 +167,29 @@ const loadCategoryProducts = async (categoryId) => {
       const apiCategories = await $fetch('/api/categories-with-products')
       const apiCategory = apiCategories.find(cat => cat._id === categoryId)
       
-      if (apiCategory) {
+      if (apiCategory && apiCategory.isVisible !== false) {
         const categoryIndex = categories.value.findIndex(cat => cat.id === categoryId)
         if (categoryIndex !== -1) {
-          categories.value[categoryIndex].items = apiCategory.items || []
+          // Filtrar produtos ocultos
+          const visibleItems = (apiCategory.items || [])
+            .filter(item => item.isVisible !== false)
+            .map(item => ({
+              ...item,
+              id: item.id || item._id || item._id?.toString()
+            }))
+          
+          categories.value[categoryIndex].items = visibleItems
+          
+          // Se a categoria ficou vazia após filtrar, removê-la
+          if (visibleItems.length === 0) {
+            categories.value.splice(categoryIndex, 1)
+            // Selecionar outra categoria se necessário
+            if (selectedCategory.value === categoryId && categories.value.length > 0) {
+              selectedCategory.value = categories.value[0].id
+            } else if (categories.value.length === 0) {
+              selectedCategory.value = null
+            }
+          }
         }
       }
     }
@@ -163,8 +199,14 @@ const loadCategoryProducts = async (categoryId) => {
 }
 // Computeds
 const filteredCategories = computed(() => {
-  // Filtrar categorias vazias primeiro
-  let filtered = categories.value.filter((cat) => cat.items && cat.items.length > 0);
+  // Filtrar categorias e produtos ocultos primeiro
+  let filtered = categories.value
+    .filter((cat) => cat.isVisible !== false) // Garantir que categoria está visível
+    .map((cat) => ({
+      ...cat,
+      items: (cat.items || []).filter((item) => item.isVisible !== false) // Filtrar produtos ocultos
+    }))
+    .filter((cat) => cat.items && cat.items.length > 0); // Remover categorias vazias
 
   // Se houver busca, filtrar também os produtos
   if (searchQuery.value.trim()) {
@@ -174,11 +216,22 @@ const filteredCategories = computed(() => {
         ...cat,
         items: cat.items.filter(
           (item) =>
-            item.name.toLowerCase().includes(query) ||
-            item.description.toLowerCase().includes(query)
+            item.isVisible !== false && // Garantir que produto está visível
+            (item.name?.toLowerCase().includes(query) ||
+            item.description?.toLowerCase().includes(query))
         ),
       }))
-      .filter((cat) => cat.items.length > 0);
+      .filter((cat) => cat.items && cat.items.length > 0);
+  }
+
+  // Verificar se a categoria selecionada ainda existe após filtros
+  if (selectedCategory.value && !filtered.some(cat => cat.id === selectedCategory.value)) {
+    // Se não existe, selecionar a primeira disponível
+    if (filtered.length > 0) {
+      selectedCategory.value = filtered[0].id;
+    } else {
+      selectedCategory.value = null;
+    }
   }
 
   return filtered;
@@ -230,7 +283,10 @@ const setupIntersectionObserver = () => {
 
     if (mostVisible?.intersectionRatio > 0.1) {
       const categoryId = mostVisible.target.id.replace("category-", "");
-      selectedCategory.value = categoryId;
+      // Verificar se a categoria existe nas categorias filtradas antes de selecionar
+      if (filteredCategories.value.some(cat => cat.id === categoryId)) {
+        selectedCategory.value = categoryId;
+      }
     }
   }, options);
 
@@ -360,6 +416,30 @@ const checkMobile = () => {
 watch(searchQuery, () => {
   if (observer) setupIntersectionObserver();
 });
+
+// Watcher para garantir que a categoria selecionada sempre existe
+watch(filteredCategories, (newCategories) => {
+  // Se não há categorias, limpar seleção
+  if (newCategories.length === 0) {
+    selectedCategory.value = null;
+    return;
+  }
+  
+  // Se a categoria selecionada não existe mais, selecionar a primeira
+  if (selectedCategory.value && !newCategories.some(cat => cat.id === selectedCategory.value)) {
+    selectedCategory.value = newCategories[0].id;
+  }
+  
+  // Se não há categoria selecionada, selecionar a primeira
+  if (!selectedCategory.value && newCategories.length > 0) {
+    selectedCategory.value = newCategories[0].id;
+  }
+  
+  // Atualizar o IntersectionObserver quando as categorias mudarem
+  nextTick(() => {
+    setupIntersectionObserver();
+  });
+}, { immediate: true });
 
 watch(selectedCategory, (newCategoryId) => {
   // Rolar a barra de categorias horizontalmente para mostrar a categoria ativa
