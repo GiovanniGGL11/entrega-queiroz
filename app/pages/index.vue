@@ -34,8 +34,22 @@ const { showImageOverlay, currentImageUrl, openImageOverlay, closeImageOverlay }
 // Estado do modal de informações da loja
 const showStoreInfoModal = ref(false)
 
+// Estado do modal de aviso
+const alertModal = ref({
+  show: false,
+  title: '',
+  message: '',
+  type: 'warning' // 'warning', 'error', 'info'
+})
+
 // Estado da barra de categorias fixa
 const showFixedCategoryBar = ref(false)
+
+// Estado para controlar se está no topo da página
+const isAtTop = ref(true)
+
+// Estado do modal de conta
+const showAccountModal = ref(false)
 
 // Dados das categorias
 const categories = ref([])
@@ -62,6 +76,19 @@ const storeSettings = ref({
 const initialLoading = ref(true)
 const settingsLoaded = ref(false)
 const categoriesLoaded = ref(false)
+
+// Helper para normalizar IDs (garantir que sempre seja string)
+const normalizeId = (id) => {
+  if (!id) return null
+  if (typeof id === 'string') return id
+  if (id && typeof id.toString === 'function') return id.toString()
+  return String(id)
+}
+
+// Helper para comparar IDs (funciona com string e ObjectId)
+const compareIds = (id1, id2) => {
+  return normalizeId(id1) === normalizeId(id2)
+}
 
 // Carregar configurações da loja
 const loadStoreSettings = async () => {
@@ -123,24 +150,38 @@ const loadCategories = async () => {
     // Filtrar categorias e produtos ocultos no frontend também (segurança dupla)
     categories.value = apiCategories
       .filter(cat => cat.isVisible !== false) // Filtrar categorias ocultas
-      .map(cat => ({
-        id: cat._id,
-        name: cat.name,
-        items: (cat.items || [])
-          .filter(item => item.isVisible !== false) // Filtrar produtos ocultos
-          .map(item => ({
-            ...item,
-            id: item.id || item._id || item._id?.toString() // Garantir que tem id
-          }))
-      }))
+      .map(cat => {
+        const normalizedCatId = normalizeId(cat._id || cat.id)
+        return {
+          id: normalizedCatId,
+          _id: normalizedCatId, // Manter ambos para compatibilidade
+          name: cat.name,
+          isVisible: cat.isVisible !== false, // Normalizar para boolean explícito
+          items: (cat.items || [])
+            .filter(item => item.isVisible !== false) // Filtrar produtos ocultos
+            .map(item => {
+              const normalizedItemId = normalizeId(item.id || item._id)
+              return {
+                ...item,
+                id: normalizedItemId,
+                _id: normalizedItemId, // Manter ambos para compatibilidade
+                isVisible: item.isVisible !== false // Normalizar para boolean explícito
+              }
+            })
+        }
+      })
       .filter(cat => cat.items && cat.items.length > 0) // Remover categorias vazias
     
     // Selecionar a primeira categoria visível se houver
     if (categories.value.length > 0) {
       // Verificar se a categoria selecionada ainda existe, senão selecionar a primeira
-      const currentCategoryExists = categories.value.some(cat => cat.id === selectedCategory.value)
+      const normalizedSelectedCategory = normalizeId(selectedCategory.value)
+      const currentCategoryExists = categories.value.some(cat => compareIds(cat.id, normalizedSelectedCategory))
       if (!currentCategoryExists) {
         selectedCategory.value = categories.value[0].id
+      } else {
+        // Garantir que selectedCategory está normalizado
+        selectedCategory.value = normalizedSelectedCategory
       }
     } else {
       // Se não há categorias, limpar seleção
@@ -161,22 +202,28 @@ const loadCategories = async () => {
 // OTIMIZAÇÃO: Lazy loading para produtos de categoria específica
 const loadCategoryProducts = async (categoryId) => {
   try {
-    const category = categories.value.find(cat => cat.id === categoryId)
+    const normalizedCategoryId = normalizeId(categoryId)
+    const category = categories.value.find(cat => compareIds(cat.id, normalizedCategoryId))
     if (!category || category.items.length === 0) {
       // Se não tem produtos carregados, buscar da API
       const apiCategories = await $fetch('/api/categories-with-products')
-      const apiCategory = apiCategories.find(cat => cat._id === categoryId)
+      const apiCategory = apiCategories.find(cat => compareIds(cat._id || cat.id, normalizedCategoryId))
       
       if (apiCategory && apiCategory.isVisible !== false) {
-        const categoryIndex = categories.value.findIndex(cat => cat.id === categoryId)
+        const categoryIndex = categories.value.findIndex(cat => compareIds(cat.id, normalizedCategoryId))
         if (categoryIndex !== -1) {
-          // Filtrar produtos ocultos
+          // Filtrar produtos ocultos e normalizar IDs
           const visibleItems = (apiCategory.items || [])
             .filter(item => item.isVisible !== false)
-            .map(item => ({
-              ...item,
-              id: item.id || item._id || item._id?.toString()
-            }))
+            .map(item => {
+              const normalizedItemId = normalizeId(item.id || item._id)
+              return {
+                ...item,
+                id: normalizedItemId,
+                _id: normalizedItemId,
+                isVisible: item.isVisible !== false
+              }
+            })
           
           categories.value[categoryIndex].items = visibleItems
           
@@ -184,7 +231,7 @@ const loadCategoryProducts = async (categoryId) => {
           if (visibleItems.length === 0) {
             categories.value.splice(categoryIndex, 1)
             // Selecionar outra categoria se necessário
-            if (selectedCategory.value === categoryId && categories.value.length > 0) {
+            if (compareIds(selectedCategory.value, normalizedCategoryId) && categories.value.length > 0) {
               selectedCategory.value = categories.value[0].id
             } else if (categories.value.length === 0) {
               selectedCategory.value = null
@@ -225,7 +272,8 @@ const filteredCategories = computed(() => {
   }
 
   // Verificar se a categoria selecionada ainda existe após filtros
-  if (selectedCategory.value && !filtered.some(cat => cat.id === selectedCategory.value)) {
+  const normalizedSelectedCategory = normalizeId(selectedCategory.value)
+  if (normalizedSelectedCategory && !filtered.some(cat => compareIds(cat.id, normalizedSelectedCategory))) {
     // Se não existe, selecionar a primeira disponível
     if (filtered.length > 0) {
       selectedCategory.value = filtered[0].id;
@@ -283,9 +331,10 @@ const setupIntersectionObserver = () => {
 
     if (mostVisible?.intersectionRatio > 0.1) {
       const categoryId = mostVisible.target.id.replace("category-", "");
+      const normalizedCategoryId = normalizeId(categoryId);
       // Verificar se a categoria existe nas categorias filtradas antes de selecionar
-      if (filteredCategories.value.some(cat => cat.id === categoryId)) {
-        selectedCategory.value = categoryId;
+      if (filteredCategories.value.some(cat => compareIds(cat.id, normalizedCategoryId))) {
+        selectedCategory.value = normalizedCategoryId;
       }
     }
   }, options);
@@ -303,8 +352,9 @@ const setupIntersectionObserver = () => {
 
 // Navegação
 const scrollToCategory = (categoryId) => {
-  selectedCategory.value = categoryId;
-  const element = document.getElementById(`category-${categoryId}`);
+  const normalizedCategoryId = normalizeId(categoryId);
+  selectedCategory.value = normalizedCategoryId;
+  const element = document.getElementById(`category-${normalizedCategoryId}`);
 
   if (element) {
     const offset = 80; // Ajustado para compensar a barra de categorias fixa
@@ -341,9 +391,30 @@ const updateComplement = (name, delta) => {
   );
 };
 
+// Função para mostrar modal de aviso
+const showAlert = (title, message, type = 'warning') => {
+  alertModal.value = {
+    show: true,
+    title,
+    message,
+    type
+  }
+}
+
+const closeAlert = () => {
+  alertModal.value.show = false
+}
+
 // Carrinho
 const addToCart = () => {
   if (!selectedItem.value) return;
+  
+  // Verificar se a loja está aberta antes de permitir adicionar ao carrinho
+  if (!storeSettings.value.isOpen) {
+    showAlert('Loja Fechada', 'A loja está fechada no momento. Não é possível adicionar itens ao carrinho.', 'warning')
+    closeModal();
+    return;
+  }
 
   const complements = Object.entries(complementsQty.value)
     .filter(([_, qty]) => qty > 0)
@@ -367,6 +438,16 @@ const closeSidebar = () => {
 };
 
 const finalizeOrder = () => {
+  // Verificar se a loja está aberta antes de permitir finalizar
+  if (!storeSettings.value.isOpen) {
+    showAlert('Loja Fechada', 'A loja está fechada no momento. Pedidos não podem ser realizados.', 'warning')
+    return;
+  }
+  
+  if (cartCount.value === 0) {
+    return;
+  }
+  
   closeSidebar();
   navigateTo('/checkout');
 };
@@ -379,12 +460,33 @@ const closeStoreInfoModal = () => {
   showStoreInfoModal.value = false;
 };
 
+// Função para scroll até o topo
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+// Função para abrir modal de conta
+const openAccountModal = () => {
+  // Por enquanto, apenas mostra um alerta. Pode ser expandido depois
+  showAlert('Conta', 'Funcionalidade de conta em desenvolvimento.', 'info');
+};
+
+// Função para fechar modal de conta
+const closeAccountModal = () => {
+  showAccountModal.value = false;
+};
+
+// Verificar posição do scroll para destacar botão Início
+const handleScrollForNavbar = () => {
+  isAtTop.value = window.scrollY < 100;
+};
+
 const applyCoupon = () => {
   const subtotal = cartSubtotal.value;
   if (couponCode.value.toUpperCase() === "DESCONTO10") {
     discountAmount.value = subtotal * 0.1;
   } else {
-    alert("Cupom inválido");
+    showAlert('Cupom Inválido', 'O cupom informado não é válido. Verifique e tente novamente.', 'error')
     discountAmount.value = 0;
   }
   couponCode.value = "";
@@ -395,6 +497,8 @@ const handleKeydown = (event) => {
   if (event.key === "Escape") {
     if (showImageOverlay.value) {
       closeImageOverlay();
+    } else if (alertModal.value.show) {
+      closeAlert();
     } else if (selectedItem.value) {
       closeModal();
     } else if (showSidebar.value) {
@@ -497,6 +601,8 @@ const handleScroll = () => {
       // Mostrar barra fixa quando a barra original sair da tela (com margem de 10px)
       showFixedCategoryBar.value = rect.top < -10
     }
+    // Atualizar estado do botão Início na navbar
+    handleScrollForNavbar()
     scrollTimeout = null
   })
 }
@@ -722,8 +828,8 @@ useHead({
     </div>
   </div>
 
-  <!-- Floating Cart Button -->
-  <button v-if="cart.length > 0" class="floating-cart-btn" @click="openSidebar">
+  <!-- Floating Cart Button - Escondido quando navbar está visível -->
+  <button v-if="cart.length > 0 && !isMobile" class="floating-cart-btn" @click="openSidebar">
     <div class="left-side">
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -742,7 +848,7 @@ useHead({
   </button>
 
   <!-- Footer Melhorado -->
-  <footer class="footer">
+  <footer class="footer" :class="{ 'has-cart': cart.length > 0 }">
     <div class="footer-bottom">
       <p>
         &copy; {{ new Date().getFullYear() }} Queiroz Hamburgueria. Desenvolvido
@@ -757,6 +863,46 @@ useHead({
     </div>
   </footer>
   </div>
+
+  <!-- Navbar Fixa no Bottom -->
+  <nav class="bottom-navbar">
+    <button class="nav-item" @click="scrollToTop" :class="{ active: isAtTop }">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>Início</span>
+    </button>
+    
+    <button class="nav-item" @click="openSidebar" :class="{ active: showSidebar }">
+      <div class="nav-badge-wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <path d="M16 10a4 4 0 0 1-8 0"></path>
+        </svg>
+        <span v-if="cartCount > 0" class="nav-badge">{{ cartCount }}</span>
+      </div>
+      <span>Carrinho</span>
+    </button>
+    
+    <button class="nav-item" @click="openAccountModal">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Conta</span>
+    </button>
+    
+    <button class="nav-item" @click="openStoreInfoModal" :class="{ active: showStoreInfoModal }">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+      </svg>
+      <span>Informações</span>
+    </button>
+  </nav>
 
   <!-- Sidebar Overlay + Sidebar (teleportados para body) -->
   <Teleport to="body">
@@ -860,12 +1006,22 @@ useHead({
         <span class="total-label">Total</span>
         <span class="total-value">{{ formatPrice(cartTotal) }}</span>
       </div>
-      <button class="finalize-btn" @click="finalizeOrder" :disabled="cartCount === 0">
+      <button 
+        class="finalize-btn" 
+        @click="finalizeOrder" 
+        :disabled="cartCount === 0 || !storeSettings.isOpen"
+        :title="!storeSettings.isOpen ? 'A loja está fechada. Pedidos não podem ser realizados.' : (cartCount === 0 ? 'Carrinho vazio' : 'Finalizar pedido')"
+      >
         <span class="btn-content">
-          <svg v-if="cartCount > 0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+          <svg v-if="cartCount > 0 && storeSettings.isOpen" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
             <path fill="currentColor" d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2s-.9-2-2-2m10 0c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2s2-.9 2-2s-.9-2-2-2m-8.9-5h7.45c.75 0 1.41-.41 1.75-1.03L21 4.96L19.25 4l-3.7 7H8.53L4.27 2H1v2h2l3.6 7.59l-1.35 2.44C4.52 15.37 5.48 17 7 17h12v-2H7zM12 2l4 4l-4 4l-1.41-1.41L12.17 7H8V5h4.17l-1.59-1.59z"/>
           </svg>
-          {{ cartCount > 0 ? 'Finalizar Pedido' : 'Carrinho vazio' }}
+          <svg v-else-if="!storeSettings.isOpen" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+            <line x1="9" y1="9" x2="15" y2="15"></line>
+          </svg>
+          {{ !storeSettings.isOpen ? 'Loja Fechada' : (cartCount > 0 ? 'Finalizar Pedido' : 'Carrinho vazio') }}
         </span>
       </button>
     </div>
@@ -971,6 +1127,44 @@ useHead({
     :storeSettings="storeSettings"
     @close="closeStoreInfoModal"
   />
+  
+  <!-- Modal de Alerta -->
+  <Teleport to="body">
+    <Transition name="modal">
+      <div v-if="alertModal.show" class="alert-modal-overlay" @click="closeAlert">
+        <div class="alert-modal" @click.stop>
+          <div class="alert-modal-header">
+            <div class="alert-icon" :class="alertModal.type">
+              <svg v-if="alertModal.type === 'warning'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              <svg v-else-if="alertModal.type === 'error'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 16v-4"></path>
+                <path d="M12 8h.01"></path>
+              </svg>
+            </div>
+            <h3>{{ alertModal.title }}</h3>
+          </div>
+          <div class="alert-modal-content">
+            <p>{{ alertModal.message }}</p>
+          </div>
+          <div class="alert-modal-actions">
+            <button @click="closeAlert" class="alert-btn-ok">
+              Entendi
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -992,6 +1186,7 @@ useHead({
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
+  padding-bottom: 70px; /* Espaço para a navbar fixa */
 }
 body {
   overflow-x: hidden; /* Previne scroll horizontal global */
@@ -1477,10 +1672,15 @@ body {
 .footer {
   width: 100%;
   /* background: #f8f9fa; */
-  padding: 2rem 0 1.5rem;
+  padding: 4rem 0 1.5rem;
   color: #666;
   font-size: 0.875rem;
-  margin-top: auto;
+  margin-top: 3rem;
+  padding-bottom: calc(1.5rem + 70px); /* Espaço padrão + altura da navbar */
+}
+
+.footer.has-cart {
+  padding-bottom: calc(6rem + 70px); /* Espaço extra com carrinho + altura da navbar */
 }
 
 .footer-content {
@@ -1549,10 +1749,90 @@ body {
   text-decoration: underline;
 }
 
-/* Floating Cart Button */
+/* Bottom Navbar */
+.bottom-navbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0.5rem 0;
+  z-index: 100;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s;
+  position: relative;
+  min-width: 60px;
+}
+
+.nav-item svg {
+  width: 24px;
+  height: 24px;
+  transition: all 0.2s;
+}
+
+.nav-item span {
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.nav-item:hover {
+  color: #ff8e24;
+}
+
+.nav-item.active {
+  color: #ff8e24;
+}
+
+.nav-item.active svg {
+  transform: scale(1.1);
+}
+
+.nav-badge-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: 2px solid white;
+}
+
+/* Floating Cart Button - Esconder quando navbar estiver visível */
 .floating-cart-btn {
   position: fixed;
-  bottom: 20px;
+  bottom: 80px; /* Acima da navbar */
   left: 50%;
   transform: translateX(-50%);
   background: #ff8e24;
@@ -2174,6 +2454,126 @@ body {
   transform: scale(0.9);
 }
 
+/* Modal de Alerta */
+.alert-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.alert-modal {
+  background: white;
+  border-radius: 1rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: alertModalSlideIn 0.3s ease-out;
+}
+
+@keyframes alertModalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.alert-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+}
+
+.alert-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.alert-icon.warning {
+  background: #fbbf24;
+  color: #92400e;
+}
+
+.alert-icon.error {
+  background: #ef4444;
+  color: white;
+}
+
+.alert-icon.info {
+  background: #3b82f6;
+  color: white;
+}
+
+.alert-modal-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+  flex: 1;
+}
+
+.alert-modal-content {
+  padding: 1.5rem;
+}
+
+.alert-modal-content p {
+  margin: 0;
+  color: #374151;
+  line-height: 1.6;
+  font-size: 0.9375rem;
+}
+
+.alert-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  justify-content: flex-end;
+}
+
+.alert-btn-ok {
+  padding: 0.75rem 1.5rem;
+  background: #ff8e24;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 100px;
+}
+
+.alert-btn-ok:hover {
+  background: #e67e22;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 142, 36, 0.3);
+}
+
+.alert-btn-ok:active {
+  transform: translateY(0);
+}
+
 .image-overlay-enter-active,
 .image-overlay-leave-active {
   transition: opacity 0.3s ease;
@@ -2209,7 +2609,12 @@ body {
   }
 
   .footer {
-    padding: 1.5rem 0 1rem;
+    padding: 3rem 0 calc(1rem + 70px);
+    margin-top: 2rem;
+  }
+
+  .footer.has-cart {
+    padding-bottom: calc(5rem + 70px); /* Espaço extra no mobile quando há itens no carrinho + navbar */
   }
 
   .footer-content {
@@ -2384,13 +2789,43 @@ body {
   }
 
   .footer {
-    padding: 1.5rem 0 1rem;
+    padding: 3rem 0 calc(1rem + 70px);
+    margin-top: 2rem;
+  }
+
+  .footer.has-cart {
+    padding-bottom: calc(5rem + 70px); /* Espaço extra em telas muito pequenas quando há itens no carrinho + navbar */
   }
 
   .footer-content {
     margin-bottom: 1rem;
     padding: 0 0.5rem;
     gap: 1.5rem;
+  }
+
+  /* Ajustar navbar em telas pequenas */
+  .bottom-navbar {
+    padding: 0.5rem 0;
+  }
+
+  .nav-item {
+    padding: 0.5rem 0.5rem;
+    min-width: 50px;
+  }
+
+  .nav-item span {
+    font-size: 0.7rem;
+  }
+
+  .nav-item svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .floating-cart-btn {
+    bottom: 75px; /* Ajustar para telas pequenas */
+    width: calc(100% - 2rem);
+    max-width: 300px;
   }
 
   .footer-section h4 {

@@ -86,6 +86,50 @@
           <p class="status-text">{{ getStatusText() }}</p>
         </div>
 
+        <!-- Modo de Operação -->
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <div class="toggle-wrapper">
+            <div class="toggle-info">
+              <label for="storeMode" class="toggle-label">Modo de Operação</label>
+              <small>Escolha como a loja será aberta e fechada</small>
+            </div>
+            <div class="mode-selector">
+              <label class="mode-option" :class="{ active: form.storeMode === 'automatic' }">
+                <input
+                  type="radio"
+                  v-model="form.storeMode"
+                  value="automatic"
+                  name="storeMode"
+                />
+                <div class="mode-content">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  <span>Automático</span>
+                </div>
+                <small>Baseado nos horários configurados</small>
+              </label>
+              <label class="mode-option" :class="{ active: form.storeMode === 'manual' }">
+                <input
+                  type="radio"
+                  v-model="form.storeMode"
+                  value="manual"
+                  name="storeMode"
+                />
+                <div class="mode-content">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  <span>Manual</span>
+                </div>
+                <small>Controle manual na sidebar</small>
+              </label>
+            </div>
+          </div>
+        </div>
+
         <div class="opening-hours">
           <div v-for="schedule in form.openingHours" :key="schedule.day" class="day-schedule">
             <div class="day-header">
@@ -873,9 +917,13 @@
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import ImageOverlay from '~/components/ImageOverlay.vue'
 import { useImageOverlay } from '~/composables/useImageOverlay'
+import { useStoreStatus } from '~/composables/useStoreStatus'
 
 // Image overlay
 const { showImageOverlay, currentImageUrl, openImageOverlay, closeImageOverlay } = useImageOverlay()
+
+// Store status composable
+const { updateStoreMode, reloadStoreStatus } = useStoreStatus()
 
 definePageMeta({
   layout: 'dashboard'
@@ -933,6 +981,7 @@ const form = ref({
   deliveryMaxTime: 60,
   deliveryFee: 5.00,
   minimumOrder: 0,
+  storeMode: 'automatic', // 'automatic' ou 'manual'
   enabledPaymentMethods: {
     pix: true,
     dinheiro: true,
@@ -1344,6 +1393,7 @@ const loadSettings = async () => {
       deliveryMaxTime: response.deliveryMaxTime || 60,
       deliveryFee: response.deliveryFee || 0,
       minimumOrder: response.minimumOrder || 0,
+      storeMode: response.storeMode || 'automatic',
       enabledPaymentMethods: response.enabledPaymentMethods || {
         pix: true,
         dinheiro: true,
@@ -1375,12 +1425,44 @@ const saveSettings = async () => {
   
   try {
     submitting.value = true
+    
+    // Preparar dados para envio
+    const dataToSave = { ...form.value }
+    
+    // Se o modo for automático, garantir que manualOverride seja null
+    if (dataToSave.storeMode === 'automatic') {
+      dataToSave.manualOverride = null
+    }
+    
     await authenticatedFetch('/api/settings', {
       method: 'PUT',
-      body: form.value
+      body: dataToSave
     })
     originalForm.value = JSON.parse(JSON.stringify(form.value))
+    
+    // Atualizar estado global usando o composable ANTES de mostrar o alerta
+    // Isso garante que a sidebar seja atualizada imediatamente
+    updateStoreMode(dataToSave.storeMode)
+    
+    // Aguardar nextTick para garantir que a reatividade foi processada
+    await nextTick()
+    
+    // Recarregar status completo do backend (isso vai atualizar manualOverride e isStoreOpen também)
+    await reloadStoreStatus()
+    
+    // Aguardar novamente para garantir que todas as atualizações foram processadas
+    await nextTick()
+    
     showAlert('Configurações salvas com sucesso!', 'success')
+    
+    // Disparar evento para atualizar a sidebar (fallback adicional)
+    if (process.client) {
+      // Pequeno delay para garantir que o estado foi atualizado
+      await nextTick()
+      window.dispatchEvent(new CustomEvent('store-settings-updated', {
+        detail: { storeMode: dataToSave.storeMode }
+      }))
+    }
   } catch (error) {
     showAlert(error.data?.message || 'Erro ao salvar configurações', 'error')
   } finally {
@@ -1657,6 +1739,14 @@ watch(() => addressFields.value, () => {
   syncAddressFromFields()
 }, { deep: true })
 
+// Watcher para limpar manualOverride quando mudar para modo automático
+watch(() => form.value.storeMode, (newMode) => {
+  if (newMode === 'automatic') {
+    // Quando mudar para automático, limpar o override manual
+    // Isso será salvo quando o usuário salvar as configurações
+  }
+})
+
 // Fechar modal com ESC
 const handleEscKey = (event) => {
   if (event.key === 'Escape') {
@@ -1791,8 +1881,94 @@ onUnmounted(() => {
 /* Toggle Switch */
 .toggle-wrapper {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--spacing-lg);
+}
+
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.toggle-label {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+}
+
+.toggle-info small {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* Mode Selector */
+.mode-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-md);
+}
+
+.mode-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
+  border: 2px solid var(--color-border-medium);
+  border-radius: var(--radius-md);
+  background: white;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  position: relative;
+}
+
+.mode-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.mode-option:hover {
+  border-color: var(--color-primary);
+  background: var(--color-bg-secondary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.mode-option.active {
+  border-color: var(--color-primary);
+  background: linear-gradient(135deg, rgba(255, 142, 36, 0.1) 0%, rgba(255, 142, 36, 0.05) 100%);
+  box-shadow: 0 4px 12px rgba(255, 142, 36, 0.2);
+}
+
+.mode-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.mode-option.active .mode-content {
+  color: var(--color-primary);
+}
+
+.mode-option svg {
+  flex-shrink: 0;
+}
+
+.mode-option small {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.mode-option.active small {
+  color: var(--color-text-secondary);
+  font-weight: 500;
 }
 
 .toggle {
@@ -3095,6 +3271,10 @@ input:checked + .toggle-slider:before {
   }
   
   .zone-fields {
+    grid-template-columns: 1fr;
+  }
+  
+  .mode-selector {
     grid-template-columns: 1fr;
   }
   

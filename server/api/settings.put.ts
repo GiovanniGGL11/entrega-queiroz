@@ -47,7 +47,8 @@ export default defineEventHandler(async (event) => {
       enabledPaymentMethods,
       checkoutFields,
       restrictedZipCodes,
-      manualOverride
+      manualOverride,
+      storeMode
     } = body;
     
     // Validações
@@ -209,6 +210,21 @@ export default defineEventHandler(async (event) => {
         .filter((zip: string) => zip.length === 8)
         .map((zip: string) => zip.substring(0, 5) + '-' + zip.substring(5, 8));
       updateFields.restrictedZipCodes = cleanedZipCodes;
+    }
+    if (storeMode !== undefined) {
+      // Validar que é 'automatic' ou 'manual'
+      if (storeMode !== 'automatic' && storeMode !== 'manual') {
+        throw createError({
+          statusCode: 400,
+          message: "Modo da loja deve ser 'automatic' ou 'manual'",
+        });
+      }
+      updateFields.storeMode = storeMode;
+      
+      // Se mudou para automático, limpar override manual
+      if (storeMode === 'automatic') {
+        updateFields.manualOverride = null;
+      }
     }
 
     const result = await settings.updateOne(

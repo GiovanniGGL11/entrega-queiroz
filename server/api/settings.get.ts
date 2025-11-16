@@ -92,6 +92,7 @@ export default defineEventHandler(async (event) => {
         },
         restrictedZipCodes: [],
         manualOverride: null, // null = usar horário automático, true/false = override manual
+        storeMode: 'automatic', // 'automatic' ou 'manual'
         updatedAt: new Date(),
         createdAt: new Date()
       };

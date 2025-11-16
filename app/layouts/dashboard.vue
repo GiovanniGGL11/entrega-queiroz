@@ -97,8 +97,8 @@
         </ul>
       </nav>
       
-      <!-- Status da Loja -->
-      <div class="store-status-section">
+      <!-- Status da Loja (apenas no modo manual) -->
+      <div v-if="storeMode === 'manual'" class="store-status-section">
         <div class="store-status-header" v-if="!sidebarCollapsed">
           <span class="store-status-label">Status da Loja</span>
         </div>
@@ -110,12 +110,28 @@
           <label class="store-toggle-switch" :title="sidebarCollapsed ? (isStoreOpen ? 'Loja Aberta' : 'Loja Fechada') : ''">
             <input 
               type="checkbox" 
-              v-model="isStoreOpen" 
-              @change="toggleStoreStatus"
+              :checked="isStoreOpen" 
+              @click.prevent="handleToggleStoreStatus"
               :disabled="isTogglingStore"
             />
             <span class="toggle-slider"></span>
           </label>
+        </div>
+      </div>
+      
+      <!-- Status da Loja (apenas visual no modo automático) -->
+      <div v-else class="store-status-section">
+        <div class="store-status-header" v-if="!sidebarCollapsed">
+          <span class="store-status-label">Status da Loja</span>
+        </div>
+        <div class="store-status-control">
+          <div class="store-status-indicator" :class="{ 'open': isStoreOpen, 'closed': !isStoreOpen }">
+            <div class="status-dot"></div>
+            <span v-if="!sidebarCollapsed" class="status-text">{{ isStoreOpen ? 'Aberta' : 'Fechada' }}</span>
+          </div>
+          <div class="store-mode-info" v-if="!sidebarCollapsed">
+            <small>Automático</small>
+          </div>
         </div>
       </div>
       
@@ -130,6 +146,45 @@
         </button>
       </div>
     </aside>
+
+    <!-- Modal de Confirmação de Status da Loja -->
+    <div v-if="showStoreStatusModal" class="modal-overlay" @click="cancelToggleStoreStatus">
+      <div class="store-status-modal" @click.stop>
+        <div class="modal-header">
+          <div class="modal-icon" :class="{ 'open': pendingStoreStatus, 'closed': !pendingStoreStatus }">
+            <svg v-if="pendingStoreStatus" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+          </div>
+          <h2>{{ pendingStoreStatus ? 'Abrir Loja' : 'Fechar Loja' }}</h2>
+        </div>
+        
+        <div class="modal-content">
+          <p>Tem certeza que deseja <strong>{{ pendingStoreStatus ? 'abrir' : 'fechar' }}</strong> a loja?</p>
+          <p v-if="!pendingStoreStatus" class="warning-text">
+            A loja ficará fechada e os clientes não poderão realizar pedidos.
+          </p>
+          <p v-else class="info-text">
+            A loja ficará aberta e os clientes poderão realizar pedidos.
+          </p>
+        </div>
+        
+        <div class="modal-actions">
+          <button @click="cancelToggleStoreStatus" class="btn-cancel">
+            Cancelar
+          </button>
+          <button @click="confirmToggleStoreStatus" class="btn-confirm" :class="{ 'btn-open': pendingStoreStatus, 'btn-close': !pendingStoreStatus }">
+            {{ pendingStoreStatus ? 'Abrir Loja' : 'Fechar Loja' }}
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Main Content Wrapper -->
     <div class="main-wrapper" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
@@ -153,8 +208,9 @@
 </template>
 
 <script setup>
-import { watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useAuthenticatedFetch } from '~/composables/useAuthenticatedFetch'
+import { useStoreStatus } from '~/composables/useStoreStatus'
 const router = useRouter()
 
 // Estado inicial: sempre false no SSR, será ajustado no cliente
@@ -183,10 +239,22 @@ const loadingSettings = ref(true)
 const storeLogo = ref('')
 const storeName = ref('')
 
-// Status da loja
-const isStoreOpen = ref(false)
+// Status da loja - usando composable compartilhado
+const { 
+  storeMode, 
+  manualOverride, 
+  isStoreOpen, 
+  reloadStoreStatus,
+  updateStoreMode,
+  updateManualOverride,
+  updateStoreStatus
+} = useStoreStatus()
+
 const isTogglingStore = ref(false)
-const manualOverride = ref(null) // null = usar horário automático, true/false = override manual
+
+// Modal de confirmação
+const showStoreStatusModal = ref(false)
+const pendingStoreStatus = ref(false)
 
 // Buscar configurações da loja
 const loadStoreSettings = async () => {
@@ -194,42 +262,58 @@ const loadStoreSettings = async () => {
     const data = await $fetch('/api/public/settings')
     storeLogo.value = data.logo || ''
     storeName.value = data.storeName || 'Dashboard'
-    isStoreOpen.value = data.isOpen || false
+    // Atualizar status usando o composable (apenas se não houver override manual)
+    if (manualOverride.value === null) {
+      updateStoreStatus(data.isOpen || false)
+    }
   } catch (error) {
     console.error('Erro ao carregar configurações da loja:', error)
     storeName.value = 'Dashboard'
-    isStoreOpen.value = false
+    updateStoreStatus(false)
   } finally {
     loadingSettings.value = false
   }
 }
 
-// Carregar status manual da loja
+// Carregar status manual da loja - agora usando o composable
 const loadStoreManualStatus = async () => {
-  try {
-    const { authenticatedFetch } = useAuthenticatedFetch()
-    const data = await authenticatedFetch('/api/settings')
-    manualOverride.value = data.manualOverride !== undefined ? data.manualOverride : null
-    // Se houver override manual, usar ele; senão usar o isOpen calculado
-    if (manualOverride.value !== null) {
-      isStoreOpen.value = manualOverride.value
-    } else {
-      isStoreOpen.value = data.isOpen || false
-    }
-  } catch (error) {
-    console.error('Erro ao carregar status manual da loja:', error)
-  }
+  await reloadStoreStatus()
 }
 
-// Alternar status da loja
-const toggleStoreStatus = async () => {
+// Handler para alternar status (mostra modal de confirmação)
+const handleToggleStoreStatus = (event) => {
+  // Prevenir comportamento padrão do checkbox (não atualizar imediatamente)
+  event.preventDefault()
+  
+  if (isTogglingStore.value) {
+    return
+  }
+  
+  // Salvar o status pendente (o novo status que será aplicado)
+  pendingStoreStatus.value = !isStoreOpen.value
+  
+  // Mostrar modal de confirmação
+  showStoreStatusModal.value = true
+}
+
+// Cancelar alternância de status (fechar modal sem alterar)
+const cancelToggleStoreStatus = () => {
+  showStoreStatusModal.value = false
+  // Não precisa reverter nada porque o checkbox não foi alterado
+}
+
+// Confirmar alternância de status
+const confirmToggleStoreStatus = async () => {
   if (isTogglingStore.value) return
+  
+  // Fechar modal
+  showStoreStatusModal.value = false
   
   isTogglingStore.value = true
   
   try {
     const { authenticatedFetch } = useAuthenticatedFetch()
-    const newStatus = isStoreOpen.value
+    const newStatus = pendingStoreStatus.value
     
     // Atualizar override manual
     await authenticatedFetch('/api/settings', {
@@ -239,7 +323,12 @@ const toggleStoreStatus = async () => {
       }
     })
     
-    manualOverride.value = newStatus
+    // Atualizar estado global (isso atualizará o checkbox automaticamente)
+    updateManualOverride(newStatus)
+    updateStoreStatus(newStatus)
+    
+    // Recarregar status completo do backend para garantir sincronização
+    await reloadStoreStatus()
     
     // Atualizar status público também (com pequeno delay para garantir que o backend processou)
     setTimeout(async () => {
@@ -247,9 +336,9 @@ const toggleStoreStatus = async () => {
     }, 500)
   } catch (error) {
     console.error('Erro ao atualizar status da loja:', error)
-    // Reverter mudança em caso de erro
-    isStoreOpen.value = !isStoreOpen.value
     alert('Erro ao atualizar status da loja. Tente novamente.')
+    // Em caso de erro, recarregar o status do backend para garantir consistência
+    await reloadStoreStatus()
   } finally {
     isTogglingStore.value = false
   }
@@ -347,12 +436,24 @@ const pageTitle = computed(() => {
 // Atualizar status da loja periodicamente (quando não há override manual)
 let storeStatusInterval = null
 
+// Handler para atualização de configurações
+const handleSettingsUpdate = async (event) => {
+  // Recarregar dados da sidebar quando as configurações forem atualizadas
+  await reloadStoreStatus()
+  await loadStoreSettings()
+}
+
 // Responsividade
 onMounted(() => {
   // Carregar configurações da loja
   loadStoreSettings()
   // Carregar status manual
   loadStoreManualStatus()
+  
+  // Escutar evento de atualização de configurações
+  if (process.client) {
+    window.addEventListener('store-settings-updated', handleSettingsUpdate)
+  }
   
   // Atualizar status periodicamente se não houver override manual
   if (process.client) {
@@ -416,6 +517,9 @@ onMounted(() => {
   
   onUnmounted(() => {
     window.removeEventListener('resize', checkMobile)
+    if (process.client) {
+      window.removeEventListener('store-settings-updated', handleSettingsUpdate)
+    }
     if (storeStatusInterval) {
       clearInterval(storeStatusInterval)
       storeStatusInterval = null
@@ -745,6 +849,21 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
+.store-mode-info {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: #f3f4f6;
+  border-radius: 0.375rem;
+  flex-shrink: 0;
+}
+
+.store-mode-info small {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
 @keyframes pulse-green {
   0%, 100% {
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
@@ -1053,6 +1172,144 @@ onMounted(() => {
     padding: 1rem;
     font-size: 0.875rem;
   }
+}
+
+/* Modal de Confirmação de Status */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.store-status-modal {
+  background: white;
+  border-radius: 0.75rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.store-status-modal .modal-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.modal-icon.open {
+  background: #d1fae5;
+  color: #10b981;
+}
+
+.modal-icon.closed {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.store-status-modal .modal-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.store-status-modal .modal-content {
+  padding: 1.5rem;
+}
+
+.store-status-modal .modal-content p {
+  margin: 0 0 0.75rem 0;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.store-status-modal .modal-content p:last-child {
+  margin-bottom: 0;
+}
+
+.warning-text {
+  color: #dc2626;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.info-text {
+  color: #059669;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.store-status-modal .modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.store-status-modal .btn-cancel {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  border: 2px solid #d1d5db;
+  background: white;
+  color: #374151;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.store-status-modal .btn-cancel:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.store-status-modal .btn-confirm {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: white;
+}
+
+.store-status-modal .btn-confirm.btn-open {
+  background: #10b981;
+}
+
+.store-status-modal .btn-confirm.btn-open:hover {
+  background: #059669;
+}
+
+.store-status-modal .btn-confirm.btn-close {
+  background: #ef4444;
+}
+
+.store-status-modal .btn-confirm.btn-close:hover {
+  background: #dc2626;
 }
 
 @media (max-width: 480px) {

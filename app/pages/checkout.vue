@@ -38,6 +38,28 @@ const isValidatingAddress = ref(false)
 const addressValidationError = ref('')
 let addressValidationTimeout = null
 
+// Estado do modal de aviso
+const alertModal = ref({
+  show: false,
+  title: '',
+  message: '',
+  type: 'warning' // 'warning', 'error', 'info'
+})
+
+// Função para mostrar modal de aviso
+const showAlert = (title, message, type = 'warning') => {
+  alertModal.value = {
+    show: true,
+    title,
+    message,
+    type
+  }
+}
+
+const closeAlert = () => {
+  alertModal.value.show = false
+}
+
 // Configurações da loja
 const storeSettings = ref({
   storeName: "",
@@ -274,7 +296,8 @@ const isFormValid = computed(() => {
          deliveryInfo.value.canDeliver && 
          !addressValidationError.value && 
          deliveryInfo.value.deliveryFee > 0 &&
-         cart.value.length > 0
+         cart.value.length > 0 &&
+         storeSettings.value.isOpen // Verificar se a loja está aberta
 })
 
 // Submeter pedido
@@ -336,12 +359,12 @@ const submitOrder = async () => {
     const errorMessage = err?.message || err?.data?.message
     
     if (errorStatus === 403 || errorMessage?.includes('fechada')) {
-      alert('A loja está fechada no momento. Pedidos não podem ser realizados.')
+      showAlert('Loja Fechada', 'A loja está fechada no momento. Pedidos não podem ser realizados.', 'warning')
       // Recarregar configurações para atualizar status
       await loadStoreSettings()
     } else {
       const finalErrorMessage = errorMessage || 'Erro ao processar pedido. Tente novamente.'
-      alert(finalErrorMessage)
+      showAlert('Erro ao Processar Pedido', finalErrorMessage, 'error')
     }
   } finally {
     isSubmitting.value = false
@@ -421,7 +444,22 @@ useHead({
 
         <!-- Formulário de Checkout -->
         <div v-else class="checkout-content">
-          <div class="checkout-layout">
+          <!-- Aviso de Loja Fechada -->
+          <div v-if="!storeSettings.isOpen" class="store-closed-banner">
+            <div class="banner-content">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+              </svg>
+              <div class="banner-text">
+                <strong>Loja Fechada</strong>
+                <p>A loja está fechada no momento. Pedidos não podem ser realizados.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="checkout-layout" :class="{ 'disabled': !storeSettings.isOpen }">
             <!-- Itens do Pedido -->
             <div class="order-items-section">
               <div class="section-header">
@@ -725,15 +763,16 @@ useHead({
               <div class="submit-section">
                 <button
                   @click="submitOrder"
-                  :disabled="!isFormValid || isSubmitting"
+                  :disabled="!isFormValid || isSubmitting || !storeSettings.isOpen"
                   class="submit-order-btn"
+                  :title="!storeSettings.isOpen ? 'A loja está fechada. Pedidos não podem ser realizados.' : ''"
                 >
                   <div v-if="isSubmitting" class="loading-spinner-small"></div>
                   <span v-else class="btn-content">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
                       <path fill="currentColor" d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2s-.9-2-2-2m10 0c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2s2-.9 2-2s-.9-2-2-2m-8.9-5h7.45c.75 0 1.41-.41 1.75-1.03L21 4.96L19.25 4l-3.7 7H8.53L4.27 2H1v2h2l3.6 7.59l-1.35 2.44C4.52 15.37 5.48 17 7 17h12v-2H7zM12 2l4 4l-4 4l-1.41-1.41L12.17 7H8V5h4.17l-1.59-1.59z"/>
                     </svg>
-                    Finalizar Pedido
+                    {{ storeSettings.isOpen ? 'Finalizar Pedido' : 'Loja Fechada' }}
                   </span>
                 </button>
               </div>
@@ -758,6 +797,44 @@ useHead({
         </div>
       </footer>
     </div>
+    
+    <!-- Modal de Alerta -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="alertModal.show" class="alert-modal-overlay" @click="closeAlert">
+          <div class="alert-modal" @click.stop>
+            <div class="alert-modal-header">
+              <div class="alert-icon" :class="alertModal.type">
+                <svg v-if="alertModal.type === 'warning'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <svg v-else-if="alertModal.type === 'error'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="15" y1="9" x2="9" y2="15"></line>
+                  <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M12 16v-4"></path>
+                  <path d="M12 8h.01"></path>
+                </svg>
+              </div>
+              <h3>{{ alertModal.title }}</h3>
+            </div>
+            <div class="alert-modal-content">
+              <p>{{ alertModal.message }}</p>
+            </div>
+            <div class="alert-modal-actions">
+              <button @click="closeAlert" class="alert-btn-ok">
+                Entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -947,10 +1024,70 @@ useHead({
   flex: 1;
 }
 
+/* Banner de Loja Fechada */
+.store-closed-banner {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border: 2px solid #f87171;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.banner-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.banner-content svg {
+  color: #dc2626;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.banner-text {
+  flex: 1;
+}
+
+.banner-text strong {
+  display: block;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #991b1b;
+  margin-bottom: 0.5rem;
+}
+
+.banner-text p {
+  margin: 0;
+  color: #7f1d1d;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
 .checkout-layout {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  transition: opacity 0.3s ease;
+}
+
+.checkout-layout.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  position: relative;
+}
+
+.checkout-layout.disabled::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.3);
+  z-index: 1;
+  border-radius: 1rem;
 }
 
 /* Seção de Itens do Pedido */
@@ -1604,5 +1741,146 @@ useHead({
   .total-line.total {
     font-size: 1.125rem;
   }
+}
+
+/* Modal de Alerta */
+.alert-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.alert-modal {
+  background: white;
+  border-radius: 1rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: alertModalSlideIn 0.3s ease-out;
+}
+
+@keyframes alertModalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.alert-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+}
+
+.alert-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.alert-icon.warning {
+  background: #fbbf24;
+  color: #92400e;
+}
+
+.alert-icon.error {
+  background: #ef4444;
+  color: white;
+}
+
+.alert-icon.info {
+  background: #3b82f6;
+  color: white;
+}
+
+.alert-modal-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+  flex: 1;
+}
+
+.alert-modal-content {
+  padding: 1.5rem;
+}
+
+.alert-modal-content p {
+  margin: 0;
+  color: #374151;
+  line-height: 1.6;
+  font-size: 0.9375rem;
+}
+
+.alert-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  justify-content: flex-end;
+}
+
+.alert-btn-ok {
+  padding: 0.75rem 1.5rem;
+  background: #ff8e24;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 100px;
+}
+
+.alert-btn-ok:hover {
+  background: #e67e22;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 142, 36, 0.3);
+}
+
+.alert-btn-ok:active {
+  transform: translateY(0);
+}
+
+/* Transições do Modal */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-active .alert-modal,
+.modal-leave-active .alert-modal {
+  transition: transform 0.3s ease;
+}
+
+.modal-enter-from .alert-modal,
+.modal-leave-to .alert-modal {
+  transform: scale(0.9);
 }
 </style>

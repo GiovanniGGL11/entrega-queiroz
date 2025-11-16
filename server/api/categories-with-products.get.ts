@@ -18,22 +18,34 @@ export default defineEventHandler(async () => {
       {
         $lookup: {
           from: "products",
-          let: { categoryId: { $toString: "$_id" } },
+          let: { 
+            categoryId: "$_id", // ObjectId original
+            categoryIdStr: { $toString: "$_id" } // String para comparação
+          },
           pipeline: [
             {
               $match: {
-                $expr: { $eq: ["$categoryId", "$$categoryId"] },
+                $expr: {
+                  $or: [
+                    // Comparar ObjectId com ObjectId (se categoryId do produto for ObjectId)
+                    { $eq: ["$categoryId", "$$categoryId"] },
+                    // Comparar string com string (se categoryId do produto for string)
+                    { $eq: [{ $toString: "$categoryId" }, "$$categoryIdStr"] }
+                  ]
+                },
                 isVisible: { $ne: false } // Apenas produtos visíveis
               }
             },
             {
               $project: {
                 id: { $toString: "$_id" },
+                _id: { $toString: "$_id" }, // Adicionar _id como string também
                 name: 1,
                 description: 1,
                 price: 1,
                 image: 1,
-                complements: 1
+                complements: 1,
+                isVisible: 1 // Incluir isVisible no projection
               }
             },
             { $sort: { order: 1, createdAt: -1 } }
@@ -43,7 +55,8 @@ export default defineEventHandler(async () => {
       },
       {
         $project: {
-          _id: 1,
+          _id: { $toString: "$_id" }, // Converter _id para string
+          id: { $toString: "$_id" }, // Adicionar id como string
           name: 1,
           description: 1,
           image: 1,
