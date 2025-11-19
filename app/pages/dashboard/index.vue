@@ -849,7 +849,7 @@ onUnmounted(() => {
 
 <style scoped>
 .dashboard-home {
-  padding: 2rem;
+  padding: 0;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -898,7 +898,7 @@ onUnmounted(() => {
 .stat-card {
   background: #ffffff;
   border-radius: 1rem;
-  padding: 1.75rem;
+  padding: 1.25rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #e2e8f0;
   display: flex;
@@ -1088,7 +1088,7 @@ onUnmounted(() => {
 }
 
 .chart-card .chart-container {
-  padding: 1.5rem;
+  padding: 1rem;
   height: 300px;
 }
 
@@ -1116,15 +1116,7 @@ onUnmounted(() => {
 }
 
 .card-header {
-  padding: 1.5rem;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.card-header {
-  padding: 1.75rem;
+  padding: 1rem;
   border-bottom: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
@@ -1169,7 +1161,7 @@ onUnmounted(() => {
 }
 
 .orders-grid-container {
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .loading, .empty-state {
@@ -1502,7 +1494,7 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1.5rem;
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .payment-method-card {
@@ -1626,7 +1618,7 @@ onUnmounted(() => {
 /* Top Items Styles */
 .top-items {
   margin-top: 1.5rem;
-  padding: 1.5rem;
+  padding: 1rem;
   background: #f8fafc;
   border-radius: 0.75rem;
   border: 1px solid #e2e8f0;
@@ -1720,7 +1712,7 @@ onUnmounted(() => {
 }
 
 .modal-header {
-  padding: 1.5rem;
+  padding: 1rem;
   border-bottom: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
@@ -1745,7 +1737,7 @@ onUnmounted(() => {
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .order-details {

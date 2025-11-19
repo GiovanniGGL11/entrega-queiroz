@@ -211,7 +211,11 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useAuthenticatedFetch } from '~/composables/useAuthenticatedFetch'
 import { useStoreStatus } from '~/composables/useStoreStatus'
+import { usePrimaryColor } from '~/composables/usePrimaryColor'
 const router = useRouter()
+
+// Carregar cor primária
+const { loadPrimaryColor } = usePrimaryColor()
 
 // Estado inicial: sempre false no SSR, será ajustado no cliente
 const sidebarCollapsed = ref(false)
@@ -449,6 +453,8 @@ onMounted(() => {
   loadStoreSettings()
   // Carregar status manual
   loadStoreManualStatus()
+  // Carregar cor primária
+  loadPrimaryColor()
   
   // Escutar evento de atualização de configurações
   if (process.client) {
@@ -720,7 +726,7 @@ onMounted(() => {
 }
 
 .nav-link.active {
-  background: linear-gradient(135deg, #FF6B35 0%, #ff8e24 100%);
+  background: linear-gradient(135deg, var(--color-primary-hover, #e67e22) 0%, var(--color-primary, #ff8e24) 100%);
   color: white;
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
 }
@@ -996,7 +1002,7 @@ onMounted(() => {
 
 .dashboard-header {
   background: white;
-  padding: 1rem 2rem;
+  padding: 1rem 1rem;
   border-bottom: 2px solid #e5e7eb;
   display: flex;
   align-items: center;
@@ -1029,7 +1035,7 @@ onMounted(() => {
 
 .dashboard-content {
   flex: 1;
-  padding: 2rem;
+  padding: 1rem;
   overflow-y: auto;
 }
 
@@ -1085,7 +1091,7 @@ onMounted(() => {
   }
   
   .dashboard-header {
-    padding: 1rem 1.5rem;
+    padding: 1rem 0.75rem;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -1094,7 +1100,7 @@ onMounted(() => {
   }
   
   .dashboard-content {
-    padding: 1rem;
+    padding: 0.75rem;
     min-height: calc(100vh - 68px);
   }
   

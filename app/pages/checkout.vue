@@ -1,9 +1,13 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useCart } from '~/composables/useCart'
+import { usePrimaryColor } from '~/composables/usePrimaryColor'
 
 // Usar o composable do carrinho
 const { cart, cartSubtotal, cartTotal, removeFromCart, updateCartQuantity, clearCart } = useCart()
+
+// Carregar cor primária
+const { loadPrimaryColor } = usePrimaryColor()
 
 // Estado do formulário
 const customerInfo = ref({
@@ -378,7 +382,10 @@ const goBackToMenu = () => {
 
 // Lifecycle
 onMounted(async () => {
-  await loadStoreSettings()
+  await Promise.all([
+    loadStoreSettings(),
+    loadPrimaryColor()
+  ])
   
   // Se não há itens no carrinho, redirecionar para o menu
   if (cart.length === 0) {
@@ -1004,7 +1011,7 @@ useHead({
 }
 
 .continue-shopping-btn {
-  background: #ff8e24;
+  background: var(--color-primary, #ff8e24);
   color: white;
   border: none;
   border-radius: 0.5rem;
@@ -1016,7 +1023,7 @@ useHead({
 }
 
 .continue-shopping-btn:hover {
-  background: #e67e22;
+  background: var(--color-primary-hover, #e67e22);
 }
 
 /* Conteúdo do Checkout */
@@ -1237,7 +1244,7 @@ useHead({
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #ff8e24;
+  border-color: var(--color-primary, #ff8e24);
   box-shadow: 0 0 0 3px rgba(255, 142, 36, 0.1);
 }
 
@@ -1386,7 +1393,7 @@ useHead({
 }
 
 .payment-option input[type="radio"]:checked + .payment-card {
-  border-color: #ff8e24;
+  border-color: var(--color-primary, #ff8e24);
   background: #fff7ed;
 }
 
@@ -1529,7 +1536,7 @@ useHead({
 
 .item-price {
   font-weight: 600;
-  color: #ff8e24;
+  color: var(--color-primary, #ff8e24);
   font-size: 1rem;
   white-space: nowrap;
 }
@@ -1580,7 +1587,7 @@ useHead({
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: #ff8e24;
+  background: var(--color-primary, #ff8e24);
   color: white;
   border: none;
   border-radius: 0.75rem;
@@ -1600,7 +1607,7 @@ useHead({
 }
 
 .submit-order-btn:hover:not(:disabled) {
-  background: #e67e22;
+  background: var(--color-primary-hover, #e67e22);
 }
 
 .submit-order-btn:disabled {
@@ -1629,7 +1636,7 @@ useHead({
 }
 
 .footer-bottom a {
-  color: #ff8e24;
+  color: var(--color-primary, #ff8e24);
   text-decoration: none;
   font-weight: 500;
 }
@@ -1842,7 +1849,7 @@ useHead({
 
 .alert-btn-ok {
   padding: 0.75rem 1.5rem;
-  background: #ff8e24;
+  background: var(--color-primary, #ff8e24);
   color: white;
   border: none;
   border-radius: 0.5rem;

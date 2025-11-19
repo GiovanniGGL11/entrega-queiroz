@@ -1256,7 +1256,7 @@ onUnmounted(() => {
 
 <style scoped>
 .inventory-page {
-  padding: 2rem;
+  padding: 0;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -1568,7 +1568,7 @@ onUnmounted(() => {
 }
 
 .inventory-info {
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .inventory-header {
@@ -2055,7 +2055,7 @@ onUnmounted(() => {
 }
 
 .skeleton-content {
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .skeleton-title {
@@ -2193,7 +2193,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
+  padding: 1rem;
   border-bottom: 1px solid #e5e7eb;
 }
 
@@ -2225,7 +2225,7 @@ onUnmounted(() => {
 }
 
 .modal-form {
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .form-group {
@@ -2327,7 +2327,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1.5rem;
+  padding: 1rem;
   border-bottom: 1px solid #e5e7eb;
 }
 

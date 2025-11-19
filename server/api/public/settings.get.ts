@@ -147,9 +147,10 @@ export default defineEventHandler(async (event) => {
         storeAddress: "",
         storePhone: "",
         whatsapp: "",
-        storeLatitude: -23.5505,
-        storeLongitude: -46.6333,
-        enabledPaymentMethods: {
+      storeLatitude: -23.5505,
+      storeLongitude: -46.6333,
+      primaryColor: '#ff8e24',
+      enabledPaymentMethods: {
           pix: true,
           dinheiro: true,
           cartao: true
@@ -250,6 +251,7 @@ export default defineEventHandler(async (event) => {
       whatsapp: storeSettings.whatsapp || "",
       storeLatitude: storeSettings.location?.latitude || storeSettings.storeLatitude || -23.5505,
       storeLongitude: storeSettings.location?.longitude || storeSettings.storeLongitude || -46.6333,
+      primaryColor: storeSettings.primaryColor || '#ff8e24',
       enabledPaymentMethods: (storeSettings.enabledPaymentMethods && typeof storeSettings.enabledPaymentMethods === 'object')
         ? storeSettings.enabledPaymentMethods
         : {
@@ -310,6 +312,7 @@ export default defineEventHandler(async (event) => {
       whatsapp: String(result.whatsapp || ""),
       storeLatitude: Number(result.storeLatitude || -23.5505),
       storeLongitude: Number(result.storeLongitude || -46.6333),
+      primaryColor: String(result.primaryColor || '#ff8e24'),
       enabledPaymentMethods: (result.enabledPaymentMethods && typeof result.enabledPaymentMethods === 'object')
         ? JSON.parse(JSON.stringify(result.enabledPaymentMethods)) // Garantir serialização
         : {
@@ -373,6 +376,7 @@ export default defineEventHandler(async (event) => {
       whatsapp: "",
       storeLatitude: -23.5505,
       storeLongitude: -46.6333,
+      primaryColor: '#ff8e24',
       checkoutFields: {
         customerName: { enabled: true, required: true },
         customerPhone: { enabled: true, required: true },

@@ -8,6 +8,36 @@
       </div>
     </div>
 
+    <!-- Navegação Lateral (Desktop) -->
+    <nav v-if="!loading && isDesktop" class="settings-nav">
+      <div class="nav-header">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+        <span>Navegação</span>
+      </div>
+      <ul class="nav-list">
+        <li 
+          v-for="section in navigationSections" 
+          :key="section.id"
+          :class="['nav-item', { active: activeSection === section.id }]"
+        >
+          <a 
+            :href="`#${section.id}`"
+            @click.prevent="scrollToSection(section.id)"
+            class="nav-link"
+          >
+            <span class="nav-link-text">{{ section.title }}</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
     <!-- Loading Skeleton -->
     <div v-if="loading" class="loading">
       <div class="loading-skeleton">
@@ -22,7 +52,7 @@
     <!-- Form -->
     <div v-else class="settings-content">
       <!-- Informações Básicas -->
-      <div class="settings-section card">
+      <div id="informacoes-basicas" class="settings-section card">
         <div class="section-header">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
@@ -67,10 +97,53 @@
           />
           <small>Número do WhatsApp (apenas números, com código do país)</small>
         </div>
+
+        <div class="form-group">
+          <label for="primaryColor">Cor Primária da Plataforma</label>
+          <div class="color-picker-wrapper">
+            <input
+              id="primaryColor"
+              v-model="form.primaryColor"
+              type="color"
+              class="color-picker"
+            />
+            <input
+              v-model="form.primaryColor"
+              type="text"
+              class="color-input"
+              placeholder="#ff8e24"
+              pattern="^#[0-9A-Fa-f]{6}$"
+              maxlength="7"
+            />
+            <button 
+              type="button" 
+              @click="resetPrimaryColor" 
+              class="btn-reset-color"
+              title="Restaurar cor padrão"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="1 4 1 10 7 10"></polyline>
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+              </svg>
+            </button>
+          </div>
+          <small>A cor primária será aplicada em botões, links, bordas e elementos de destaque em toda a plataforma</small>
+          <div class="color-preview">
+            <div class="preview-item" :style="{ backgroundColor: form.primaryColor }">
+              <span>Botão</span>
+            </div>
+            <div class="preview-item" :style="{ borderColor: form.primaryColor, color: form.primaryColor }">
+              <span>Borda</span>
+            </div>
+            <div class="preview-item" :style="{ color: form.primaryColor }">
+              <span>Texto</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Horário de Funcionamento -->
-      <div class="settings-section card">
+      <div id="horario-funcionamento" class="settings-section card">
         <div class="section-header">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
@@ -163,7 +236,7 @@
       </div>
 
       <!-- Imagens da Loja -->
-      <div class="settings-section card">
+      <div id="imagens-loja" class="settings-section card">
         <div class="section-header">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -263,7 +336,7 @@
       </div>
 
       <!-- Configurações de Entrega -->
-      <div class="settings-section card">
+      <div id="configuracoes-entrega" class="settings-section card">
         <div class="section-header">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="1" y="3" width="15" height="13"></rect>
@@ -314,7 +387,7 @@
       </div>
 
       <!-- Localização da Loja -->
-      <div class="settings-section card">
+      <div id="localizacao-loja" class="settings-section card">
         <div class="section-header">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -358,7 +431,7 @@
           </svg>
           <div>
             <strong>Endereço localizado!</strong>
-            <span>A loja foi posicionada no mapa. Arraste o marcador se necessário ajustar.</span>
+            <span>A loja foi posicionada no mapa. Use o botão "Localizar no Mapa" para ajustar a posição.</span>
           </div>
         </div>
 
@@ -382,7 +455,7 @@
       </div>
 
       <!-- Zonas de Entrega -->
-      <div class="settings-section card">
+      <div id="zonas-entrega" class="settings-section card">
         <div class="section-header">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
@@ -462,7 +535,7 @@
       </div>
 
       <!-- CEPs Restritos -->
-      <div class="settings-section card">
+      <div id="ceps-restritos" class="settings-section card">
         <div class="section-header">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
@@ -520,7 +593,7 @@
       </div>
 
       <!-- Campos do Checkout -->
-      <div class="settings-section card">
+      <div id="campos-checkout" class="settings-section card">
         <div class="section-header">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
             <path fill="currentColor" d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2s-.9-2-2-2m10 0c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2s2-.9 2-2s-.9-2-2-2m-8.9-5h7.45c.75 0 1.41-.41 1.75-1.03L21 4.96L19.25 4l-3.7 7H8.53L4.27 2H1v2h2l3.6 7.59l-1.35 2.44C4.52 15.37 5.48 17 7 17h12v-2H7zM12 2l4 4l-4 4l-1.41-1.41L12.17 7H8V5h4.17l-1.59-1.59z"/>
@@ -941,6 +1014,20 @@ let map = null
 let mapCircles = []
 let storeMarker = null
 
+// Navegação lateral
+const isDesktop = ref(false)
+const activeSection = ref('')
+const navigationSections = [
+  { id: 'informacoes-basicas', title: 'Informações Básicas' },
+  { id: 'horario-funcionamento', title: 'Horário de Funcionamento' },
+  { id: 'imagens-loja', title: 'Imagens da Loja' },
+  { id: 'configuracoes-entrega', title: 'Configurações de Entrega' },
+  { id: 'localizacao-loja', title: 'Localização da Loja' },
+  { id: 'zonas-entrega', title: 'Zonas de Entrega' },
+  { id: 'ceps-restritos', title: 'CEPs Restritos' },
+  { id: 'campos-checkout', title: 'Campos do Checkout' }
+]
+
 // Campos de endereço separados
 const addressFields = ref({
   street: '',
@@ -982,6 +1069,7 @@ const form = ref({
   deliveryFee: 5.00,
   minimumOrder: 0,
   storeMode: 'automatic', // 'automatic' ou 'manual'
+  primaryColor: '#ff8e24', // Cor primária da plataforma
   enabledPaymentMethods: {
     pix: true,
     dinheiro: true,
@@ -1229,7 +1317,7 @@ const initMap = () => {
     maxZoom: 19
   }).addTo(map)
   
-  // Adicionar marcador da loja (arrastável)
+  // Adicionar marcador da loja (não arrastável)
   const storeIcon = window.L.divIcon({
     className: 'custom-store-marker',
     html: `<div class="store-marker-pin">
@@ -1243,22 +1331,10 @@ const initMap = () => {
   
   storeMarker = window.L.marker([lat, lng], { 
     icon: storeIcon,
-    draggable: true // Tornar arrastável
+    draggable: false // Marcador fixo, não arrastável
   }).addTo(map)
   
-  storeMarker.bindPopup('<strong>Sua Loja</strong><br>' + (form.value.location.address || 'Arraste para ajustar a posição'))
-  
-  // Atualizar coordenadas quando arrastar o marcador
-  storeMarker.on('dragend', async function() {
-    const position = storeMarker.getLatLng()
-    form.value.location.latitude = position.lat
-    form.value.location.longitude = position.lng
-    
-    // Geocodificação reversa para obter o endereço
-    await reverseGeocode(position.lat, position.lng)
-    
-    updateMapCircles()
-  })
+  storeMarker.bindPopup('<strong>Sua Loja</strong><br>' + (form.value.location.address || 'Localização da loja'))
   
   // Desenhar círculos de entrega
   updateMapCircles()
@@ -1394,6 +1470,7 @@ const loadSettings = async () => {
       deliveryFee: response.deliveryFee || 0,
       minimumOrder: response.minimumOrder || 0,
       storeMode: response.storeMode || 'automatic',
+      primaryColor: response.primaryColor || '#ff8e24',
       enabledPaymentMethods: response.enabledPaymentMethods || {
         pix: true,
         dinheiro: true,
@@ -1455,6 +1532,9 @@ const saveSettings = async () => {
     
     showAlert('Configurações salvas com sucesso!', 'success')
     
+    // Aplicar cor primária após salvar
+    applyPrimaryColor()
+    
     // Disparar evento para atualizar a sidebar (fallback adicional)
     if (process.client) {
       // Pequeno delay para garantir que o estado foi atualizado
@@ -1474,6 +1554,85 @@ const resetForm = () => {
   if (originalForm.value) {
     form.value = JSON.parse(JSON.stringify(originalForm.value))
     showAlert('Formulário redefinido', 'info')
+  }
+}
+
+// Resetar cor primária para o padrão
+const resetPrimaryColor = () => {
+  form.value.primaryColor = '#ff8e24'
+}
+
+// Aplicar cor primária dinamicamente
+const applyPrimaryColor = () => {
+  if (process.client && form.value.primaryColor) {
+    const root = document.documentElement
+    const color = form.value.primaryColor
+    
+    // Calcular cor hover (escurecer 10%)
+    const hex = color.replace('#', '')
+    const r = parseInt(hex.substr(0, 2), 16)
+    const g = parseInt(hex.substr(2, 2), 16)
+    const b = parseInt(hex.substr(4, 2), 16)
+    
+    // Escurecer 10%
+    const hoverR = Math.max(0, Math.floor(r * 0.9))
+    const hoverG = Math.max(0, Math.floor(g * 0.9))
+    const hoverB = Math.max(0, Math.floor(b * 0.9))
+    
+    const hoverColor = `#${hoverR.toString(16).padStart(2, '0')}${hoverG.toString(16).padStart(2, '0')}${hoverB.toString(16).padStart(2, '0')}`
+    
+    root.style.setProperty('--color-primary', color)
+    root.style.setProperty('--color-primary-hover', hoverColor)
+  }
+}
+
+// Watcher para aplicar cor quando mudar
+watch(() => form.value.primaryColor, () => {
+  applyPrimaryColor()
+})
+
+// Função para scroll suave até uma seção
+const scrollToSection = (sectionId) => {
+  const element = document.getElementById(sectionId)
+  if (element) {
+    const offset = 100 // Offset para compensar header fixo
+    const elementPosition = element.getBoundingClientRect().top
+    const offsetPosition = elementPosition + window.pageYOffset - offset
+
+    window.scrollTo({
+      top: offsetPosition,
+      behavior: 'smooth'
+    })
+  }
+}
+
+// Detectar seção ativa durante o scroll
+const handleScroll = () => {
+  if (!process.client) return
+  
+  const scrollPosition = window.scrollY + 150 // Offset para ativar antes de chegar na seção
+  
+  for (let i = navigationSections.length - 1; i >= 0; i--) {
+    const section = document.getElementById(navigationSections[i].id)
+    if (section) {
+      const sectionTop = section.offsetTop
+      if (scrollPosition >= sectionTop) {
+        activeSection.value = navigationSections[i].id
+        break
+      }
+    }
+  }
+  
+  // Se estiver no topo, definir primeira seção como ativa
+  if (scrollPosition < 200) {
+    activeSection.value = navigationSections[0].id
+  }
+}
+
+// Verificar se é desktop
+const checkIsDesktop = () => {
+  if (process.client) {
+    isDesktop.value = window.innerWidth >= 1024
   }
 }
 
@@ -1704,6 +1863,15 @@ const handleFileUpload = async (event, type) => {
 onMounted(async () => {
   await loadSettings()
   
+  // Aplicar cor primária após carregar configurações
+  applyPrimaryColor()
+  
+  // Configurar navegação lateral
+  checkIsDesktop()
+  window.addEventListener('resize', checkIsDesktop)
+  window.addEventListener('scroll', handleScroll)
+  handleScroll() // Verificar seção inicial
+  
   // Aguardar o Leaflet carregar e o DOM estar pronto
   const checkLeaflet = setInterval(() => {
     if (typeof window !== 'undefined' && window.L) {
@@ -1761,21 +1929,133 @@ onUnmounted(() => {
     map.remove()
   }
   window.removeEventListener('keydown', handleEscKey)
+  window.removeEventListener('resize', checkIsDesktop)
+  window.removeEventListener('scroll', handleScroll)
 })
 </script>
 
 <style scoped>
 .settings-page {
-  padding: var(--spacing-2xl);
+  padding: 1rem;
   padding-bottom: 120px; /* Espaço para o botão fixo */
   max-width: 1200px;
   margin: 0 auto;
+  position: relative;
 }
 
+/* Navegação Lateral */
+.settings-nav {
+  position: fixed;
+  top: 100px;
+  right: 2rem;
+  width: 240px;
+  max-height: calc(100vh - 140px);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 50;
+  padding: 1rem 0;
+}
+
+.settings-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.settings-nav::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.settings-nav::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.settings-nav::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.nav-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.nav-header svg {
+  color: var(--color-primary, #ff8e24);
+}
+
+.nav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-item {
+  margin: 0;
+}
+
+.nav-link {
+  display: block;
+  padding: 0.625rem 1.25rem;
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+  position: relative;
+}
+
+.nav-link:hover {
+  background: #f9fafb;
+  color: #374151;
+  border-left-color: #d1d5db;
+}
+
+.nav-item.active .nav-link {
+  background: #f0f9ff;
+  color: var(--color-primary, #ff8e24);
+  border-left-color: var(--color-primary, #ff8e24);
+  font-weight: 500;
+}
+
+.nav-link-text {
+  display: block;
+  line-height: 1.5;
+}
+
+/* Ajustar conteúdo quando navegação está visível */
 .settings-content {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2xl);
+  position: relative;
+}
+
+@media (min-width: 1024px) {
+  .settings-content {
+    padding-right: 280px; /* Espaço para a navegação lateral */
+  }
+}
+
+@media (max-width: 1023px) {
+  .settings-nav {
+    display: none;
+  }
+  
+  .settings-content {
+    padding-right: 0;
+  }
 }
 
 /* Page Header - Padronizado */
@@ -1814,7 +2094,7 @@ onUnmounted(() => {
 }
 
 .settings-section {
-  padding: var(--spacing-2xl);
+  padding: 1rem;
 }
 
 .section-header {
@@ -2439,7 +2719,7 @@ onUnmounted(() => {
 
 .cep-input:focus {
   outline: none;
-  border-color: #ff8e24;
+  border-color: var(--color-primary, #ff8e24);
   box-shadow: 0 0 0 3px rgba(255, 142, 36, 0.1);
 }
 
@@ -2534,7 +2814,7 @@ onUnmounted(() => {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: #ff8e24;
+  background: var(--color-primary, #ff8e24);
   color: white;
   border: none;
   border-radius: 0.75rem;
@@ -2548,7 +2828,7 @@ onUnmounted(() => {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #e67e22;
+  background: var(--color-primary-hover, #e67e22);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 142, 36, 0.4);
 }
@@ -2713,7 +2993,7 @@ onUnmounted(() => {
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #ff8e24;
+  accent-color: var(--color-primary, #ff8e24);
 }
 
 .payment-method-checkbox input[type="checkbox"]:checked + .payment-method-label {
@@ -3304,5 +3584,105 @@ input:checked + .toggle-slider:before {
   .legend-items {
     gap: var(--spacing-sm);
   }
+}
+
+/* Color Picker Styles */
+.color-picker-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.color-picker {
+  width: 60px;
+  height: 40px;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  padding: 0;
+  background: none;
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.color-picker::-webkit-color-swatch {
+  border: none;
+  border-radius: 0.375rem;
+}
+
+.color-input {
+  flex: 1;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+}
+
+.color-input:focus {
+  outline: none;
+  border-color: var(--color-primary, #ff8e24);
+  box-shadow: 0 0 0 3px rgba(255, 142, 36, 0.1);
+}
+
+.btn-reset-color {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.btn-reset-color:hover {
+  background: #e5e7eb;
+  color: #374151;
+  border-color: #9ca3af;
+}
+
+.color-preview {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+}
+
+.preview-item {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.preview-item:first-child {
+  background-color: var(--color-primary, #ff8e24);
+  color: white;
+}
+
+.preview-item:nth-child(2) {
+  background: white;
+  border-color: var(--color-primary, #ff8e24);
+  color: var(--color-primary, #ff8e24);
+}
+
+.preview-item:last-child {
+  background: white;
+  color: var(--color-primary, #ff8e24);
 }
 </style>

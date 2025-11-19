@@ -4,6 +4,7 @@ import ImageOverlay from '~/components/ImageOverlay.vue'
 import StoreInfoModal from '~/components/StoreInfoModal.vue'
 import { useImageOverlay } from '~/composables/useImageOverlay'
 import { useCart } from '~/composables/useCart'
+import { usePrimaryColor } from '~/composables/usePrimaryColor'
 
 // Estado do carrinho e modal
 const selectedItem = ref(null);
@@ -13,6 +14,9 @@ const observation = ref("");
 
 // Usar o composable do carrinho
 const { cart, cartCount, cartSubtotal, cartTotal, addToCart: addToCartComposable, removeFromCart, updateCartQuantity } = useCart()
+
+// Carregar cor primária
+const { loadPrimaryColor } = usePrimaryColor()
 
 // Estado da sidebar
 const showSidebar = ref(false);
@@ -612,7 +616,8 @@ onMounted(async () => {
   // Carregar APIs em paralelo
   await Promise.all([
     loadStoreSettings(),
-    loadCategories()
+    loadCategories(),
+    loadPrimaryColor()
   ]);
   
   // Só mostra o conteúdo depois que tudo carregou
@@ -1193,7 +1198,7 @@ body {
 }
 
 .alert {
-  background-color: #e67e22;
+  background-color: var(--color-primary-hover, #e67e22);
   width: 100%;
   display: flex;
   justify-content: center;
@@ -1336,7 +1341,7 @@ body {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: #ff8e24;
+  background: var(--color-primary, #ff8e24);
   color: #fff;
   border: none;
   border-radius: 0.5rem;
@@ -1348,7 +1353,7 @@ body {
 }
 
 .ver-mais-btn:hover {
-  background: #e67e22;
+  background: var(--color-primary-hover, #e67e22);
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(255, 142, 36, 0.3);
 }
@@ -1384,7 +1389,7 @@ body {
 }
 
 .search-icon {
-  color: #ff8e24;
+  color: var(--color-primary, #ff8e24);
   flex-shrink: 0;
 }
 
@@ -1490,9 +1495,9 @@ body {
 }
 
 .tab.active {
-  background: #ff8e24;
+  background: var(--color-primary, #ff8e24);
   color: #fff;
-  border-color: #ff8e24;
+  border-color: var(--color-primary, #ff8e24);
 }
 
 .categories {
@@ -1578,7 +1583,7 @@ body {
 
 .price {
   font-weight: 600;
-  color: #ff8e24;
+  color: var(--color-primary, #ff8e24);
   font-size: 1rem;
   margin-top: auto; /* Empurra o preço para o final do card */
 }
@@ -1714,14 +1719,14 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #ff8e24;
+  color: var(--color-primary, #ff8e24);
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s;
 }
 
 .social-links a:hover {
-  color: #e67e22;
+  color: var(--color-primary-hover, #e67e22);
 }
 
 .social-links svg {
@@ -1794,11 +1799,11 @@ body {
 }
 
 .nav-item:hover {
-  color: #ff8e24;
+  color: var(--color-primary, #ff8e24);
 }
 
 .nav-item.active {
-  color: #ff8e24;
+  color: var(--color-primary, #ff8e24);
 }
 
 .nav-item.active svg {
@@ -1835,7 +1840,7 @@ body {
   bottom: 80px; /* Acima da navbar */
   left: 50%;
   transform: translateX(-50%);
-  background: #ff8e24;
+  background: var(--color-primary, #ff8e24);
   color: #fff;
   border: none;
   border-radius: 0.5rem;
@@ -1853,7 +1858,7 @@ body {
 }
 
 .floating-cart-btn:hover {
-  background: #e67e22;
+  background: var(--color-primary-hover, #e67e22);
 }
 
 .left-side {

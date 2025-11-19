@@ -62,6 +62,8 @@
 </template>
 
 <script setup>
+import { usePrimaryColor } from '~/composables/usePrimaryColor'
+
 const router = useRouter();
 const form = ref({
   email: "",
@@ -69,6 +71,9 @@ const form = ref({
 });
 const loading = ref(false);
 const error = ref("");
+
+// Carregar cor primária
+const { loadPrimaryColor } = usePrimaryColor()
 const showPassword = ref(false);
 const loadingSettings = ref(true);
 
@@ -134,6 +139,7 @@ onMounted(() => {
     }
   }
   loadStoreSettings();
+  loadPrimaryColor();
 });
  
 const handleLogin = async () => {

@@ -5,6 +5,13 @@
         <h1>Gerenciar Pedidos</h1>
       </div>
       <div class="header-actions">
+        <button @click="openCreateOrderModal" class="btn-create">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Novo Pedido
+        </button>
         <button @click="refreshOrders" class="btn-refresh" :disabled="loading">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="23 4 23 10 17 10"></polyline>
@@ -107,55 +114,147 @@
 
       <div v-else class="orders-grid">
         <div v-for="order in orders" :key="order.id" class="order-card">
+          <!-- Header do Card -->
           <div class="order-header">
-            <div class="order-info">
-              <h3>Pedido #{{ order.id }}</h3>
-              <span class="order-date">{{ formatDate(order.createdAt) }}</span>
+            <div class="order-number-section">
+              <div class="order-number">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                </svg>
+                <span class="order-id">#{{ order.id }}</span>
+              </div>
+              <span class="order-date">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                {{ formatDate(order.createdAt) }}
+              </span>
             </div>
             <span class="status-badge" :class="order.status">
               {{ getStatusText(order.status) }}
             </span>
           </div>
           
-          <div class="order-details">
-            <div class="customer-info">
-              <strong>{{ order.customer }}</strong>
-              <span v-if="order.phone">{{ order.phone }}</span>
+          <!-- Informações do Cliente -->
+          <div class="order-section customer-section">
+            <div class="section-label">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              Cliente
             </div>
-            
+            <div class="customer-info">
+              <div class="customer-name">{{ order.customer }}</div>
+              <div v-if="order.phone" class="customer-phone">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                </svg>
+                {{ order.phone }}
+              </div>
+            </div>
+          </div>
+          
+          <!-- Itens do Pedido -->
+          <div class="order-section items-section">
+            <div class="section-label">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <path d="M16 10a4 4 0 0 1-8 0"></path>
+              </svg>
+              Itens ({{ order.items.length }})
+            </div>
             <div class="order-items">
-              <div v-for="item in order.items" :key="item.id" class="order-item">
+              <div v-for="(item, index) in order.items.slice(0, 3)" :key="item.id || index" class="order-item">
                 <span class="item-quantity">{{ item.quantity }}x</span>
                 <span class="item-name">{{ item.name }}</span>
                 <span class="item-price">{{ formatCurrency(item.price) }}</span>
               </div>
+              <div v-if="order.items.length > 3" class="more-items">
+                +{{ order.items.length - 3 }} item{{ order.items.length - 3 > 1 ? 's' : '' }}
+              </div>
             </div>
-            
-            <div v-if="order.notes && order.notes.trim()" class="order-notes">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          </div>
+          
+          <!-- Informações de Pagamento e Entrega -->
+          <div class="order-section payment-section">
+            <div class="payment-info">
+              <div class="info-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="1" x2="12" y2="23"></line>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+                <span class="info-label">Pagamento:</span>
+                <span class="info-value">{{ getPaymentMethodText(order.paymentMethod) }}</span>
+              </div>
+              <div v-if="order.deliveryFee && order.deliveryFee > 0" class="info-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                <span class="info-label">Entrega:</span>
+                <span class="info-value">{{ formatCurrency(order.deliveryFee) }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Observações -->
+          <div v-if="order.notes && order.notes.trim()" class="order-section notes-section">
+            <div class="order-notes">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                 <polyline points="14,2 14,8 20,8"></polyline>
                 <line x1="16" y1="13" x2="8" y2="13"></line>
                 <line x1="16" y1="17" x2="8" y2="17"></line>
               </svg>
-              <span class="notes-label">Observações:</span>
-              <span class="notes-text">{{ order.notes }}</span>
-            </div>
-            
-            <div class="order-total">
-              <strong>Total: {{ formatCurrency(order.total) }}</strong>
+              <div class="notes-content">
+                <span class="notes-text">{{ order.notes }}</span>
+              </div>
             </div>
           </div>
           
+          <!-- Total -->
+          <div class="order-total-section">
+            <div class="total-label">Total do Pedido</div>
+            <div class="total-value">{{ formatCurrency(order.total) }}</div>
+          </div>
+          
+          <!-- Ações -->
           <div class="order-actions">
             <button 
               @click="showEditStatusModal(order)" 
-              class="btn-edit"
+              class="btn-action btn-edit"
+              title="Editar status"
             >
-              Editar Status
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              Status
             </button>
-            <button @click="viewOrderDetails(order)" class="btn-view">
-              Ver Detalhes
+            <button 
+              @click="viewOrderDetails(order)" 
+              class="btn-action btn-view"
+              title="Ver detalhes completos"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              Detalhes
+            </button>
+            <button 
+              @click="confirmDeleteOrder(order)" 
+              class="btn-action btn-delete"
+              title="Excluir pedido"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
             </button>
           </div>
         </div>
@@ -301,6 +400,187 @@
       </div>
     </div>
 
+    <!-- Modal de Criar Pedido -->
+    <div v-if="showCreateOrderModal" class="modal-overlay" @click="closeCreateOrderModal">
+      <div class="modal-content create-order-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Criar Novo Pedido</h3>
+          <button @click="closeCreateOrderModal" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="createOrder" class="create-order-form">
+            <div class="form-group">
+              <label for="customerName">Nome do Cliente *</label>
+              <input
+                id="customerName"
+                v-model="newOrder.customerInfo.name"
+                type="text"
+                required
+                placeholder="Nome completo"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="customerPhone">Telefone *</label>
+              <input
+                id="customerPhone"
+                v-model="newOrder.customerInfo.phone"
+                type="tel"
+                required
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="customerEmail">Email</label>
+              <input
+                id="customerEmail"
+                v-model="newOrder.customerInfo.email"
+                type="email"
+                placeholder="email@exemplo.com"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="deliveryAddress">Endereço de Entrega *</label>
+              <input
+                id="deliveryAddress"
+                v-model="newOrder.deliveryInfo.address"
+                type="text"
+                required
+                placeholder="Rua, Avenida, etc."
+              />
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="deliveryNumber">Número</label>
+                <input
+                  id="deliveryNumber"
+                  v-model="newOrder.deliveryInfo.number"
+                  type="text"
+                  placeholder="123"
+                />
+              </div>
+              
+              <div class="form-group">
+                <label for="deliveryZipCode">CEP</label>
+                <input
+                  id="deliveryZipCode"
+                  v-model="newOrder.deliveryInfo.zipCode"
+                  type="text"
+                  placeholder="12345-678"
+                />
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="deliveryNeighborhood">Bairro</label>
+              <input
+                id="deliveryNeighborhood"
+                v-model="newOrder.deliveryInfo.neighborhood"
+                type="text"
+                placeholder="Bairro"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="deliveryCity">Cidade</label>
+              <input
+                id="deliveryCity"
+                v-model="newOrder.deliveryInfo.city"
+                type="text"
+                placeholder="Cidade"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="paymentMethod">Método de Pagamento *</label>
+              <select id="paymentMethod" v-model="newOrder.paymentMethod" required>
+                <option value="pix">PIX</option>
+                <option value="dinheiro">Dinheiro</option>
+                <option value="cartao">Cartão</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="orderNotes">Observações</label>
+              <textarea
+                id="orderNotes"
+                v-model="newOrder.notes"
+                rows="3"
+                placeholder="Observações do pedido..."
+              ></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label>Itens do Pedido *</label>
+              <div class="order-items-section">
+                <div v-for="(item, index) in newOrder.items" :key="index" class="order-item-row">
+                  <input
+                    v-model="item.name"
+                    type="text"
+                    placeholder="Nome do item"
+                    required
+                    class="item-name-input"
+                  />
+                  <input
+                    v-model.number="item.quantity"
+                    type="number"
+                    min="1"
+                    placeholder="Qtd"
+                    required
+                    class="item-qty-input"
+                  />
+                  <input
+                    v-model.number="item.price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Preço"
+                    required
+                    class="item-price-input"
+                  />
+                  <button
+                    type="button"
+                    @click="removeOrderItem(index)"
+                    class="btn-remove-item"
+                    v-if="newOrder.items.length > 1"
+                  >
+                    ×
+                  </button>
+                </div>
+                <button type="button" @click="addOrderItem" class="btn-add-item">
+                  + Adicionar Item
+                </button>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="deliveryFee">Taxa de Entrega</label>
+              <input
+                id="deliveryFee"
+                v-model.number="newOrder.deliveryInfo.deliveryFee"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+              />
+            </div>
+            
+            <div class="modal-footer">
+              <button type="button" @click="closeCreateOrderModal" class="btn-cancel-modal">
+                Cancelar
+              </button>
+              <button type="submit" class="btn-confirm-modal" :disabled="creatingOrder">
+                {{ creatingOrder ? 'Criando...' : 'Criar Pedido' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <!-- Alert -->
     <Alert 
       :show="alert.show" 
@@ -344,6 +624,28 @@ const selectedOrder = ref(null)
 const showStatusModal = ref(false)
 const orderToUpdate = ref(null)
 const newStatus = ref('')
+const showCreateOrderModal = ref(false)
+const creatingOrder = ref(false)
+const newOrder = ref({
+  customerInfo: {
+    name: '',
+    phone: '',
+    email: ''
+  },
+  deliveryInfo: {
+    address: '',
+    number: '',
+    zipCode: '',
+    neighborhood: '',
+    city: '',
+    deliveryFee: 0
+  },
+  paymentMethod: 'dinheiro',
+  notes: '',
+  items: [
+    { name: '', quantity: 1, price: 0 }
+  ]
+})
 const confirmationModal = ref({
   show: false,
   title: '',
@@ -454,6 +756,15 @@ const getStatusText = (status) => {
     cancelled: 'Cancelado'
   }
   return statusMap[status] || status
+}
+
+const getPaymentMethodText = (method) => {
+  const methodMap = {
+    pix: 'PIX',
+    dinheiro: 'Dinheiro',
+    cartao: 'Cartão'
+  }
+  return methodMap[method] || method || 'Não informado'
 }
 
 const { authenticatedFetch, clearCache } = useAuthenticatedFetch()
@@ -651,6 +962,137 @@ const showEditStatusModal = (order) => {
 }
 
 // Função para fechar modal de edição de status
+// Funções para criar pedido
+const openCreateOrderModal = () => {
+  showCreateOrderModal.value = true
+  // Resetar formulário
+  newOrder.value = {
+    customerInfo: {
+      name: '',
+      phone: '',
+      email: ''
+    },
+    deliveryInfo: {
+      address: '',
+      number: '',
+      zipCode: '',
+      neighborhood: '',
+      city: '',
+      deliveryFee: 0
+    },
+    paymentMethod: 'dinheiro',
+    notes: '',
+    items: [
+      { name: '', quantity: 1, price: 0 }
+    ]
+  }
+}
+
+const closeCreateOrderModal = () => {
+  showCreateOrderModal.value = false
+}
+
+const addOrderItem = () => {
+  newOrder.value.items.push({ name: '', quantity: 1, price: 0 })
+}
+
+const removeOrderItem = (index) => {
+  if (newOrder.value.items.length > 1) {
+    newOrder.value.items.splice(index, 1)
+  }
+}
+
+const createOrder = async () => {
+  try {
+    creatingOrder.value = true
+    
+    // Validar itens
+    const validItems = newOrder.value.items
+      .filter(item => item.name && item.quantity > 0 && item.price > 0)
+      .map(item => ({
+        productId: null, // Pedido manual não tem productId
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        subtotal: item.quantity * item.price,
+        complements: []
+      }))
+    
+    if (validItems.length === 0) {
+      showError('Adicione pelo menos um item válido ao pedido')
+      return
+    }
+    
+    // Calcular total
+    const subtotal = validItems.reduce((sum, item) => sum + item.subtotal, 0)
+    const deliveryFee = newOrder.value.deliveryInfo.deliveryFee || 0
+    const total = subtotal + deliveryFee
+    
+    const orderData = {
+      customerInfo: {
+        name: newOrder.value.customerInfo.name.trim(),
+        phone: newOrder.value.customerInfo.phone.trim(),
+        email: newOrder.value.customerInfo.email?.trim() || ''
+      },
+      items: validItems,
+      deliveryInfo: {
+        address: newOrder.value.deliveryInfo.address.trim(),
+        number: newOrder.value.deliveryInfo.number?.trim() || '',
+        zipCode: newOrder.value.deliveryInfo.zipCode?.trim() || '',
+        neighborhood: newOrder.value.deliveryInfo.neighborhood?.trim() || '',
+        city: newOrder.value.deliveryInfo.city?.trim() || '',
+        complement: '',
+        latitude: null,
+        longitude: null,
+        deliveryFee: deliveryFee,
+        deliveryZone: '',
+        estimatedTime: ''
+      },
+      paymentMethod: newOrder.value.paymentMethod,
+      notes: newOrder.value.notes?.trim() || '',
+      totalAmount: total
+    }
+    
+    await authenticatedFetch('/api/orders', {
+      method: 'POST',
+      body: orderData
+    })
+    
+    showSuccess('Pedido criado com sucesso!')
+    closeCreateOrderModal()
+    loadOrders()
+  } catch (error) {
+    showError(error.data?.message || 'Erro ao criar pedido')
+  } finally {
+    creatingOrder.value = false
+  }
+}
+
+// Funções para excluir pedido
+const confirmDeleteOrder = (order) => {
+  confirmationModal.value = {
+    show: true,
+    title: 'Excluir Pedido',
+    message: `Tem certeza que deseja excluir o pedido #${order.id}? Esta ação não pode ser desfeita.`,
+    action: () => deleteOrder(order._id || order.id)
+  }
+}
+
+const deleteOrder = async (orderId) => {
+  try {
+    await authenticatedFetch(`/api/orders/${orderId}`, {
+      method: 'DELETE'
+    })
+    
+    showSuccess('Pedido excluído com sucesso!')
+    loadOrders()
+  } catch (error) {
+    showError(error.data?.message || 'Erro ao excluir pedido')
+  } finally {
+    confirmationModal.value.show = false
+  }
+}
+
 const closeStatusModal = () => {
   showStatusModal.value = false
   orderToUpdate.value = null
@@ -742,7 +1184,7 @@ onUnmounted(() => {
 
 <style scoped>
 .orders-page {
-  padding: 2rem;
+  padding: 0;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -860,7 +1302,7 @@ onUnmounted(() => {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
-  padding: 1.5rem;
+  padding: 1rem;
   margin-bottom: 2rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
@@ -1049,7 +1491,7 @@ onUnmounted(() => {
 
 .orders-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
 }
 
@@ -1057,34 +1499,60 @@ onUnmounted(() => {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
-  padding: 1.5rem;
+  padding: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .order-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border-color: #ff8e24;
+  border-color: var(--color-primary, #ff8e24);
 }
 
 .order-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-.order-info h3 {
-  margin: 0 0 0.25rem 0;
+.order-number-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.order-number {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.order-number svg {
+  color: var(--color-primary, #ff8e24);
+}
+
+.order-id {
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #1e293b;
 }
 
 .order-date {
-  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
   color: #64748b;
+}
+
+.order-date svg {
+  flex-shrink: 0;
 }
 
 .status-badge {
@@ -1132,107 +1600,238 @@ onUnmounted(() => {
   color: #991b1b;
 }
 
-.order-details {
-  margin-bottom: 1rem;
+/* Seções do Pedido */
+.order-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.section-label svg {
+  flex-shrink: 0;
+  color: var(--color-primary, #ff8e24);
+}
+
+/* Seção de Cliente */
+.customer-section {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .customer-info {
-  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
 }
 
-.customer-info strong {
-  display: block;
+.customer-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
   color: #1e293b;
-  font-size: 0.875rem;
 }
 
-.customer-info span {
+.customer-phone {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
   color: #64748b;
-  font-size: 0.75rem;
+}
+
+.customer-phone svg {
+  flex-shrink: 0;
+}
+
+/* Seção de Itens */
+.items-section {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .order-items {
-  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .order-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.25rem 0;
-  font-size: 0.875rem;
-}
-
-.order-notes {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  margin: 0.75rem 0;
+  padding: 0.5rem;
   background: #f8fafc;
-  border-left: 3px solid #ff8e24;
   border-radius: 0.375rem;
-  font-size: 0.875rem;
-}
-
-.order-notes svg {
-  flex-shrink: 0;
-  color: #ff8e24;
-  margin-top: 0.125rem;
-}
-
-.notes-label {
-  font-weight: 600;
-  color: #475569;
-  flex-shrink: 0;
-}
-
-.notes-text {
-  color: #64748b;
-  flex: 1;
-  line-height: 1.5;
+  font-size: 0.8125rem;
 }
 
 .item-quantity {
-  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 20px;
+  background: var(--color-primary, #ff8e24);
+  color: white;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
   margin-right: 0.5rem;
 }
 
 .item-name {
   flex: 1;
   color: #1e293b;
+  font-weight: 500;
 }
 
 .item-price {
   color: #1e293b;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.more-items {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #64748b;
+  font-style: italic;
+  padding: 0.25rem;
+}
+
+/* Seção de Pagamento */
+.payment-section {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.payment-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.info-item svg {
+  flex-shrink: 0;
+  color: #64748b;
+}
+
+.info-label {
+  color: #64748b;
   font-weight: 500;
 }
 
-.order-total {
-  padding-top: 0.75rem;
-  border-top: 1px solid #f1f5f9;
-  text-align: right;
+.info-value {
   color: #1e293b;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* Seção de Observações */
+.notes-section {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.order-notes {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  font-size: 0.8125rem;
+}
+
+.order-notes svg {
+  flex-shrink: 0;
+  color: #94a3b8;
+  margin-top: 0.125rem;
+}
+
+.notes-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.notes-label {
+  font-weight: 500;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.notes-text {
+  color: #475569;
+  line-height: 1.5;
+}
+
+/* Seção de Total */
+.order-total-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.total-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.total-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-primary, #ff8e24);
 }
 
 .order-actions {
   display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-top: 1rem;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
 }
 
-.order-actions button {
+.btn-action {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.625rem 1rem;
   border: 1px solid;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  flex: 1;
+}
+
+.btn-action svg {
+  flex-shrink: 0;
 }
 
 .btn-view {
@@ -1246,15 +1845,54 @@ onUnmounted(() => {
   color: white;
 }
 
+.btn-create {
+  background: var(--color-primary, #ff8e24);
+  color: white;
+  border: none;
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.btn-create:hover {
+  background: var(--color-primary-hover, #e67e22);
+  transform: translateY(-1px);
+}
+
 .btn-edit {
   background: white;
-  color: #ff8e24;
-  border-color: #ff8e24;
+  color: var(--color-primary, #ff8e24);
+  border-color: var(--color-primary, #ff8e24);
 }
 
 .btn-edit:hover {
-  background: #ff8e24;
+  background: var(--color-primary, #ff8e24);
   color: white;
+}
+
+.btn-delete {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-delete:hover {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
 }
 
 /* Modal */
@@ -1282,7 +1920,7 @@ onUnmounted(() => {
 }
 
 .modal-header {
-  padding: 1.5rem;
+  padding: 1rem;
   border-bottom: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
@@ -1307,7 +1945,7 @@ onUnmounted(() => {
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .detail-section {
@@ -1429,7 +2067,7 @@ onUnmounted(() => {
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
-  padding: 1rem 1.5rem;
+  padding: 1rem;
   border-top: 1px solid #e2e8f0;
   background: #f8fafc;
 }
@@ -1610,6 +2248,109 @@ onUnmounted(() => {
   
   .orders-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Modal de Criar Pedido */
+.create-order-modal {
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.create-order-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.order-items-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.order-item-row {
+  display: grid;
+  grid-template-columns: 2fr 80px 120px auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.item-name-input {
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+}
+
+.item-qty-input,
+.item-price-input {
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  text-align: center;
+}
+
+.btn-remove-item {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  width: 32px;
+  height: 32px;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.btn-remove-item:hover {
+  background: #dc2626;
+  color: white;
+}
+
+.btn-add-item {
+  background: #f0f9ff;
+  color: var(--color-primary, #ff8e24);
+  border: 1px dashed var(--color-primary, #ff8e24);
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-add-item:hover {
+  background: var(--color-primary, #ff8e24);
+  color: white;
+}
+
+@media (max-width: 1200px) {
+  .orders-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .orders-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .order-item-row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
   
   .order-actions {

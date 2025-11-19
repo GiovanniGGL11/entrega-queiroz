@@ -190,17 +190,36 @@
           </div>
           
           <div class="form-group">
-            <label class="checkbox-label">
-              <input
-                type="checkbox"
-                v-model="categoryForm.isVisible"
-                :disabled="submitting"
-              />
-              <span class="checkbox-text">
-                <span class="checkbox-title">Exibir no menu</span>
-                <span class="checkbox-description">Esta categoria será visível para os clientes no cardápio</span>
-              </span>
-            </label>
+            <div class="visibility-toggle-wrapper">
+              <div class="visibility-toggle-header">
+                <div class="visibility-toggle-info">
+                  <div class="visibility-toggle-icon" :class="{ 'visible': categoryForm.isVisible, 'hidden': !categoryForm.isVisible }">
+                    <svg v-if="categoryForm.isVisible" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                      <line x1="1" y1="1" x2="23" y2="23"></line>
+                    </svg>
+                  </div>
+                  <div class="visibility-toggle-text">
+                    <span class="visibility-toggle-title">Visibilidade no Cardápio</span>
+                    <span class="visibility-toggle-description">
+                      {{ categoryForm.isVisible ? 'Esta categoria está visível para os clientes' : 'Esta categoria está oculta e não aparecerá no cardápio' }}
+                    </span>
+                  </div>
+                </div>
+                <label class="visibility-toggle-switch">
+                  <input
+                    type="checkbox"
+                    v-model="categoryForm.isVisible"
+                    :disabled="submitting"
+                  />
+                  <span class="toggle-slider" :class="{ 'checked': categoryForm.isVisible }"></span>
+                </label>
+              </div>
+            </div>
           </div>
           
           <div class="form-group" style="display:none;">
@@ -768,7 +787,7 @@ onUnmounted(() => {
 
 <style scoped>
 .categories-page {
-  padding: 2rem;
+  padding: 0;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -1137,7 +1156,7 @@ onUnmounted(() => {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
-  padding: 1.5rem;
+  padding: 1rem;
   transition: all 0.2s;
   position: relative;
 }
@@ -1307,7 +1326,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 1.25rem 1.5rem;
+  padding: 1rem;
   border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
 }
@@ -1339,7 +1358,7 @@ onUnmounted(() => {
 /* Conteúdo com scroll */
 .modal-content {
   flex: 1;
-  padding: 1.5rem;
+  padding: 1rem;
   overflow-y: auto;
   min-height: 0;
 }
@@ -1486,7 +1505,7 @@ onUnmounted(() => {
 .modal-actions {
   display: flex;
   gap: 0.75rem;
-  padding: 1rem 1.5rem;
+  padding: 1rem;
   border-top: 1px solid #e5e7eb;
   background: #fafafa;
   flex-shrink: 0;
@@ -1612,7 +1631,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
+  padding: 1rem;
   border-bottom: 1px solid #e5e7eb;
 }
 
@@ -1637,7 +1656,7 @@ onUnmounted(() => {
 }
 
 .modal-form {
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .form-group {
@@ -1750,7 +1769,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1.5rem;
+  padding: 1rem;
   border-bottom: 1px solid #e5e7eb;
 }
 
@@ -1774,7 +1793,7 @@ onUnmounted(() => {
 }
 
 .modal-content {
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .modal-content p {
@@ -1793,7 +1812,7 @@ onUnmounted(() => {
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
-  padding: 1.5rem;
+  padding: 1rem;
   border-top: 1px solid #e5e7eb;
 }
 
@@ -2091,39 +2110,129 @@ onUnmounted(() => {
 }
 
 /* Checkbox styles */
-.checkbox-label {
+/* Visibility Toggle - Melhorado */
+.visibility-toggle-wrapper {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  transition: all 0.2s;
+}
+
+.visibility-toggle-wrapper:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.visibility-toggle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.visibility-toggle-info {
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  cursor: pointer;
-  padding: 0.5rem 0;
+  flex: 1;
 }
 
-.checkbox-label input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  accent-color: #ff8e24;
+.visibility-toggle-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 0.5rem;
   flex-shrink: 0;
-  margin-top: 2px;
+  transition: all 0.2s;
 }
 
-.checkbox-text {
+.visibility-toggle-icon.visible {
+  background: #d1fae5;
+  color: #10b981;
+}
+
+.visibility-toggle-icon.hidden {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.visibility-toggle-text {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  flex: 1;
 }
 
-.checkbox-title {
-  font-weight: 500;
+.visibility-toggle-title {
+  font-weight: 600;
   color: #1f2937;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
 }
 
-.checkbox-description {
-  font-size: 0.75rem;
+.visibility-toggle-description {
+  font-size: 0.8125rem;
   color: #6b7280;
-  line-height: 1.4;
+  line-height: 1.5;
+}
+
+.visibility-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.visibility-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #d1d5db;
+  transition: all 0.3s ease;
+  border-radius: 28px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: all 0.3s ease;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-slider.checked {
+  background-color: #10b981;
+}
+
+.toggle-slider.checked:before {
+  transform: translateX(24px);
+}
+
+.visibility-toggle-switch input:disabled + .toggle-slider {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.visibility-toggle-switch input:disabled {
+  cursor: not-allowed;
 }
 
 /* Category badges */

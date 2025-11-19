@@ -48,7 +48,8 @@ export default defineEventHandler(async (event) => {
       checkoutFields,
       restrictedZipCodes,
       manualOverride,
-      storeMode
+      storeMode,
+      primaryColor
     } = body;
     
     // Validações
@@ -225,6 +226,16 @@ export default defineEventHandler(async (event) => {
       if (storeMode === 'automatic') {
         updateFields.manualOverride = null;
       }
+    }
+    if (primaryColor !== undefined) {
+      // Validar formato de cor hexadecimal
+      if (!/^#[0-9A-Fa-f]{6}$/.test(primaryColor)) {
+        throw createError({
+          statusCode: 400,
+          message: "Cor primária deve ser um valor hexadecimal válido (ex: #ff8e24)",
+        });
+      }
+      updateFields.primaryColor = primaryColor;
     }
 
     const result = await settings.updateOne(
