@@ -30,3 +30,13 @@ public/uploads/
 
 # Backup
 *.backup
+
+# Arquivos JS duplicados (versões .ts existem)
+server/api/auth/login.post.js
+server/api/auth/logout.post.js
+server/api/categories/[id].delete.js
+server/api/products.get.js
+server/api/products/[id].delete.js
+
+# Lock files duplicados
+package-lock.json
