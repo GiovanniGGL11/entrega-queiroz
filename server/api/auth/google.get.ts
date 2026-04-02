@@ -1,7 +1,8 @@
-import { sendRedirect } from 'h3'
+import { sendRedirect, getQuery } from 'h3'
 
 export default defineEventHandler((event) => {
   const config = useRuntimeConfig()
+  const { mode } = getQuery(event)
 
   const params = new URLSearchParams({
     client_id: config.googleClientId as string,
@@ -9,7 +10,8 @@ export default defineEventHandler((event) => {
     response_type: 'code',
     scope: 'email profile',
     access_type: 'offline',
-    prompt: 'select_account'
+    prompt: 'select_account',
+    state: (mode as string) || 'admin'
   })
 
   return sendRedirect(event, `https://accounts.google.com/o/oauth2/v2/auth?${params}`)

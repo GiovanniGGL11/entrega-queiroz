@@ -55,7 +55,14 @@ export default defineEventHandler(async (event) => {
       email: user.email
     })
 
-    // Redirecionar para página que salva o token e vai para o dashboard
+    // Redirecionar conforme o modo (cliente ou admin)
+    const { state } = getQuery(event)
+    if (state === 'cliente') {
+      const name = encodeURIComponent(userInfo.name || '')
+      const email = encodeURIComponent(userInfo.email)
+      return sendRedirect(event, `/auth/google-cliente?name=${name}&email=${email}`)
+    }
+
     return sendRedirect(event, `/auth/google-sucesso?token=${token}`)
   } catch (err: any) {
     console.error('[Google OAuth] Erro:', err.message)
