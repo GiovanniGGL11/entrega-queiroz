@@ -57,6 +57,7 @@ const showAccountModal = ref(false)
 
 // Estado do modal de login do cliente
 const showLoginModal = ref(false)
+const isCustomerIdentified = ref(false)
 
 // Dados das categorias
 const categories = ref([])
@@ -455,8 +456,7 @@ const finalizeOrder = () => {
   }
 
   // Verificar se o cliente já está identificado nesta sessão
-  const customerEmail = sessionStorage.getItem('customer_email')
-  if (!customerEmail) {
+  if (!isCustomerIdentified.value) {
     closeSidebar();
     showLoginModal.value = true;
     return;
@@ -623,16 +623,19 @@ const handleScroll = () => {
 
 // Lifecycle
 onMounted(async () => {
+  // Verificar se cliente já está identificado nesta sessão
+  isCustomerIdentified.value = !!sessionStorage.getItem('customer_email')
+
   // Carregar APIs em paralelo
   await Promise.all([
     loadStoreSettings(),
     loadCategories(),
     loadPrimaryColor()
   ]);
-  
+
   // Só mostra o conteúdo depois que tudo carregou
   initialLoading.value = false;
-  
+
   setupIntersectionObserver();
   checkMobile();
   window.addEventListener("resize", checkMobile);
