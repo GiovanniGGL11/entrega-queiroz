@@ -14,8 +14,8 @@ onMounted(() => {
   const email = route.query.email || ''
 
   if (email) {
-    localStorage.setItem('customer_name', decodeURIComponent(name))
-    localStorage.setItem('customer_email', decodeURIComponent(email))
+    sessionStorage.setItem('customer_name', decodeURIComponent(name))
+    sessionStorage.setItem('customer_email', decodeURIComponent(email))
     router.push('/checkout')
   } else {
     router.push('/')

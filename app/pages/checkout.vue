@@ -386,7 +386,13 @@ onMounted(async () => {
     loadStoreSettings(),
     loadPrimaryColor()
   ])
-  
+
+  // Pré-preencher dados do cliente vindo do Google
+  const customerName = sessionStorage.getItem('customer_name')
+  const customerEmail = sessionStorage.getItem('customer_email')
+  if (customerName) customerInfo.value.name = customerName
+  if (customerEmail) customerInfo.value.email = customerEmail
+
   // Se não há itens no carrinho, redirecionar para o menu
   if (cart.length === 0) {
     navigateTo('/')

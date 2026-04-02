@@ -454,8 +454,8 @@ const finalizeOrder = () => {
     return;
   }
 
-  // Verificar se o cliente já está identificado
-  const customerEmail = process.client ? localStorage.getItem('customer_email') : null
+  // Verificar se o cliente já está identificado nesta sessão
+  const customerEmail = process.client ? sessionStorage.getItem('customer_email') : null
   if (!customerEmail) {
     closeSidebar();
     showLoginModal.value = true;
