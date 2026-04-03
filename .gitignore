@@ -38,5 +38,3 @@ server/api/categories/\[id\].delete.js
 server/api/products.get.js
 server/api/products/\[id\].delete.js
 
-# Lock files duplicados
-package-lock.json
