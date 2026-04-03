@@ -446,6 +446,10 @@ const closeSidebar = () => {
 };
 
 const finalizeOrder = () => {
+  console.log('[DEBUG] isOpen:', storeSettings.value.isOpen)
+  console.log('[DEBUG] cartCount:', cartCount.value)
+  console.log('[DEBUG] isCustomerIdentified:', isCustomerIdentified.value)
+
   if (!storeSettings.value.isOpen) {
     showAlert('Loja Fechada', 'A loja está fechada no momento. Pedidos não podem ser realizados.', 'warning')
     return;
