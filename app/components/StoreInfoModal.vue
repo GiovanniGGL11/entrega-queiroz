@@ -33,12 +33,22 @@
               <div class="section-content">
                 <div class="time-info">
                   <span class="status-badge" :class="storeSettings.isOpen ? 'open' : 'closed'">
-                    {{ storeSettings.isOpen ? 'Aberto' : 'Fechado' }}
+                    {{ storeSettings.isOpen ? 'Aberto agora' : 'Fechado agora' }}
                   </span>
-                  <p class="time-text">
-                    <strong>Entrega:</strong> {{ storeSettings.deliveryMinTime }}-{{ storeSettings.deliveryMaxTime }} minutos
-                  </p>
                 </div>
+                <div class="schedule-list">
+                  <div class="schedule-row">
+                    <span class="schedule-days">Quarta a Domingo</span>
+                    <span class="schedule-hours">18h30 – 23h30</span>
+                  </div>
+                  <div class="schedule-row closed-day">
+                    <span class="schedule-days">Segunda e Terça</span>
+                    <span class="schedule-hours">Fechado</span>
+                  </div>
+                </div>
+                <p class="time-text" style="margin-top: 0.75rem;">
+                  <strong>Tempo de entrega:</strong> {{ storeSettings.deliveryMinTime }}-{{ storeSettings.deliveryMaxTime }} minutos
+                </p>
               </div>
             </div>
 
@@ -478,6 +488,42 @@ watch(() => props.show, (newShow) => {
 
 .contact-item a:hover {
   text-decoration: underline;
+}
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.schedule-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.schedule-row:last-child {
+  border-bottom: none;
+}
+
+.schedule-days {
+  color: #333;
+  font-weight: 500;
+}
+
+.schedule-hours {
+  color: #333;
+  font-weight: 600;
+}
+
+.closed-day .schedule-days,
+.closed-day .schedule-hours {
+  color: #999;
+  font-weight: 400;
 }
 
 /* Transições */
