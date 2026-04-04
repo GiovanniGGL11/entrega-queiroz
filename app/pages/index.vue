@@ -1210,7 +1210,12 @@ useHead({
     <Transition name="finalize-bar">
       <button v-if="cart.length > 0" class="finalize-bar" @click="finalizeOrder">
         <div class="finalize-bar-left">
-          <span class="finalize-bar-badge">{{ cartCount }}</span>
+          <span class="finalize-bar-badge">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+          </span>
           <span class="finalize-bar-label">Finalizar Pedido</span>
         </div>
         <span class="finalize-bar-total">{{ formatPrice(cartTotal) }}</span>
@@ -1230,9 +1235,8 @@ useHead({
     <button class="nav-item" @click="openSidebar" :class="{ active: showSidebar }">
       <div class="nav-badge-wrapper">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <path d="M16 10a4 4 0 0 1-8 0"></path>
+          <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
         </svg>
         <span v-if="cartCount > 0" class="nav-badge">{{ cartCount }}</span>
       </div>
