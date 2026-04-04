@@ -2290,53 +2290,56 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 0 1rem 0.6rem;
-  padding: 0.85rem 1rem 0.85rem 0.85rem;
-  background: #1a1a1a;
-  border-radius: 16px;
+  margin: 0 0.875rem 0.5rem;
+  padding: 0.6rem 0.875rem 0.6rem 0.6rem;
+  background: var(--color-primary);
+  border-radius: 12px;
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease, background 0.15s ease;
   text-align: left;
 }
 
 .finalize-bar:active {
-  transform: scale(0.98);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transform: scale(0.97);
+}
+
+.finalize-bar:hover {
+  background: var(--color-primary-hover);
 }
 
 .finalize-bar-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
 
 .finalize-bar-badge {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 6px;
-  background: var(--color-primary);
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  background: rgba(255, 255, 255, 0.25);
   color: white;
-  border-radius: 8px;
-  font-size: 0.85rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
   font-weight: 700;
 }
 
 .finalize-bar-label {
   color: white;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: -0.01em;
 }
 
 .finalize-bar-total {
   color: white;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
+  opacity: 0.92;
 }
 
 .finalize-bar-enter-active,
