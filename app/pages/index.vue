@@ -55,9 +55,16 @@ const isAtTop = ref(true)
 // Estado do modal de conta
 const showAccountModal = ref(false)
 
-// Estado do modal de login do cliente
+// Estado do modal de login/conta do cliente
 const showLoginModal = ref(false)
 const isCustomerIdentified = ref(false)
+const customerData = ref(null)
+
+// Abas do modal de conta
+const accountTab = ref('login') // 'login' | 'register'
+const accountForm = ref({ name: '', email: '', phone: '', password: '', address: '', number: '', neighborhood: '', city: '', zipCode: '' })
+const accountError = ref('')
+const accountLoading = ref(false)
 
 // Dados das categorias
 const categories = ref([])
@@ -446,10 +453,6 @@ const closeSidebar = () => {
 };
 
 const finalizeOrder = () => {
-  console.log('[DEBUG] isOpen:', storeSettings.value.isOpen)
-  console.log('[DEBUG] cartCount:', cartCount.value)
-  console.log('[DEBUG] isCustomerIdentified:', isCustomerIdentified.value)
-
   if (!storeSettings.value.isOpen) {
     showAlert('Loja Fechada', 'A loja está fechada no momento. Pedidos não podem ser realizados.', 'warning')
     return;
@@ -459,9 +462,10 @@ const finalizeOrder = () => {
     return;
   }
 
-  // Verificar se o cliente já está identificado nesta sessão
+  // Verificar se o cliente está logado
   if (!isCustomerIdentified.value) {
     closeSidebar();
+    accountTab.value = 'login';
     showLoginModal.value = true;
     return;
   }
@@ -485,9 +489,58 @@ const scrollToTop = () => {
 
 // Função para abrir modal de conta
 const openAccountModal = () => {
-  // Por enquanto, apenas mostra um alerta. Pode ser expandido depois
-  showAlert('Conta', 'Funcionalidade de conta em desenvolvimento.', 'info');
-};
+  accountError.value = ''
+  accountTab.value = isCustomerIdentified.value ? 'perfil' : 'login'
+  showLoginModal.value = true
+}
+
+const logoutCustomer = () => {
+  localStorage.removeItem('customer_token')
+  localStorage.removeItem('customer_data')
+  isCustomerIdentified.value = false
+  customerData.value = null
+  showLoginModal.value = false
+}
+
+const handleAccountLogin = async () => {
+  accountError.value = ''
+  accountLoading.value = true
+  try {
+    const res: any = await $fetch('/api/customers/login', {
+      method: 'POST',
+      body: { email: accountForm.value.email, password: accountForm.value.password }
+    })
+    localStorage.setItem('customer_token', res.token)
+    localStorage.setItem('customer_data', JSON.stringify(res.customer))
+    customerData.value = res.customer
+    isCustomerIdentified.value = true
+    showLoginModal.value = false
+  } catch (e: any) {
+    accountError.value = e.data?.statusMessage || 'Erro ao entrar'
+  } finally {
+    accountLoading.value = false
+  }
+}
+
+const handleAccountRegister = async () => {
+  accountError.value = ''
+  accountLoading.value = true
+  try {
+    const res: any = await $fetch('/api/customers/register', {
+      method: 'POST',
+      body: accountForm.value
+    })
+    localStorage.setItem('customer_token', res.token)
+    localStorage.setItem('customer_data', JSON.stringify(res.customer))
+    customerData.value = res.customer
+    isCustomerIdentified.value = true
+    showLoginModal.value = false
+  } catch (e: any) {
+    accountError.value = e.data?.statusMessage || 'Erro ao cadastrar'
+  } finally {
+    accountLoading.value = false
+  }
+}
 
 // Função para fechar modal de conta
 const closeAccountModal = () => {
@@ -627,8 +680,18 @@ const handleScroll = () => {
 
 // Lifecycle
 onMounted(async () => {
-  // Verificar se cliente já está identificado nesta sessão
-  isCustomerIdentified.value = !!sessionStorage.getItem('customer_email')
+  // Verificar se cliente está logado
+  const token = localStorage.getItem('customer_token')
+  if (token) {
+    try {
+      const data = localStorage.getItem('customer_data')
+      if (data) customerData.value = JSON.parse(data)
+      isCustomerIdentified.value = true
+    } catch (e) {
+      localStorage.removeItem('customer_token')
+      localStorage.removeItem('customer_data')
+    }
+  }
 
   // Carregar APIs em paralelo
   await Promise.all([
@@ -1150,30 +1213,80 @@ useHead({
     @close="closeStoreInfoModal"
   />
   
-  <!-- Modal de Login do Cliente -->
+  <!-- Modal de Conta do Cliente -->
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="showLoginModal" class="alert-modal-overlay" @click="showLoginModal = false">
-        <div class="alert-modal login-modal" @click.stop>
-          <div class="alert-modal-header">
-            <h3>Identificação</h3>
+        <div class="account-modal" @click.stop>
+
+          <!-- PERFIL (logado) -->
+          <div v-if="accountTab === 'perfil'" class="account-section">
+            <div class="account-modal-header">
+              <h3>Minha Conta</h3>
+              <button @click="showLoginModal = false" class="close-modal-btn">×</button>
+            </div>
+            <div class="account-info">
+              <div class="account-avatar">{{ customerData?.name?.charAt(0)?.toUpperCase() || '?' }}</div>
+              <p class="account-name">{{ customerData?.name }}</p>
+              <p class="account-email">{{ customerData?.email }}</p>
+            </div>
+            <button @click="logoutCustomer" class="logout-btn">Sair da conta</button>
           </div>
-          <div class="alert-modal-content">
-            <p>Para finalizar seu pedido, entre com sua conta Google.</p>
-          </div>
-          <div class="alert-modal-actions login-actions">
+
+          <!-- LOGIN -->
+          <div v-else-if="accountTab === 'login'" class="account-section">
+            <div class="account-modal-header">
+              <h3>Entrar</h3>
+              <button @click="showLoginModal = false" class="close-modal-btn">×</button>
+            </div>
             <a href="/api/auth/google?mode=cliente" class="google-login-btn">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
                 <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
                 <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
                 <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                 <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                <path fill="none" d="M0 0h48v48H0z"/>
               </svg>
-              Continuar com Google
+              Entrar com Google
             </a>
-            <button @click="showLoginModal = false" class="alert-btn-cancel">Cancelar</button>
+            <div class="account-divider"><span>ou</span></div>
+            <form @submit.prevent="handleAccountLogin" class="account-form">
+              <input v-model="accountForm.email" type="email" placeholder="Email" required />
+              <input v-model="accountForm.password" type="password" placeholder="Senha" required />
+              <p v-if="accountError" class="account-error">{{ accountError }}</p>
+              <button type="submit" class="account-submit-btn" :disabled="accountLoading">
+                {{ accountLoading ? 'Entrando...' : 'Entrar' }}
+              </button>
+            </form>
+            <p class="account-switch">Não tem conta? <button @click="accountTab = 'register'">Cadastrar</button></p>
           </div>
+
+          <!-- CADASTRO -->
+          <div v-else-if="accountTab === 'register'" class="account-section">
+            <div class="account-modal-header">
+              <h3>Criar Conta</h3>
+              <button @click="showLoginModal = false" class="close-modal-btn">×</button>
+            </div>
+            <form @submit.prevent="handleAccountRegister" class="account-form">
+              <input v-model="accountForm.name" type="text" placeholder="Nome completo *" required />
+              <input v-model="accountForm.email" type="email" placeholder="Email *" required />
+              <input v-model="accountForm.phone" type="tel" placeholder="Telefone *" required />
+              <input v-model="accountForm.password" type="password" placeholder="Senha *" required />
+              <hr class="form-divider" />
+              <input v-model="accountForm.zipCode" type="text" placeholder="CEP" />
+              <input v-model="accountForm.address" type="text" placeholder="Endereço" />
+              <div class="form-row">
+                <input v-model="accountForm.number" type="text" placeholder="Número" />
+                <input v-model="accountForm.neighborhood" type="text" placeholder="Bairro" />
+              </div>
+              <input v-model="accountForm.city" type="text" placeholder="Cidade" />
+              <p v-if="accountError" class="account-error">{{ accountError }}</p>
+              <button type="submit" class="account-submit-btn" :disabled="accountLoading">
+                {{ accountLoading ? 'Cadastrando...' : 'Criar Conta' }}
+              </button>
+            </form>
+            <p class="account-switch">Já tem conta? <button @click="accountTab = 'login'">Entrar</button></p>
+          </div>
+
         </div>
       </div>
     </Transition>
@@ -2670,6 +2783,182 @@ body {
 
 .alert-btn-cancel:hover {
   background: #f5f5f5;
+}
+
+.account-modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+.account-section {
+  padding: 1.5rem;
+}
+
+.account-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.account-modal-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  line-height: 1;
+  padding: 0;
+}
+
+.account-info {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.account-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  font-size: 1.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.75rem;
+}
+
+.account-name {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin: 0 0 0.25rem;
+}
+
+.account-email {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.logout-btn {
+  width: 100%;
+  padding: 0.875rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  color: var(--color-error, #e53e3e);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  background: #fff5f5;
+}
+
+.account-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  margin: 1rem 0;
+}
+
+.account-divider::before,
+.account-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e0e0e0;
+}
+
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.account-form input {
+  padding: 0.875rem 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.account-form input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.form-divider {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 0.25rem 0;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.account-submit-btn {
+  padding: 0.875rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.25rem;
+}
+
+.account-submit-btn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.account-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.account-error {
+  color: var(--color-error, #e53e3e);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.account-switch {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.account-switch button {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
 }
 
 .image-overlay-enter-active,

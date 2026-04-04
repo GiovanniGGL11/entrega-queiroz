@@ -387,11 +387,21 @@ onMounted(async () => {
     loadPrimaryColor()
   ])
 
-  // Pré-preencher dados do cliente vindo do Google
-  const customerName = sessionStorage.getItem('customer_name')
-  const customerEmail = sessionStorage.getItem('customer_email')
-  if (customerName) customerInfo.value.name = customerName
-  if (customerEmail) customerInfo.value.email = customerEmail
+  // Pré-preencher dados do cliente logado
+  const customerData = localStorage.getItem('customer_data')
+  if (customerData) {
+    try {
+      const data = JSON.parse(customerData)
+      if (data.name) customerInfo.value.name = data.name
+      if (data.email) customerInfo.value.email = data.email
+      if (data.phone) customerInfo.value.phone = data.phone
+      if (data.address) deliveryInfo.value.address = data.address
+      if (data.number) deliveryInfo.value.number = data.number
+      if (data.neighborhood) deliveryInfo.value.neighborhood = data.neighborhood
+      if (data.city) deliveryInfo.value.city = data.city
+      if (data.zipCode) deliveryInfo.value.zipCode = data.zipCode
+    } catch (e) {}
+  }
 
   // Se não há itens no carrinho, redirecionar para o menu
   if (cart.length === 0) {

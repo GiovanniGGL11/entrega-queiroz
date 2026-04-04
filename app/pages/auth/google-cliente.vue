@@ -9,13 +9,20 @@
 const route = useRoute()
 const router = useRouter()
 
-onMounted(() => {
-  const name = route.query.name || ''
-  const email = route.query.email || ''
+onMounted(async () => {
+  const token = route.query.token
+  if (token) {
+    const decoded = decodeURIComponent(token)
+    localStorage.setItem('customer_token', decoded)
 
-  if (email) {
-    sessionStorage.setItem('customer_name', decodeURIComponent(name))
-    sessionStorage.setItem('customer_email', decodeURIComponent(email))
+    // Buscar dados do cliente
+    try {
+      const data = await $fetch('/api/customers/me', {
+        headers: { Authorization: `Bearer ${decoded}` }
+      })
+      localStorage.setItem('customer_data', JSON.stringify(data))
+    } catch (e) {}
+
     router.push('/checkout')
   } else {
     router.push('/')

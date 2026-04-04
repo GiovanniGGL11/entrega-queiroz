@@ -1,6 +1,6 @@
 import { getQuery, sendRedirect } from 'h3'
 import { connectToDatabase } from '../../../utils/db'
-import { signUserToken } from '../../../utils/auth'
+import { signCustomerToken } from '../../../utils/customer-auth'
 
 export default defineEventHandler(async (event) => {
   const { code, error } = getQuery(event)
@@ -34,26 +34,32 @@ export default defineEventHandler(async (event) => {
       return sendRedirect(event, '/login?error=email_nao_encontrado')
     }
 
-    // Buscar ou criar usuário no banco
+    // Buscar ou criar cliente no banco
     const { db } = await connectToDatabase()
-    const users = db.collection('users')
+    const customers = db.collection('customers')
 
-    let user = await users.findOne({ email: userInfo.email })
+    let customer = await customers.findOne({ email: userInfo.email })
 
-    if (!user) {
-      const result = await users.insertOne({
+    if (!customer) {
+      const result = await customers.insertOne({
         email: userInfo.email,
         name: userInfo.name || '',
         googleId: userInfo.id,
+        phone: '',
+        address: '',
+        number: '',
+        neighborhood: '',
+        city: '',
+        zipCode: '',
         createdAt: new Date()
       })
-      user = { _id: result.insertedId, email: userInfo.email }
+      customer = { _id: result.insertedId, email: userInfo.email, name: userInfo.name || '' }
     }
 
-    // Google OAuth é apenas para clientes — nunca dá acesso ao admin
-    const name = encodeURIComponent(userInfo.name || '')
-    const email = encodeURIComponent(userInfo.email)
-    return sendRedirect(event, `/auth/google-cliente?name=${name}&email=${email}`)
+    // Gerar token de cliente
+    const token = signCustomerToken({ customerId: customer._id.toString(), email: customer.email })
+    const encodedToken = encodeURIComponent(token)
+    return sendRedirect(event, `/auth/google-cliente?token=${encodedToken}`)
   } catch (err: any) {
     console.error('[Google OAuth] Erro:', err.message)
     return sendRedirect(event, '/login?error=falha_google')

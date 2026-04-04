@@ -40,3 +40,4 @@ server/api/products/\[id\].delete.js
 
 
 .vercel
+.env*.local
