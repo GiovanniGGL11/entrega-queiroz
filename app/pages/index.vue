@@ -1220,7 +1220,7 @@ useHead({
           <div class="finalize-bar-divider"></div>
           <div class="finalize-bar-bottom">
             <span>Itens: {{ cartCount }}</span>
-            <span class="finalize-bar-dot">▶</span>
+            <span class="finalize-bar-dot">•</span>
             <span>Total: {{ formatPrice(cartTotal) }}</span>
           </div>
         </div>
