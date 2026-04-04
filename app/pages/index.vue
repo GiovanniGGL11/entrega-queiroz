@@ -993,7 +993,7 @@ useHead({
   </div>
 
   <!-- Conteúdo Principal (só aparece após carregar) -->
-  <div v-else class="page-wrapper" :class="{ 'has-finalize-bar': cart.length > 0 }">
+  <div v-else class="page-wrapper">
   <div class="container">
     <!-- Hero Section -->
     <div class="hero">
@@ -1717,12 +1717,9 @@ useHead({
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  padding-bottom: 70px; /* Espaço para a navbar fixa */
+  padding-bottom: 130px; /* navbar + barra ver pedido */
 }
 
-.page-wrapper.has-finalize-bar {
-  padding-bottom: 140px; /* navbar + barra flutuante */
-}
 body {
   overflow-x: hidden; /* Previne scroll horizontal global */
 }
@@ -2300,7 +2297,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 0 0.875rem 0.5rem;
+  margin: 0 0.75rem 0.4rem;
   padding: 0.6rem 0.875rem 0.6rem 0.6rem;
   background: var(--color-primary);
   border-radius: 12px;
