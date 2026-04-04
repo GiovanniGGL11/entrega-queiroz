@@ -993,7 +993,7 @@ useHead({
   </div>
 
   <!-- Conteúdo Principal (só aparece após carregar) -->
-  <div v-else class="page-wrapper">
+  <div v-else class="page-wrapper" :class="{ 'has-finalize-bar': cart.length > 0 }">
   <div class="container">
     <!-- Hero Section -->
     <div class="hero">
@@ -1204,6 +1204,22 @@ useHead({
     </div>
   </footer>
   </div>
+
+  <!-- Barra de Finalizar Pedido (aparece quando há itens no carrinho) -->
+  <Transition name="finalize-bar">
+    <div v-if="cart.length > 0" class="finalize-bar">
+      <div class="finalize-bar-info">
+        <span class="finalize-bar-count">{{ cartCount }} {{ cartCount === 1 ? 'item' : 'itens' }}</span>
+        <span class="finalize-bar-total">{{ formatPrice(cartTotal) }}</span>
+      </div>
+      <button class="finalize-bar-btn" @click="finalizeOrder">
+        Finalizar Pedido
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+    </div>
+  </Transition>
 
   <!-- Navbar Fixa no Bottom -->
   <nav class="bottom-navbar">
@@ -1695,6 +1711,10 @@ useHead({
   display: flex;
   flex-direction: column;
   padding-bottom: 70px; /* Espaço para a navbar fixa */
+}
+
+.page-wrapper.has-finalize-bar {
+  padding-bottom: 130px; /* navbar + barra de finalizar */
 }
 body {
   overflow-x: hidden; /* Previne scroll horizontal global */
@@ -2258,6 +2278,71 @@ body {
 }
 
 /* Bottom Navbar */
+/* Barra de finalizar pedido */
+.finalize-bar {
+  position: fixed;
+  bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  right: 0;
+  z-index: 99;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  padding: 0.65rem 1.25rem;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.finalize-bar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.finalize-bar-count {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.finalize-bar-total {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.finalize-bar-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 0.7rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.finalize-bar-btn:hover {
+  background: var(--color-primary-hover);
+}
+
+.finalize-bar-enter-active,
+.finalize-bar-leave-active {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.finalize-bar-enter-from,
+.finalize-bar-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
 .bottom-navbar {
   position: fixed;
   bottom: 0;
