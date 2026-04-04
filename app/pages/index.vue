@@ -506,7 +506,7 @@ const handleAccountLogin = async () => {
   accountError.value = ''
   accountLoading.value = true
   try {
-    const res: any = await $fetch('/api/customers/login', {
+    const res = await $fetch('/api/customers/login', {
       method: 'POST',
       body: { email: accountForm.value.email, password: accountForm.value.password }
     })
@@ -515,7 +515,7 @@ const handleAccountLogin = async () => {
     customerData.value = res.customer
     isCustomerIdentified.value = true
     showLoginModal.value = false
-  } catch (e: any) {
+  } catch (e) {
     accountError.value = e.data?.statusMessage || 'Erro ao entrar'
   } finally {
     accountLoading.value = false
@@ -526,7 +526,7 @@ const handleAccountRegister = async () => {
   accountError.value = ''
   accountLoading.value = true
   try {
-    const res: any = await $fetch('/api/customers/register', {
+    const res = await $fetch('/api/customers/register', {
       method: 'POST',
       body: accountForm.value
     })
@@ -535,7 +535,7 @@ const handleAccountRegister = async () => {
     customerData.value = res.customer
     isCustomerIdentified.value = true
     showLoginModal.value = false
-  } catch (e: any) {
+  } catch (e) {
     accountError.value = e.data?.statusMessage || 'Erro ao cadastrar'
   } finally {
     accountLoading.value = false
