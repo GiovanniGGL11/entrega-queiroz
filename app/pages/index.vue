@@ -1717,7 +1717,7 @@ useHead({
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  padding-bottom: 130px; /* navbar + barra ver pedido */
+  padding-bottom: 90px; /* navbar + barra ver pedido */
 }
 
 body {
