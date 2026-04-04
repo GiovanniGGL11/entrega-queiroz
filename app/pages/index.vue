@@ -74,6 +74,8 @@ const perfilSuccess = ref('')
 const perfilError = ref('')
 const perfilLoading = ref(false)
 const showPasswordSection = ref(false)
+const avatarUploading = ref(false)
+const avatarPreview = ref('')
 
 // Dados das categorias
 const categories = ref([])
@@ -519,8 +521,55 @@ const openAccountModal = () => {
     perfilForm.value.newPassword = ''
     perfilForm.value.confirmPassword = ''
     showPasswordSection.value = false
+    avatarPreview.value = customerData.value?.avatar || ''
   }
   showLoginModal.value = true
+}
+
+const handleAvatarChange = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const img = new Image()
+    img.onload = async () => {
+      // Redimensionar para no máximo 200x200
+      const size = 200
+      const canvas = document.createElement('canvas')
+      const scale = Math.min(size / img.width, size / img.height, 1)
+      canvas.width = img.width * scale
+      canvas.height = img.height * scale
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      const base64 = canvas.toDataURL('image/jpeg', 0.85)
+
+      avatarPreview.value = base64
+      avatarUploading.value = true
+      try {
+        const token = localStorage.getItem('customer_token')
+        await $fetch('/api/customers/avatar', {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}` },
+          body: { avatar: base64 }
+        })
+        const saved = localStorage.getItem('customer_data')
+        if (saved) {
+          const d = JSON.parse(saved)
+          d.avatar = base64
+          localStorage.setItem('customer_data', JSON.stringify(d))
+          customerData.value = d
+        }
+      } catch (err) {
+        perfilError.value = 'Erro ao enviar foto'
+        avatarPreview.value = ''
+      } finally {
+        avatarUploading.value = false
+      }
+    }
+    img.src = e.target.result
+  }
+  reader.readAsDataURL(file)
 }
 
 const handleSaveAll = async () => {
@@ -1435,10 +1484,23 @@ useHead({
 
             <!-- Avatar + info -->
             <div class="perfil-avatar-block">
-              <div class="account-avatar perfil-avatar-lg">{{ customerData?.name?.charAt(0)?.toUpperCase() || '?' }}</div>
+              <label class="avatar-upload-label" :class="{ 'avatar-uploading': avatarUploading }">
+                <input type="file" accept="image/*" class="avatar-file-input" @change="handleAvatarChange" />
+                <div class="account-avatar perfil-avatar-lg">
+                  <img v-if="avatarPreview" :src="avatarPreview" class="avatar-img" alt="Foto de perfil" />
+                  <span v-else>{{ customerData?.name?.charAt(0)?.toUpperCase() || '?' }}</span>
+                </div>
+                <div class="avatar-overlay">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
+                </div>
+              </label>
               <div class="perfil-avatar-info">
                 <p class="account-name">{{ customerData?.name }}</p>
                 <p class="account-email">{{ customerData?.email }}</p>
+                <p class="avatar-hint">{{ avatarUploading ? 'Enviando...' : 'Clique na foto para alterar' }}</p>
               </div>
             </div>
 
@@ -3341,6 +3403,57 @@ body {
   font-size: 0.875rem;
   margin: 0;
   font-weight: 500;
+}
+
+/* Upload de avatar */
+.avatar-upload-label {
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.avatar-file-input {
+  display: none;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.avatar-upload-label:hover .avatar-overlay,
+.avatar-uploading .avatar-overlay {
+  opacity: 1;
+}
+
+.avatar-uploading .avatar-overlay {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.avatar-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin: 0.2rem 0 0;
 }
 
 .image-overlay-enter-active,

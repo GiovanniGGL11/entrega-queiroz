@@ -27,6 +27,7 @@ export default defineEventHandler(async (event) => {
     number: customer.number || '',
     neighborhood: customer.neighborhood || '',
     city: customer.city || '',
-    zipCode: customer.zipCode || ''
+    zipCode: customer.zipCode || '',
+    avatar: customer.avatar || ''
   }
 })
