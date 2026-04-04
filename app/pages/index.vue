@@ -519,10 +519,15 @@ const handleAccountLogin = async () => {
     localStorage.setItem('customer_data', JSON.stringify(res.customer))
     customerData.value = res.customer
     isCustomerIdentified.value = true
+    const hasAddress = !!(res.customer?.address && res.customer.address.trim())
     if (loginContext.value === 'order') {
-      localStorage.removeItem('pending_order')
-      showLoginModal.value = false
-      navigateTo('/checkout')
+      if (hasAddress) {
+        localStorage.removeItem('pending_order')
+        showLoginModal.value = false
+        navigateTo('/checkout')
+      } else {
+        accountTab.value = 'address'
+      }
     } else {
       showLoginModal.value = false
     }
@@ -545,8 +550,18 @@ const handleAccountRegister = async () => {
     localStorage.setItem('customer_data', JSON.stringify(res.customer))
     customerData.value = res.customer
     isCustomerIdentified.value = true
-    // Cadastro nunca vai direto ao checkout — só fecha o modal
-    showLoginModal.value = false
+    const hasAddress = !!(res.customer?.address && res.customer.address.trim())
+    if (loginContext.value === 'order') {
+      if (hasAddress) {
+        localStorage.removeItem('pending_order')
+        showLoginModal.value = false
+        navigateTo('/checkout')
+      } else {
+        accountTab.value = 'address'
+      }
+    } else {
+      showLoginModal.value = false
+    }
   } catch (e) {
     accountError.value = e.data?.statusMessage || 'Erro ao cadastrar'
   } finally {
@@ -751,24 +766,37 @@ onMounted(async () => {
     }
   }
 
-  // Retorno do Google OAuth — pedir endereço
+  // Retorno do Google OAuth
   const route = useRoute()
   if (route.query.after_google === '1') {
     const pending = localStorage.getItem('pending_order') === '1'
     loginContext.value = pending ? 'order' : 'account'
-    accountTab.value = 'address'
-    showLoginModal.value = true
-    // Pré-preencher form com dados já salvos
+
     const saved = localStorage.getItem('customer_data')
+    let hasAddress = false
     if (saved) {
       try {
         const d = JSON.parse(saved)
+        hasAddress = !!(d.address && d.address.trim())
         accountForm.value.address = d.address || ''
         accountForm.value.number = d.number || ''
         accountForm.value.neighborhood = d.neighborhood || ''
         accountForm.value.city = d.city || ''
         accountForm.value.zipCode = d.zipCode || ''
       } catch (e) {}
+    }
+
+    if (hasAddress) {
+      // Já tem endereço: se for pedido vai direto ao checkout
+      if (pending) {
+        localStorage.removeItem('pending_order')
+        navigateTo('/checkout')
+      }
+      // se não for pedido, apenas fica na página já logado
+    } else {
+      // Sem endereço: pedir uma vez
+      accountTab.value = 'address'
+      showLoginModal.value = true
     }
   }
 
