@@ -38,6 +38,9 @@ const { showImageOverlay, currentImageUrl, openImageOverlay, closeImageOverlay }
 // Estado do modal de informações da loja
 const showStoreInfoModal = ref(false)
 
+// Estado do menu hamburguer
+const showHamburgerMenu = ref(false)
+
 // Estado do modal de aviso
 const alertModal = ref({
   show: false,
@@ -878,6 +881,10 @@ watch(showLoginModal, (newVal) => {
   document.body.style.overflow = newVal ? "hidden" : "";
 });
 
+watch(showHamburgerMenu, (newVal) => {
+  document.body.style.overflow = newVal ? "hidden" : "";
+});
+
 // Watchers do carrinho já são gerenciados pelo composable
 
 // Watchers do carrinho já são gerenciados pelo composable
@@ -1004,7 +1011,12 @@ useHead({
       />
       
       <div class="profile">
-        <img :src="storeSettings.logo" :alt="`Logo da ${storeSettings.storeName}`" />
+        <div class="profile-logo-row">
+          <img :src="storeSettings.logo" :alt="`Logo da ${storeSettings.storeName}`" />
+          <button class="hamburger-btn" @click="showHamburgerMenu = true" aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
         <div class="profile-info">
             <div class="store-name-row">
               <h2>{{ storeSettings.storeName }}</h2>
@@ -1228,45 +1240,56 @@ useHead({
       </button>
     </Transition>
 
-  <!-- Navbar Fixa no Bottom -->
-  <nav class="bottom-navbar">
-    <button class="nav-item" @click="scrollToTop" :class="{ active: isAtTop }">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-      </svg>
-      <span>Início</span>
-    </button>
-    
-    <button class="nav-item" @click="openSidebar" :class="{ active: showSidebar }">
-      <div class="nav-badge-wrapper">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-        </svg>
-        <span v-if="cartCount > 0" class="nav-badge">{{ cartCount }}</span>
-      </div>
-      <span>Carrinho</span>
-    </button>
-    
-    <button class="nav-item" @click="openAccountModal">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-        <circle cx="12" cy="7" r="4"></circle>
-      </svg>
-      <span>Conta</span>
-    </button>
-    
-    <button class="nav-item" @click="openStoreInfoModal" :class="{ active: showStoreInfoModal }">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"></circle>
-        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-        <line x1="12" y1="17" x2="12.01" y2="17"></line>
-      </svg>
-      <span>Informações</span>
-    </button>
-  </nav>
   </div><!-- /bottom-stack -->
+
+  <!-- Drawer Menu Hamburguer -->
+  <Teleport to="body">
+    <Transition name="drawer-overlay">
+      <div v-if="showHamburgerMenu" class="drawer-overlay" @click="showHamburgerMenu = false"></div>
+    </Transition>
+    <Transition name="drawer">
+      <div v-if="showHamburgerMenu" class="drawer-menu">
+        <div class="drawer-header">
+          <img :src="storeSettings.logo" :alt="storeSettings.storeName" class="drawer-logo" />
+          <button class="drawer-close" @click="showHamburgerMenu = false">×</button>
+        </div>
+        <nav class="drawer-nav">
+          <button class="drawer-item" @click="scrollToTop(); showHamburgerMenu = false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            Início
+          </button>
+          <button class="drawer-item" @click="openSidebar(); showHamburgerMenu = false">
+            <div style="position:relative;display:flex;align-items:center;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+              </svg>
+              <span v-if="cartCount > 0" class="drawer-badge">{{ cartCount }}</span>
+            </div>
+            Carrinho
+          </button>
+          <button class="drawer-item" @click="openAccountModal(); showHamburgerMenu = false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            Conta
+          </button>
+          <button class="drawer-item" @click="openStoreInfoModal(); showHamburgerMenu = false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Informações
+          </button>
+        </nav>
+      </div>
+    </Transition>
+  </Teleport>
 
   <!-- Sidebar Overlay + Sidebar (teleportados para body) -->
   <Teleport to="body">
@@ -1717,7 +1740,7 @@ useHead({
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  padding-bottom: 90px; /* navbar + barra ver pedido */
+  padding-bottom: 70px; /* barra ver pedido */
 }
 
 body {
@@ -2376,80 +2399,144 @@ body {
   opacity: 0;
 }
 
-.bottom-navbar {
-  background: white;
-  border-top: 1px solid #e5e7eb;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  padding: 0.5rem 0;
-  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+/* Hamburguer button na logo */
+.profile-logo-row {
+  position: relative;
+  display: inline-block;
 }
 
-.nav-item {
+.hamburger-btn {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  background: white;
+  border: none;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-  padding: 0.5rem 1rem;
-  background: none;
-  border: none;
+  gap: 5px;
   cursor: pointer;
-  color: #6b7280;
-  transition: all 0.2s;
-  position: relative;
-  min-width: 60px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  padding: 0;
 }
 
-.nav-item svg {
-  width: 24px;
-  height: 24px;
-  transition: all 0.2s;
+.hamburger-btn span {
+  display: block;
+  width: 16px;
+  height: 2px;
+  background: #1a1a1a;
+  border-radius: 2px;
 }
 
-.nav-item span {
-  font-size: 0.75rem;
-  font-weight: 500;
-  transition: all 0.2s;
+/* Drawer menu lateral */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 600;
+  backdrop-filter: blur(2px);
 }
 
-.nav-item:hover {
-  color: var(--color-primary, #ff8e24);
+.drawer-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  background: white;
+  z-index: 601;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.15);
 }
 
-.nav-item.active {
-  color: var(--color-primary, #ff8e24);
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.25rem 1rem;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.nav-item.active svg {
-  transform: scale(1.1);
+.drawer-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  object-fit: cover;
 }
 
-.nav-badge-wrapper {
-  position: relative;
+.drawer-close {
+  background: #f5f5f5;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #555;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.nav-badge {
+.drawer-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 0;
+}
+
+.drawer-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+  border-radius: 0;
+}
+
+.drawer-item:hover {
+  background: #f9f9f9;
+  color: var(--color-primary);
+}
+
+.drawer-item svg {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.drawer-badge {
   position: absolute;
-  top: -8px;
+  top: -6px;
   right: -8px;
   background: #ef4444;
   color: white;
   border-radius: 50%;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: 0.65rem;
+  font-weight: 700;
   border: 2px solid white;
 }
+
+.drawer-overlay-enter-active, .drawer-overlay-leave-active { transition: opacity 0.25s ease; }
+.drawer-overlay-enter-from, .drawer-overlay-leave-to { opacity: 0; }
+.drawer-enter-active, .drawer-leave-active { transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1); }
+.drawer-enter-from, .drawer-leave-to { transform: translateX(-100%); }
 
 /* Floating Cart Button - Esconder quando navbar estiver visível */
 .floating-cart-btn {
@@ -3799,24 +3886,6 @@ body {
     gap: 1.5rem;
   }
 
-  /* Ajustar navbar em telas pequenas */
-  .bottom-navbar {
-    padding: 0.5rem 0;
-  }
-
-  .nav-item {
-    padding: 0.5rem 0.5rem;
-    min-width: 50px;
-  }
-
-  .nav-item span {
-    font-size: 0.7rem;
-  }
-
-  .nav-item svg {
-    width: 20px;
-    height: 20px;
-  }
 
   .floating-cart-btn {
     bottom: 75px; /* Ajustar para telas pequenas */
