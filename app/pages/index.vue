@@ -1011,12 +1011,7 @@ useHead({
       />
       
       <div class="profile">
-        <div class="profile-logo-row">
-          <img :src="storeSettings.logo" :alt="`Logo da ${storeSettings.storeName}`" />
-          <button class="hamburger-btn" @click="showHamburgerMenu = true" aria-label="Menu">
-            <span></span><span></span><span></span>
-          </button>
-        </div>
+        <img :src="storeSettings.logo" :alt="`Logo da ${storeSettings.storeName}`" />
         <div class="profile-info">
             <div class="store-name-row">
               <h2>{{ storeSettings.storeName }}</h2>
@@ -1088,6 +1083,9 @@ useHead({
             </button>
           </div>
         </div>
+        <button class="hamburger-btn" @click="showHamburgerMenu = true" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
       </div>
     </div>
 
@@ -1812,8 +1810,7 @@ body {
 
 @media (max-width: 480px) {
   .profile {
-    flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
   }
 }
 
@@ -2320,8 +2317,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 0 0.75rem 0.4rem;
-  padding: 0.6rem 0.875rem 0.6rem 0.6rem;
+  margin: 0 0.75rem 0.3rem;
+  padding: 0.4rem 0.75rem 0.4rem 0.5rem;
   background: var(--color-primary);
   border-radius: 12px;
   border: none;
@@ -2355,7 +2352,7 @@ body {
 
 .finalize-bar-label {
   color: white;
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.03em;
 }
@@ -2368,14 +2365,14 @@ body {
 .finalize-bar-bottom {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 500;
 }
 
 .finalize-bar-dot {
-  font-size: 0.5rem;
+  font-size: 0.4rem;
   opacity: 0.7;
 }
 
@@ -2399,36 +2396,33 @@ body {
   opacity: 0;
 }
 
-/* Hamburguer button na logo */
-.profile-logo-row {
-  position: relative;
-  display: inline-block;
-}
-
+/* Hamburguer button */
 .hamburger-btn {
-  position: absolute;
-  top: -6px;
-  right: -10px;
-  background: white;
+  margin-left: auto;
+  background: var(--color-primary);
   border: none;
   border-radius: 8px;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 4px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.hamburger-btn:hover {
+  background: var(--color-primary-hover);
 }
 
 .hamburger-btn span {
   display: block;
   width: 16px;
   height: 2px;
-  background: #1a1a1a;
+  background: white;
   border-radius: 2px;
 }
 
