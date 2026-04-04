@@ -12,16 +12,17 @@ export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
 
   try {
-    // Trocar o code pelo access_token do Google
+    // Trocar o code pelo access_token do Google (form-urlencoded)
     const tokenData: any = await $fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
-      body: {
-        code,
-        client_id: config.googleClientId,
-        client_secret: config.googleClientSecret,
-        redirect_uri: config.googleRedirectUri,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code: code as string,
+        client_id: config.googleClientId as string,
+        client_secret: config.googleClientSecret as string,
+        redirect_uri: config.googleRedirectUri as string,
         grant_type: 'authorization_code'
-      }
+      }).toString()
     })
 
     // Buscar informações do usuário no Google
