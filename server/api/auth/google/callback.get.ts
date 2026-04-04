@@ -49,21 +49,10 @@ export default defineEventHandler(async (event) => {
       user = { _id: result.insertedId, email: userInfo.email }
     }
 
-    // Gerar JWT igual ao login normal
-    const token = signUserToken({
-      userId: user._id.toString(),
-      email: user.email
-    })
-
-    // Redirecionar conforme o modo (cliente ou admin)
-    const { state } = getQuery(event)
-    if (state === 'cliente') {
-      const name = encodeURIComponent(userInfo.name || '')
-      const email = encodeURIComponent(userInfo.email)
-      return sendRedirect(event, `/auth/google-cliente?name=${name}&email=${email}`)
-    }
-
-    return sendRedirect(event, `/auth/google-sucesso?token=${token}`)
+    // Google OAuth é apenas para clientes — nunca dá acesso ao admin
+    const name = encodeURIComponent(userInfo.name || '')
+    const email = encodeURIComponent(userInfo.email)
+    return sendRedirect(event, `/auth/google-cliente?name=${name}&email=${email}`)
   } catch (err: any) {
     console.error('[Google OAuth] Erro:', err.message)
     return sendRedirect(event, '/login?error=falha_google')
