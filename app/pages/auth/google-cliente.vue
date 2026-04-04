@@ -23,7 +23,7 @@ onMounted(async () => {
       localStorage.setItem('customer_data', JSON.stringify(data))
     } catch (e) {}
 
-    router.push('/checkout')
+    router.push('/?after_google=1')
   } else {
     router.push('/')
   }

@@ -61,10 +61,11 @@ const isCustomerIdentified = ref(false)
 const customerData = ref(null)
 
 // Abas do modal de conta
-const accountTab = ref('login') // 'login' | 'register'
+const accountTab = ref('login') // 'login' | 'register' | 'perfil' | 'address'
 const accountForm = ref({ name: '', email: '', phone: '', password: '', address: '', number: '', neighborhood: '', city: '', zipCode: '' })
 const accountError = ref('')
 const accountLoading = ref(false)
+const loginContext = ref('account') // 'account' | 'order'
 
 // Dados das categorias
 const categories = ref([])
@@ -464,11 +465,14 @@ const finalizeOrder = () => {
 
   // Verificar se o cliente está logado
   if (!isCustomerIdentified.value) {
-    closeSidebar();
-    accountTab.value = 'login';
-    showLoginModal.value = true;
-    return;
+    closeSidebar()
+    loginContext.value = 'order'
+    localStorage.setItem('pending_order', '1')
+    accountTab.value = 'login'
+    showLoginModal.value = true
+    return
   }
+  localStorage.removeItem('pending_order')
 
   closeSidebar();
   navigateTo('/checkout');
@@ -490,6 +494,7 @@ const scrollToTop = () => {
 // Função para abrir modal de conta
 const openAccountModal = () => {
   accountError.value = ''
+  loginContext.value = 'account'
   accountTab.value = isCustomerIdentified.value ? 'perfil' : 'login'
   showLoginModal.value = true
 }
@@ -514,7 +519,13 @@ const handleAccountLogin = async () => {
     localStorage.setItem('customer_data', JSON.stringify(res.customer))
     customerData.value = res.customer
     isCustomerIdentified.value = true
-    showLoginModal.value = false
+    if (loginContext.value === 'order') {
+      localStorage.removeItem('pending_order')
+      showLoginModal.value = false
+      navigateTo('/checkout')
+    } else {
+      showLoginModal.value = false
+    }
   } catch (e) {
     accountError.value = e.data?.statusMessage || 'Erro ao entrar'
   } finally {
@@ -534,9 +545,52 @@ const handleAccountRegister = async () => {
     localStorage.setItem('customer_data', JSON.stringify(res.customer))
     customerData.value = res.customer
     isCustomerIdentified.value = true
+    // Cadastro nunca vai direto ao checkout — só fecha o modal
     showLoginModal.value = false
   } catch (e) {
     accountError.value = e.data?.statusMessage || 'Erro ao cadastrar'
+  } finally {
+    accountLoading.value = false
+  }
+}
+
+const handleSaveAddress = async () => {
+  accountError.value = ''
+  accountLoading.value = true
+  try {
+    const token = localStorage.getItem('customer_token')
+    await $fetch('/api/customers/address', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: {
+        address: accountForm.value.address,
+        number: accountForm.value.number,
+        neighborhood: accountForm.value.neighborhood,
+        city: accountForm.value.city,
+        zipCode: accountForm.value.zipCode
+      }
+    })
+    // Atualizar dados locais
+    const saved = localStorage.getItem('customer_data')
+    if (saved) {
+      const d = JSON.parse(saved)
+      d.address = accountForm.value.address
+      d.number = accountForm.value.number
+      d.neighborhood = accountForm.value.neighborhood
+      d.city = accountForm.value.city
+      d.zipCode = accountForm.value.zipCode
+      localStorage.setItem('customer_data', JSON.stringify(d))
+      customerData.value = d
+    }
+    if (loginContext.value === 'order') {
+      localStorage.removeItem('pending_order')
+      showLoginModal.value = false
+      navigateTo('/checkout')
+    } else {
+      showLoginModal.value = false
+    }
+  } catch (e) {
+    accountError.value = e.data?.statusMessage || 'Erro ao salvar endereço'
   } finally {
     accountLoading.value = false
   }
@@ -656,6 +710,10 @@ watch(showStoreInfoModal, (newVal) => {
   document.body.style.overflow = newVal ? "hidden" : "";
 });
 
+watch(showLoginModal, (newVal) => {
+  document.body.style.overflow = newVal ? "hidden" : "";
+});
+
 // Watchers do carrinho já são gerenciados pelo composable
 
 // Watchers do carrinho já são gerenciados pelo composable
@@ -690,6 +748,27 @@ onMounted(async () => {
     } catch (e) {
       localStorage.removeItem('customer_token')
       localStorage.removeItem('customer_data')
+    }
+  }
+
+  // Retorno do Google OAuth — pedir endereço
+  const route = useRoute()
+  if (route.query.after_google === '1') {
+    const pending = localStorage.getItem('pending_order') === '1'
+    loginContext.value = pending ? 'order' : 'account'
+    accountTab.value = 'address'
+    showLoginModal.value = true
+    // Pré-preencher form com dados já salvos
+    const saved = localStorage.getItem('customer_data')
+    if (saved) {
+      try {
+        const d = JSON.parse(saved)
+        accountForm.value.address = d.address || ''
+        accountForm.value.number = d.number || ''
+        accountForm.value.neighborhood = d.neighborhood || ''
+        accountForm.value.city = d.city || ''
+        accountForm.value.zipCode = d.zipCode || ''
+      } catch (e) {}
     }
   }
 
@@ -1285,6 +1364,28 @@ useHead({
               </button>
             </form>
             <p class="account-switch">Já tem conta? <button @click="accountTab = 'login'">Entrar</button></p>
+          </div>
+
+          <!-- ENDEREÇO (pós Google login) -->
+          <div v-else-if="accountTab === 'address'" class="account-section">
+            <div class="account-modal-header">
+              <h3>Seu Endereço</h3>
+              <button @click="showLoginModal = false" class="close-modal-btn">×</button>
+            </div>
+            <p class="account-subtitle">Para continuar, informe seu endereço de entrega.</p>
+            <form @submit.prevent="handleSaveAddress" class="account-form">
+              <input v-model="accountForm.zipCode" type="text" placeholder="CEP" />
+              <input v-model="accountForm.address" type="text" placeholder="Endereço *" required />
+              <div class="form-row">
+                <input v-model="accountForm.number" type="text" placeholder="Número *" required />
+                <input v-model="accountForm.neighborhood" type="text" placeholder="Bairro" />
+              </div>
+              <input v-model="accountForm.city" type="text" placeholder="Cidade" />
+              <p v-if="accountError" class="account-error">{{ accountError }}</p>
+              <button type="submit" class="account-submit-btn" :disabled="accountLoading">
+                {{ accountLoading ? 'Salvando...' : 'Salvar Endereço' }}
+              </button>
+            </form>
           </div>
 
         </div>
@@ -2943,6 +3044,13 @@ body {
   color: var(--color-error, #e53e3e);
   font-size: 0.875rem;
   margin: 0;
+}
+
+.account-subtitle {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin: 0 0 0.75rem;
+  text-align: center;
 }
 
 .account-switch {
