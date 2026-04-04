@@ -1205,21 +1205,17 @@ useHead({
   </footer>
   </div>
 
-  <!-- Barra de Finalizar Pedido (aparece quando há itens no carrinho) -->
-  <Transition name="finalize-bar">
-    <div v-if="cart.length > 0" class="finalize-bar">
-      <div class="finalize-bar-info">
-        <span class="finalize-bar-count">{{ cartCount }} {{ cartCount === 1 ? 'item' : 'itens' }}</span>
+  <!-- Container fixo: barra de finalizar + navbar (sempre juntos e na frente) -->
+  <div class="bottom-stack">
+    <Transition name="finalize-bar">
+      <button v-if="cart.length > 0" class="finalize-bar" @click="finalizeOrder">
+        <div class="finalize-bar-left">
+          <span class="finalize-bar-badge">{{ cartCount }}</span>
+          <span class="finalize-bar-label">Finalizar Pedido</span>
+        </div>
         <span class="finalize-bar-total">{{ formatPrice(cartTotal) }}</span>
-      </div>
-      <button class="finalize-bar-btn" @click="finalizeOrder">
-        Finalizar Pedido
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
       </button>
-    </div>
-  </Transition>
+    </Transition>
 
   <!-- Navbar Fixa no Bottom -->
   <nav class="bottom-navbar">
@@ -1260,6 +1256,7 @@ useHead({
       <span>Informações</span>
     </button>
   </nav>
+  </div><!-- /bottom-stack -->
 
   <!-- Sidebar Overlay + Sidebar (teleportados para body) -->
   <Teleport to="body">
@@ -1714,7 +1711,7 @@ useHead({
 }
 
 .page-wrapper.has-finalize-bar {
-  padding-bottom: 130px; /* navbar + barra de finalizar */
+  padding-bottom: 140px; /* navbar + barra flutuante */
 }
 body {
   overflow-x: hidden; /* Previne scroll horizontal global */
@@ -2277,77 +2274,83 @@ body {
   text-decoration: underline;
 }
 
-/* Bottom Navbar */
-/* Barra de finalizar pedido */
-.finalize-bar {
-  position: fixed;
-  bottom: calc(70px + env(safe-area-inset-bottom, 0px));
-  left: 0;
-  right: 0;
-  z-index: 99;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  background: white;
-  border-top: 1px solid #e5e7eb;
-  padding: 0.65rem 1.25rem;
-  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
-}
-
-.finalize-bar-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
-.finalize-bar-count {
-  font-size: 0.78rem;
-  color: #6b7280;
-}
-
-.finalize-bar-total {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #1a1a1a;
-}
-
-.finalize-bar-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  padding: 0.7rem 1.25rem;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.2s;
-}
-
-.finalize-bar-btn:hover {
-  background: var(--color-primary-hover);
-}
-
-.finalize-bar-enter-active,
-.finalize-bar-leave-active {
-  transition: transform 0.25s ease, opacity 0.25s ease;
-}
-
-.finalize-bar-enter-from,
-.finalize-bar-leave-to {
-  transform: translateY(100%);
-  opacity: 0;
-}
-
-.bottom-navbar {
+/* Container fixo que agrupa barra + navbar */
+.bottom-stack {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Barra de finalizar pedido */
+.finalize-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 1rem 0.6rem;
+  padding: 0.85rem 1rem 0.85rem 0.85rem;
+  background: #1a1a1a;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  text-align: left;
+}
+
+.finalize-bar:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.finalize-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.finalize-bar-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.finalize-bar-label {
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.finalize-bar-total {
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.finalize-bar-enter-active,
+.finalize-bar-leave-active {
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+}
+
+.finalize-bar-enter-from,
+.finalize-bar-leave-to {
+  transform: translateY(120%);
+  opacity: 0;
+}
+
+.bottom-navbar {
   background: white;
   border-top: 1px solid #e5e7eb;
   display: flex;
@@ -2355,8 +2358,7 @@ body {
   align-items: center;
   padding: 0.5rem 0;
   padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
-  z-index: 100;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
 }
 
 .nav-item {
