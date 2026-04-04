@@ -67,6 +67,13 @@ const accountError = ref('')
 const accountLoading = ref(false)
 const loginContext = ref('account') // 'account' | 'order'
 
+// Sub-abas do perfil
+const perfilTab = ref('dados') // 'dados' | 'endereco' | 'senha'
+const perfilForm = ref({ name: '', phone: '', zipCode: '', address: '', number: '', neighborhood: '', city: '', currentPassword: '', newPassword: '', confirmPassword: '' })
+const perfilSuccess = ref('')
+const perfilError = ref('')
+const perfilLoading = ref(false)
+
 // Dados das categorias
 const categories = ref([])
 const loadingCategories = ref(false)
@@ -496,7 +503,111 @@ const openAccountModal = () => {
   accountError.value = ''
   loginContext.value = 'account'
   accountTab.value = isCustomerIdentified.value ? 'perfil' : 'login'
+  if (isCustomerIdentified.value && customerData.value) {
+    perfilTab.value = 'dados'
+    perfilSuccess.value = ''
+    perfilError.value = ''
+    perfilForm.value.name = customerData.value.name || ''
+    perfilForm.value.phone = customerData.value.phone || ''
+    perfilForm.value.zipCode = customerData.value.zipCode || ''
+    perfilForm.value.address = customerData.value.address || ''
+    perfilForm.value.number = customerData.value.number || ''
+    perfilForm.value.neighborhood = customerData.value.neighborhood || ''
+    perfilForm.value.city = customerData.value.city || ''
+    perfilForm.value.currentPassword = ''
+    perfilForm.value.newPassword = ''
+    perfilForm.value.confirmPassword = ''
+  }
   showLoginModal.value = true
+}
+
+const handleSavePerfil = async () => {
+  perfilError.value = ''
+  perfilSuccess.value = ''
+  perfilLoading.value = true
+  try {
+    const token = localStorage.getItem('customer_token')
+    await $fetch('/api/customers/profile', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: { name: perfilForm.value.name, phone: perfilForm.value.phone }
+    })
+    const saved = localStorage.getItem('customer_data')
+    if (saved) {
+      const d = JSON.parse(saved)
+      d.name = perfilForm.value.name
+      d.phone = perfilForm.value.phone
+      localStorage.setItem('customer_data', JSON.stringify(d))
+      customerData.value = d
+    }
+    perfilSuccess.value = 'Dados salvos com sucesso!'
+  } catch (e) {
+    perfilError.value = e.data?.statusMessage || 'Erro ao salvar dados'
+  } finally {
+    perfilLoading.value = false
+  }
+}
+
+const handleSavePerfilAddress = async () => {
+  perfilError.value = ''
+  perfilSuccess.value = ''
+  perfilLoading.value = true
+  try {
+    const token = localStorage.getItem('customer_token')
+    await $fetch('/api/customers/address', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: {
+        address: perfilForm.value.address,
+        number: perfilForm.value.number,
+        neighborhood: perfilForm.value.neighborhood,
+        city: perfilForm.value.city,
+        zipCode: perfilForm.value.zipCode
+      }
+    })
+    const saved = localStorage.getItem('customer_data')
+    if (saved) {
+      const d = JSON.parse(saved)
+      d.address = perfilForm.value.address
+      d.number = perfilForm.value.number
+      d.neighborhood = perfilForm.value.neighborhood
+      d.city = perfilForm.value.city
+      d.zipCode = perfilForm.value.zipCode
+      localStorage.setItem('customer_data', JSON.stringify(d))
+      customerData.value = d
+    }
+    perfilSuccess.value = 'Endereço salvo com sucesso!'
+  } catch (e) {
+    perfilError.value = e.data?.statusMessage || 'Erro ao salvar endereço'
+  } finally {
+    perfilLoading.value = false
+  }
+}
+
+const handleSavePassword = async () => {
+  perfilError.value = ''
+  perfilSuccess.value = ''
+  if (perfilForm.value.newPassword !== perfilForm.value.confirmPassword) {
+    perfilError.value = 'As senhas não coincidem'
+    return
+  }
+  perfilLoading.value = true
+  try {
+    const token = localStorage.getItem('customer_token')
+    await $fetch('/api/customers/password', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: { currentPassword: perfilForm.value.currentPassword, newPassword: perfilForm.value.newPassword }
+    })
+    perfilForm.value.currentPassword = ''
+    perfilForm.value.newPassword = ''
+    perfilForm.value.confirmPassword = ''
+    perfilSuccess.value = 'Senha alterada com sucesso!'
+  } catch (e) {
+    perfilError.value = e.data?.statusMessage || 'Erro ao alterar senha'
+  } finally {
+    perfilLoading.value = false
+  }
 }
 
 const logoutCustomer = () => {
@@ -1327,16 +1438,83 @@ useHead({
         <div class="account-modal" @click.stop>
 
           <!-- PERFIL (logado) -->
-          <div v-if="accountTab === 'perfil'" class="account-section">
+          <div v-if="accountTab === 'perfil'" class="account-section perfil-section">
             <div class="account-modal-header">
               <h3>Minha Conta</h3>
               <button @click="showLoginModal = false" class="close-modal-btn">×</button>
             </div>
-            <div class="account-info">
-              <div class="account-avatar">{{ customerData?.name?.charAt(0)?.toUpperCase() || '?' }}</div>
-              <p class="account-name">{{ customerData?.name }}</p>
-              <p class="account-email">{{ customerData?.email }}</p>
+
+            <!-- Avatar + info -->
+            <div class="perfil-avatar-block">
+              <div class="account-avatar perfil-avatar-lg">{{ customerData?.name?.charAt(0)?.toUpperCase() || '?' }}</div>
+              <div class="perfil-avatar-info">
+                <p class="account-name">{{ customerData?.name }}</p>
+                <p class="account-email">{{ customerData?.email }}</p>
+              </div>
             </div>
+
+            <!-- Sub-abas -->
+            <div class="perfil-tabs">
+              <button :class="['perfil-tab', perfilTab === 'dados' && 'active']" @click="perfilTab = 'dados'; perfilSuccess = ''; perfilError = ''">Dados</button>
+              <button :class="['perfil-tab', perfilTab === 'endereco' && 'active']" @click="perfilTab = 'endereco'; perfilSuccess = ''; perfilError = ''">Endereço</button>
+              <button :class="['perfil-tab', perfilTab === 'senha' && 'active']" @click="perfilTab = 'senha'; perfilSuccess = ''; perfilError = ''">Senha</button>
+            </div>
+
+            <!-- Dados Pessoais -->
+            <form v-if="perfilTab === 'dados'" @submit.prevent="handleSavePerfil" class="account-form perfil-form">
+              <label class="perfil-label">Nome completo</label>
+              <input v-model="perfilForm.name" type="text" placeholder="Seu nome" required />
+              <label class="perfil-label">Telefone</label>
+              <input v-model="perfilForm.phone" type="tel" placeholder="(00) 00000-0000" />
+              <label class="perfil-label">Email</label>
+              <input :value="customerData?.email" type="email" disabled class="input-disabled" />
+              <p v-if="perfilSuccess" class="account-success">✓ {{ perfilSuccess }}</p>
+              <p v-if="perfilError" class="account-error">{{ perfilError }}</p>
+              <button type="submit" class="account-submit-btn" :disabled="perfilLoading">
+                {{ perfilLoading ? 'Salvando...' : 'Salvar Dados' }}
+              </button>
+            </form>
+
+            <!-- Endereço -->
+            <form v-else-if="perfilTab === 'endereco'" @submit.prevent="handleSavePerfilAddress" class="account-form perfil-form">
+              <label class="perfil-label">CEP</label>
+              <input v-model="perfilForm.zipCode" type="text" placeholder="00000-000" />
+              <label class="perfil-label">Rua / Avenida</label>
+              <input v-model="perfilForm.address" type="text" placeholder="Nome da rua" />
+              <div class="form-row">
+                <div>
+                  <label class="perfil-label">Número</label>
+                  <input v-model="perfilForm.number" type="text" placeholder="Nº" />
+                </div>
+                <div>
+                  <label class="perfil-label">Bairro</label>
+                  <input v-model="perfilForm.neighborhood" type="text" placeholder="Bairro" />
+                </div>
+              </div>
+              <label class="perfil-label">Cidade</label>
+              <input v-model="perfilForm.city" type="text" placeholder="Cidade" />
+              <p v-if="perfilSuccess" class="account-success">✓ {{ perfilSuccess }}</p>
+              <p v-if="perfilError" class="account-error">{{ perfilError }}</p>
+              <button type="submit" class="account-submit-btn" :disabled="perfilLoading">
+                {{ perfilLoading ? 'Salvando...' : 'Salvar Endereço' }}
+              </button>
+            </form>
+
+            <!-- Senha -->
+            <form v-else-if="perfilTab === 'senha'" @submit.prevent="handleSavePassword" class="account-form perfil-form">
+              <label class="perfil-label">Senha atual</label>
+              <input v-model="perfilForm.currentPassword" type="password" placeholder="••••••••" required />
+              <label class="perfil-label">Nova senha</label>
+              <input v-model="perfilForm.newPassword" type="password" placeholder="Mínimo 6 caracteres" required />
+              <label class="perfil-label">Confirmar nova senha</label>
+              <input v-model="perfilForm.confirmPassword" type="password" placeholder="Repita a nova senha" required />
+              <p v-if="perfilSuccess" class="account-success">✓ {{ perfilSuccess }}</p>
+              <p v-if="perfilError" class="account-error">{{ perfilError }}</p>
+              <button type="submit" class="account-submit-btn" :disabled="perfilLoading">
+                {{ perfilLoading ? 'Salvando...' : 'Alterar Senha' }}
+              </button>
+            </form>
+
             <button @click="logoutCustomer" class="logout-btn">Sair da conta</button>
           </div>
 
@@ -3095,6 +3273,97 @@ body {
   font-weight: 600;
   cursor: pointer;
   font-size: 0.9rem;
+}
+
+/* Perfil expandido */
+.perfil-avatar-block {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.perfil-avatar-lg {
+  width: 56px;
+  height: 56px;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.perfil-avatar-info {
+  min-width: 0;
+}
+
+.perfil-avatar-info .account-name {
+  font-size: 1rem;
+  margin: 0 0 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.perfil-avatar-info .account-email {
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.perfil-tabs {
+  display: flex;
+  gap: 0.25rem;
+  background: #f5f5f5;
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 1.25rem;
+}
+
+.perfil-tab {
+  flex: 1;
+  padding: 0.5rem 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.perfil-tab.active {
+  background: white;
+  color: var(--color-primary);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.perfil-form {
+  margin-bottom: 1rem;
+}
+
+.perfil-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
+.input-disabled {
+  background: #f5f5f5;
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+}
+
+.account-success {
+  color: #38a169;
+  font-size: 0.875rem;
+  margin: 0;
+  font-weight: 500;
 }
 
 .image-overlay-enter-active,
