@@ -1806,6 +1806,7 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
+  position: relative;
 }
 
 @media (max-width: 480px) {
@@ -2223,16 +2224,10 @@ body {
 /* Footer Melhorado */
 .footer {
   width: 100%;
-  /* background: #f8f9fa; */
-  padding: 4rem 0 1.5rem;
   color: #666;
   font-size: 0.875rem;
-  margin-top: 3rem;
-  padding-bottom: calc(1.5rem + 70px); /* Espaço padrão + altura da navbar */
-}
-
-.footer.has-cart {
-  padding-bottom: calc(6rem + 70px); /* Espaço extra com carrinho + altura da navbar */
+  margin-top: 1rem;
+  padding: 1rem 0 0.75rem;
 }
 
 .footer-content {
@@ -2398,7 +2393,10 @@ body {
 
 /* Hamburguer button */
 .hamburger-btn {
-  margin-left: auto;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
   background: var(--color-primary);
   border: none;
   border-radius: 8px;
@@ -3686,12 +3684,8 @@ body {
   }
 
   .footer {
-    padding: 3rem 0 calc(1rem + 70px);
-    margin-top: 2rem;
-  }
-
-  .footer.has-cart {
-    padding-bottom: calc(5rem + 70px); /* Espaço extra no mobile quando há itens no carrinho + navbar */
+    padding: 0.75rem 0;
+    margin-top: 0.5rem;
   }
 
   .footer-content {
@@ -3866,12 +3860,8 @@ body {
   }
 
   .footer {
-    padding: 3rem 0 calc(1rem + 70px);
-    margin-top: 2rem;
-  }
-
-  .footer.has-cart {
-    padding-bottom: calc(5rem + 70px); /* Espaço extra em telas muito pequenas quando há itens no carrinho + navbar */
+    padding: 0.75rem 0;
+    margin-top: 0.5rem;
   }
 
   .footer-content {
