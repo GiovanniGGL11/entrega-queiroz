@@ -1224,9 +1224,7 @@ useHead({
             <span>Total: {{ formatPrice(cartTotal) }}</span>
           </div>
         </div>
-        <svg class="finalize-bar-arrow" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
+        <span class="finalize-bar-arrow">›</span>
       </button>
     </Transition>
 
@@ -2362,9 +2360,12 @@ body {
 }
 
 .finalize-bar-arrow {
-  color: white;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 2rem;
+  line-height: 1;
   flex-shrink: 0;
   margin-left: 0.5rem;
+  font-weight: 300;
 }
 
 .finalize-bar-enter-active,
