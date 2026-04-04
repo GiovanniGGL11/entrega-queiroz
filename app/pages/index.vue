@@ -2269,6 +2269,7 @@ body {
   justify-content: space-around;
   align-items: center;
   padding: 0.5rem 0;
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
   z-index: 100;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
 }
