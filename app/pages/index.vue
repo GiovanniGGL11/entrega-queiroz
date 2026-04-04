@@ -67,12 +67,13 @@ const accountError = ref('')
 const accountLoading = ref(false)
 const loginContext = ref('account') // 'account' | 'order'
 
-// Sub-abas do perfil
-const perfilTab = ref('dados') // 'dados' | 'endereco' | 'senha'
+// Perfil expandido
+const perfilTab = ref('dados') // mantido apenas para compatibilidade interna
 const perfilForm = ref({ name: '', phone: '', zipCode: '', address: '', number: '', neighborhood: '', city: '', currentPassword: '', newPassword: '', confirmPassword: '' })
 const perfilSuccess = ref('')
 const perfilError = ref('')
 const perfilLoading = ref(false)
+const showPasswordSection = ref(false)
 
 // Dados das categorias
 const categories = ref([])
@@ -517,57 +518,66 @@ const openAccountModal = () => {
     perfilForm.value.currentPassword = ''
     perfilForm.value.newPassword = ''
     perfilForm.value.confirmPassword = ''
+    showPasswordSection.value = false
   }
   showLoginModal.value = true
 }
 
-const handleSavePerfil = async () => {
+const handleSaveAll = async () => {
   perfilError.value = ''
   perfilSuccess.value = ''
+
+  // Validar senha se a seção estiver aberta
+  if (showPasswordSection.value && perfilForm.value.newPassword) {
+    if (perfilForm.value.newPassword !== perfilForm.value.confirmPassword) {
+      perfilError.value = 'As senhas não coincidem'
+      return
+    }
+    if (!perfilForm.value.currentPassword) {
+      perfilError.value = 'Informe a senha atual'
+      return
+    }
+  }
+
   perfilLoading.value = true
   try {
     const token = localStorage.getItem('customer_token')
-    await $fetch('/api/customers/profile', {
-      method: 'PUT',
-      headers: { Authorization: `Bearer ${token}` },
-      body: { name: perfilForm.value.name, phone: perfilForm.value.phone }
-    })
+
+    const requests = [
+      $fetch('/api/customers/profile', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: { name: perfilForm.value.name, phone: perfilForm.value.phone }
+      }),
+      $fetch('/api/customers/address', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: {
+          address: perfilForm.value.address,
+          number: perfilForm.value.number,
+          neighborhood: perfilForm.value.neighborhood,
+          city: perfilForm.value.city,
+          zipCode: perfilForm.value.zipCode
+        }
+      })
+    ]
+
+    if (showPasswordSection.value && perfilForm.value.newPassword) {
+      requests.push($fetch('/api/customers/password', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: { currentPassword: perfilForm.value.currentPassword, newPassword: perfilForm.value.newPassword }
+      }))
+    }
+
+    await Promise.all(requests)
+
+    // Atualizar localStorage
     const saved = localStorage.getItem('customer_data')
     if (saved) {
       const d = JSON.parse(saved)
       d.name = perfilForm.value.name
       d.phone = perfilForm.value.phone
-      localStorage.setItem('customer_data', JSON.stringify(d))
-      customerData.value = d
-    }
-    perfilSuccess.value = 'Dados salvos com sucesso!'
-  } catch (e) {
-    perfilError.value = e.data?.statusMessage || 'Erro ao salvar dados'
-  } finally {
-    perfilLoading.value = false
-  }
-}
-
-const handleSavePerfilAddress = async () => {
-  perfilError.value = ''
-  perfilSuccess.value = ''
-  perfilLoading.value = true
-  try {
-    const token = localStorage.getItem('customer_token')
-    await $fetch('/api/customers/address', {
-      method: 'PUT',
-      headers: { Authorization: `Bearer ${token}` },
-      body: {
-        address: perfilForm.value.address,
-        number: perfilForm.value.number,
-        neighborhood: perfilForm.value.neighborhood,
-        city: perfilForm.value.city,
-        zipCode: perfilForm.value.zipCode
-      }
-    })
-    const saved = localStorage.getItem('customer_data')
-    if (saved) {
-      const d = JSON.parse(saved)
       d.address = perfilForm.value.address
       d.number = perfilForm.value.number
       d.neighborhood = perfilForm.value.neighborhood
@@ -576,35 +586,14 @@ const handleSavePerfilAddress = async () => {
       localStorage.setItem('customer_data', JSON.stringify(d))
       customerData.value = d
     }
-    perfilSuccess.value = 'Endereço salvo com sucesso!'
-  } catch (e) {
-    perfilError.value = e.data?.statusMessage || 'Erro ao salvar endereço'
-  } finally {
-    perfilLoading.value = false
-  }
-}
 
-const handleSavePassword = async () => {
-  perfilError.value = ''
-  perfilSuccess.value = ''
-  if (perfilForm.value.newPassword !== perfilForm.value.confirmPassword) {
-    perfilError.value = 'As senhas não coincidem'
-    return
-  }
-  perfilLoading.value = true
-  try {
-    const token = localStorage.getItem('customer_token')
-    await $fetch('/api/customers/password', {
-      method: 'PUT',
-      headers: { Authorization: `Bearer ${token}` },
-      body: { currentPassword: perfilForm.value.currentPassword, newPassword: perfilForm.value.newPassword }
-    })
     perfilForm.value.currentPassword = ''
     perfilForm.value.newPassword = ''
     perfilForm.value.confirmPassword = ''
-    perfilSuccess.value = 'Senha alterada com sucesso!'
+    showPasswordSection.value = false
+    perfilSuccess.value = 'Dados salvos com sucesso!'
   } catch (e) {
-    perfilError.value = e.data?.statusMessage || 'Erro ao alterar senha'
+    perfilError.value = e.data?.statusMessage || 'Erro ao salvar'
   } finally {
     perfilLoading.value = false
   }
@@ -1453,30 +1442,17 @@ useHead({
               </div>
             </div>
 
-            <!-- Sub-abas -->
-            <div class="perfil-tabs">
-              <button :class="['perfil-tab', perfilTab === 'dados' && 'active']" @click="perfilTab = 'dados'; perfilSuccess = ''; perfilError = ''">Dados</button>
-              <button :class="['perfil-tab', perfilTab === 'endereco' && 'active']" @click="perfilTab = 'endereco'; perfilSuccess = ''; perfilError = ''">Endereço</button>
-              <button :class="['perfil-tab', perfilTab === 'senha' && 'active']" @click="perfilTab = 'senha'; perfilSuccess = ''; perfilError = ''">Senha</button>
-            </div>
-
-            <!-- Dados Pessoais -->
-            <form v-if="perfilTab === 'dados'" @submit.prevent="handleSavePerfil" class="account-form perfil-form">
+            <!-- Formulário unificado -->
+            <form @submit.prevent="handleSaveAll" class="account-form perfil-form">
+              <p class="perfil-section-title">Dados Pessoais</p>
               <label class="perfil-label">Nome completo</label>
               <input v-model="perfilForm.name" type="text" placeholder="Seu nome" required />
               <label class="perfil-label">Telefone</label>
               <input v-model="perfilForm.phone" type="tel" placeholder="(00) 00000-0000" />
               <label class="perfil-label">Email</label>
               <input :value="customerData?.email" type="email" disabled class="input-disabled" />
-              <p v-if="perfilSuccess" class="account-success">✓ {{ perfilSuccess }}</p>
-              <p v-if="perfilError" class="account-error">{{ perfilError }}</p>
-              <button type="submit" class="account-submit-btn" :disabled="perfilLoading">
-                {{ perfilLoading ? 'Salvando...' : 'Salvar Dados' }}
-              </button>
-            </form>
 
-            <!-- Endereço -->
-            <form v-else-if="perfilTab === 'endereco'" @submit.prevent="handleSavePerfilAddress" class="account-form perfil-form">
+              <p class="perfil-section-title" style="margin-top: 0.75rem;">Endereço</p>
               <label class="perfil-label">CEP</label>
               <input v-model="perfilForm.zipCode" type="text" placeholder="00000-000" />
               <label class="perfil-label">Rua / Avenida</label>
@@ -1493,25 +1469,24 @@ useHead({
               </div>
               <label class="perfil-label">Cidade</label>
               <input v-model="perfilForm.city" type="text" placeholder="Cidade" />
-              <p v-if="perfilSuccess" class="account-success">✓ {{ perfilSuccess }}</p>
-              <p v-if="perfilError" class="account-error">{{ perfilError }}</p>
-              <button type="submit" class="account-submit-btn" :disabled="perfilLoading">
-                {{ perfilLoading ? 'Salvando...' : 'Salvar Endereço' }}
-              </button>
-            </form>
 
-            <!-- Senha -->
-            <form v-else-if="perfilTab === 'senha'" @submit.prevent="handleSavePassword" class="account-form perfil-form">
-              <label class="perfil-label">Senha atual</label>
-              <input v-model="perfilForm.currentPassword" type="password" placeholder="••••••••" required />
-              <label class="perfil-label">Nova senha</label>
-              <input v-model="perfilForm.newPassword" type="password" placeholder="Mínimo 6 caracteres" required />
-              <label class="perfil-label">Confirmar nova senha</label>
-              <input v-model="perfilForm.confirmPassword" type="password" placeholder="Repita a nova senha" required />
+              <!-- Alterar senha (expansível) -->
+              <button type="button" class="toggle-senha-btn" @click="showPasswordSection = !showPasswordSection; perfilError = ''; perfilSuccess = ''">
+                {{ showPasswordSection ? '− Cancelar alteração de senha' : '+ Alterar senha' }}
+              </button>
+              <div v-if="showPasswordSection" class="senha-section">
+                <label class="perfil-label">Senha atual</label>
+                <input v-model="perfilForm.currentPassword" type="password" placeholder="••••••••" />
+                <label class="perfil-label">Nova senha</label>
+                <input v-model="perfilForm.newPassword" type="password" placeholder="Mínimo 6 caracteres" />
+                <label class="perfil-label">Confirmar nova senha</label>
+                <input v-model="perfilForm.confirmPassword" type="password" placeholder="Repita a nova senha" />
+              </div>
+
               <p v-if="perfilSuccess" class="account-success">✓ {{ perfilSuccess }}</p>
               <p v-if="perfilError" class="account-error">{{ perfilError }}</p>
               <button type="submit" class="account-submit-btn" :disabled="perfilLoading">
-                {{ perfilLoading ? 'Salvando...' : 'Alterar Senha' }}
+                {{ perfilLoading ? 'Salvando...' : 'Salvar' }}
               </button>
             </form>
 
@@ -3312,37 +3287,17 @@ body {
   text-overflow: ellipsis;
 }
 
-.perfil-tabs {
-  display: flex;
-  gap: 0.25rem;
-  background: #f5f5f5;
-  border-radius: 10px;
-  padding: 4px;
-  margin-bottom: 1.25rem;
-}
-
-.perfil-tab {
-  flex: 1;
-  padding: 0.5rem 0;
-  border: none;
-  border-radius: 7px;
-  background: transparent;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.perfil-tab.active {
-  background: white;
-  color: var(--color-primary);
-  font-weight: 700;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-}
-
 .perfil-form {
   margin-bottom: 1rem;
+}
+
+.perfil-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  margin: 0 0 0.5rem;
 }
 
 .perfil-label {
@@ -3357,6 +3312,28 @@ body {
   background: #f5f5f5;
   color: var(--color-text-secondary);
   cursor: not-allowed;
+}
+
+.toggle-senha-btn {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  text-align: left;
+  margin-top: 0.25rem;
+}
+
+.senha-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #eee;
 }
 
 .account-success {
