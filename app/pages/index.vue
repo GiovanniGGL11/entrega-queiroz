@@ -1208,17 +1208,25 @@ useHead({
   <!-- Container fixo: barra de finalizar + navbar (sempre juntos e na frente) -->
   <div class="bottom-stack">
     <Transition name="finalize-bar">
-      <button v-if="cart.length > 0" class="finalize-bar" @click="finalizeOrder">
-        <div class="finalize-bar-left">
-          <span class="finalize-bar-badge">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <button v-if="cart.length > 0" class="finalize-bar" @click="openSidebar">
+        <div class="finalize-bar-main">
+          <div class="finalize-bar-top">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
               <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
             </svg>
-          </span>
-          <span class="finalize-bar-label">Finalizar Pedido</span>
+            <span class="finalize-bar-label">VER PEDIDO</span>
+          </div>
+          <div class="finalize-bar-divider"></div>
+          <div class="finalize-bar-bottom">
+            <span>Itens: {{ cartCount }}</span>
+            <span class="finalize-bar-dot">▶</span>
+            <span>Total: {{ formatPrice(cartTotal) }}</span>
+          </div>
         </div>
-        <span class="finalize-bar-total">{{ formatPrice(cartTotal) }}</span>
+        <svg class="finalize-bar-arrow" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
       </button>
     </Transition>
 
@@ -2313,37 +2321,50 @@ body {
   background: var(--color-primary-hover);
 }
 
-.finalize-bar-left {
+.finalize-bar-main {
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
 }
 
-.finalize-bar-badge {
+.finalize-bar-top {
   display: flex;
   align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 5px;
-  background: rgba(255, 255, 255, 0.25);
+  gap: 0.5rem;
   color: white;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 700;
 }
 
 .finalize-bar-label {
   color: white;
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
 }
 
-.finalize-bar-total {
+.finalize-bar-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.finalize-bar-bottom {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.finalize-bar-dot {
+  font-size: 0.5rem;
+  opacity: 0.7;
+}
+
+.finalize-bar-arrow {
   color: white;
-  font-size: 0.9rem;
-  font-weight: 700;
-  opacity: 0.92;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
 }
 
 .finalize-bar-enter-active,
