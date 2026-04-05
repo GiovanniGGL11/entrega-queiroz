@@ -164,6 +164,22 @@
                       +55 11 98055-4271
                     </a>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Instagram -->
+            <div class="info-section">
+              <div class="section-header">
+                <svg class="section-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                  <circle cx="12" cy="12" r="4"/>
+                  <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/>
+                </svg>
+                <h3>Instagram</h3>
+              </div>
+              <div class="section-content">
+                <div class="contact-info">
                   <div class="contact-item">
                     <svg class="contact-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
