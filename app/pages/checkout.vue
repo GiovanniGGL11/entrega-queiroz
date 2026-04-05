@@ -399,7 +399,11 @@ onMounted(async () => {
       if (data.number) deliveryInfo.value.number = data.number
       if (data.neighborhood) deliveryInfo.value.neighborhood = data.neighborhood
       if (data.city) deliveryInfo.value.city = data.city
-      if (data.zipCode) deliveryInfo.value.zipCode = data.zipCode
+      if (data.zipCode) {
+        deliveryInfo.value.zipCode = data.zipCode
+        // Disparar validação automática do CEP já preenchido
+        validateAddress()
+      }
     } catch (e) {}
   }
 
