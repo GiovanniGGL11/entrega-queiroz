@@ -296,10 +296,10 @@ const isFormValid = computed(() => {
     return value && value.trim() !== ''
   })
   
-  return allRequiredFieldsFilled && 
-         deliveryInfo.value.canDeliver && 
-         !addressValidationError.value && 
-         deliveryInfo.value.deliveryFee > 0 &&
+  return allRequiredFieldsFilled &&
+         deliveryInfo.value.canDeliver &&
+         !addressValidationError.value &&
+         deliveryInfo.value.deliveryFee >= 0 &&
          cart.value.length > 0 &&
          storeSettings.value.isOpen // Verificar se a loja está aberta
 })

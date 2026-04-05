@@ -128,19 +128,24 @@ export default defineEventHandler(async (event) => {
         }
       }
       
-      // Se ainda não encontrou, não entrega
+      // Se ainda não encontrou zona mas há taxa padrão configurada, usar ela
       if (!canDeliver) {
-        return {
-          canDeliver: false,
-          message: "Desculpe, não entregamos neste CEP",
-          zipCode: cleanZipCode
-        };
+        if (config.deliveryFee !== undefined) {
+          deliveryFee = config.deliveryFee
+          canDeliver = true
+        } else {
+          return {
+            canDeliver: false,
+            message: "Desculpe, não entregamos neste CEP",
+            zipCode: cleanZipCode
+          };
+        }
       }
       
       const result = {
         canDeliver: true,
         deliveryFee: deliveryFee,
-        deliveryZone: deliveryZone.label,
+        deliveryZone: deliveryZone?.label || 'Padrão',
         estimatedTime: `${config.deliveryMinTime || 30}-${config.deliveryMaxTime || 45} min`,
         zipCode: cleanZipCode
       };
