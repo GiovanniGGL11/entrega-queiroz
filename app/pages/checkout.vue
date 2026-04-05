@@ -165,21 +165,27 @@ const formatZipCode = (value) => {
 }
 
 // Função para validação automática com debounce
+const resetDeliveryState = () => {
+  deliveryInfo.value.canDeliver = false
+  deliveryInfo.value.deliveryFee = 0
+  deliveryInfo.value.deliveryZone = ''
+  deliveryInfo.value.estimatedTime = ''
+}
+
 const validateAddressAutomatically = () => {
-  // Limpar timeout anterior se existir
   if (addressValidationTimeout) {
     clearTimeout(addressValidationTimeout)
   }
 
-  // Limpar estado de erro temporariamente
   addressValidationError.value = ''
 
-  // Verificar se o CEP está preenchido e tem 8 dígitos
+  // Se CEP incompleto ou vazio, resetar estado de entrega imediatamente
   if (!deliveryInfo.value.zipCode || deliveryInfo.value.zipCode.replace(/\D/g, '').length !== 8) {
+    resetDeliveryState()
     return
   }
 
-  // Aguardar 1 segundo após parar de digitar o CEP
+  // Aguardar 1 segundo após parar de digitar
   addressValidationTimeout = setTimeout(() => {
     validateAddress()
   }, 1000)
