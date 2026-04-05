@@ -2395,8 +2395,7 @@ body {
 .hamburger-btn {
   position: absolute;
   right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 0;
   background: var(--color-primary);
   border: none;
   border-radius: 8px;
