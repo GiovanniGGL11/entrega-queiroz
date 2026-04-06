@@ -956,6 +956,8 @@ const loadOrders = async (showLoading = true, forceRefresh = false) => {
         paymentMethod: order.paymentMethod || 'dinheiro',
         notes: order.notes || '',
         createdAt: order.createdAt || new Date(),
+        motoboyNome: order.motoboyNome || '',
+        motoboyId: order.motoboyId || '',
         items: items.map(item => ({
           id: item.productId || item._id?.toString() || '',
           name: item.name || 'Produto sem nome',
@@ -1175,8 +1177,10 @@ const performStatusUpdate = async (orderId, newStatus, motoboyId = null, motoboy
     })
     
     
-    // Atualizar status localmente
+    // Atualizar localmente
     order.status = newStatus
+    if (motoboyNome) order.motoboyNome = motoboyNome
+    if (motoboyId) order.motoboyId = motoboyId
     showAlert(`Status do pedido #${orderId} atualizado para ${getStatusText(newStatus)}`, 'success')
   } catch (error) {
     console.error('Erro ao atualizar pedido:', error)
