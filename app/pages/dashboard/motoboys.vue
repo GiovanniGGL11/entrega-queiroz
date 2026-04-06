@@ -102,7 +102,7 @@
 
           <!-- Foto -->
           <div class="foto-upload-area">
-            <div class="foto-preview" @click="$refs.fotoInput.click()">
+            <div class="foto-preview" @click="fotoInput.click()">
               <img v-if="form.foto" :src="form.foto" alt="Foto" class="foto-preview-img" />
               <div v-else class="foto-placeholder">
                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -119,7 +119,7 @@
                 <span>Alterar</span>
               </div>
             </div>
-            <input ref="fotoInput" type="file" accept="image/*" style="display:none" @change="handleFoto" />
+            <input ref="fotoInput" type="file" accept="image/*" style="display:none" @change="handleFoto" :key="showModal" />
             <button v-if="form.foto" type="button" class="btn-remove-foto" @click="form.foto = ''">Remover foto</button>
           </div>
 
@@ -187,6 +187,7 @@ const deleteTarget = ref(null)
 const deleting = ref(false)
 const editando = ref(null) // null = novo, objeto = editando
 
+const fotoInput = ref(null)
 const formVazio = () => ({ nome: '', telefone: '', placa: '', cpf: '', status: true, foto: '', trabalhouHoje: false })
 const form = ref(formVazio())
 
