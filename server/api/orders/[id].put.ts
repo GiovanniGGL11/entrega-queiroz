@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
   
   const id = getRouterParam(event, 'id');
   const body = await readBody(event);
-  const { status, notes } = body;
+  const { status, notes, motoboyId, motoboyNome } = body;
 
   if (!id) {
     throw createError({
@@ -69,6 +69,10 @@ export default defineEventHandler(async (event) => {
 
     if (notes !== undefined) {
       updateData.notes = notes.trim();
+    }
+    if (motoboyId !== undefined) {
+      updateData.motoboyId = motoboyId;
+      updateData.motoboyNome = motoboyNome || '';
     }
     const result = await orders.updateOne(
       { _id: new ObjectId(id) },

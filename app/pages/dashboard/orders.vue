@@ -400,6 +400,46 @@
       </div>
     </div>
 
+    <!-- Modal de Seleção de Motoboy -->
+    <div v-if="showMotoboyModal" class="status-overlay" @click.self="showMotoboyModal = false">
+      <div class="modal-content status-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Quem irá levar?</h3>
+          <button @click="showMotoboyModal = false" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="motoboysAtivos.length === 0" class="motoboy-empty">
+            <p>Nenhum motoboy marcou presença hoje.</p>
+            <p>Vá em <strong>Motoboys</strong> e marque quem veio trabalhar.</p>
+          </div>
+          <div v-else class="motoboy-list">
+            <div
+              v-for="m in motoboysAtivos"
+              :key="m._id"
+              class="motoboy-option"
+              :class="{ selected: selectedMotoboyId === m._id }"
+              @click="selectedMotoboyId = m._id; selectedMotoboyNome = m.nome"
+            >
+              <div class="motoboy-opt-avatar">
+                <img v-if="m.foto" :src="m.foto" :alt="m.nome" />
+                <span v-else>{{ m.nome.charAt(0).toUpperCase() }}</span>
+              </div>
+              <span class="motoboy-opt-nome">{{ m.nome }}</span>
+              <svg v-if="selectedMotoboyId === m._id" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--color-primary); margin-left: auto;">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="showMotoboyModal = false" class="btn-cancel-modal">Cancelar</button>
+          <button @click="confirmarComMotoboy" class="btn-confirm-modal" :disabled="!selectedMotoboyId && motoboysAtivos.length > 0">
+            Confirmar Entrega
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal de Criar Pedido -->
     <div v-if="showCreateOrderModal" class="modal-overlay" @click="closeCreateOrderModal">
       <div class="modal-content create-order-modal" @click.stop>
@@ -624,6 +664,10 @@ const selectedOrder = ref(null)
 const showStatusModal = ref(false)
 const orderToUpdate = ref(null)
 const newStatus = ref('')
+const showMotoboyModal = ref(false)
+const motoboysAtivos = ref([])
+const selectedMotoboyId = ref('')
+const selectedMotoboyNome = ref('')
 const showCreateOrderModal = ref(false)
 const creatingOrder = ref(false)
 const newOrder = ref({
@@ -1100,7 +1144,7 @@ const closeStatusModal = () => {
 }
 
 // Função para executar a atualização de status
-const performStatusUpdate = async (orderId, newStatus) => {
+const performStatusUpdate = async (orderId, newStatus, motoboyId = null, motoboyNome = null) => {
   try {
     const order = orders.value.find(o => o.id === orderId)
     if (!order) {
@@ -1108,11 +1152,16 @@ const performStatusUpdate = async (orderId, newStatus) => {
       showAlert('Pedido não encontrado', 'error')
       return
     }
-    
-    
+
+    const body = { status: newStatus }
+    if (motoboyId) {
+      body.motoboyId = motoboyId
+      body.motoboyNome = motoboyNome
+    }
+
     const response = await authenticatedFetch(`/api/orders/${order._id}`, {
       method: 'PUT',
-      body: { status: newStatus }
+      body
     })
     
     
@@ -1126,21 +1175,59 @@ const performStatusUpdate = async (orderId, newStatus) => {
   }
 }
 
+// Carregar motoboys ativos hoje
+const carregarMotoboysAtivos = async () => {
+  try {
+    const token = localStorage.getItem('auth_token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    const res = await fetch('/api/motoboys', { headers })
+    const todos = await res.json()
+    motoboysAtivos.value = todos.filter(m => m.status && m.trabalhouHoje)
+  } catch (e) {
+    motoboysAtivos.value = []
+  }
+}
+
 // Função para salvar status editado
 const saveStatusEdit = async () => {
   if (!orderToUpdate.value || !newStatus.value) return
-  
+
+  // Se for "saiu para entrega", perguntar o motoboy
+  if (newStatus.value === 'out_for_delivery') {
+    selectedMotoboyId.value = ''
+    selectedMotoboyNome.value = ''
+    await carregarMotoboysAtivos()
+    showStatusModal.value = false
+    showMotoboyModal.value = true
+    return
+  }
+
   const orderId = orderToUpdate.value.id
   const currentStatusText = getStatusText(orderToUpdate.value.status)
   const newStatusText = getStatusText(newStatus.value)
-  
+
   const title = 'Confirmar Alteração de Status'
   const message = `Deseja realmente alterar o status do pedido #${orderId} de "${currentStatusText}" para "${newStatusText}"?`
-  
+
   showConfirmation(title, message, async () => {
     await performStatusUpdate(orderId, newStatus.value)
     closeStatusModal()
   })
+}
+
+// Confirmar entrega com motoboy selecionado
+const confirmarComMotoboy = async () => {
+  if (!orderToUpdate.value) return
+  const orderId = orderToUpdate.value.id
+  showMotoboyModal.value = false
+  showConfirmation(
+    'Confirmar Saída para Entrega',
+    `Confirmar que ${selectedMotoboyNome.value || 'motoboy'} irá levar o pedido #${orderId}?`,
+    async () => {
+      await performStatusUpdate(orderId, 'out_for_delivery', selectedMotoboyId.value, selectedMotoboyNome.value)
+      closeStatusModal()
+    }
+  )
 }
 
 const viewOrderDetails = (order) => {
@@ -2108,6 +2195,48 @@ onUnmounted(() => {
 
 .form-group {
   margin-bottom: 1rem;
+}
+
+/* Motoboy modal */
+.motoboy-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.motoboy-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid transparent;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  background: #f8fafc;
+  transition: all 0.15s;
+}
+.motoboy-option:hover { background: #f0f4ff; border-color: #c7d2fe; }
+.motoboy-option.selected { background: #eff6ff; border-color: var(--color-primary); }
+
+.motoboy-opt-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.motoboy-opt-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.motoboy-opt-nome { font-weight: 500; font-size: 0.95rem; }
+
+.motoboy-empty {
+  text-align: center;
+  padding: 1.5rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 .form-group label {
