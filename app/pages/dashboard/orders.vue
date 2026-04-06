@@ -198,13 +198,15 @@
                 <span class="info-label">Entrega:</span>
                 <span class="info-value">{{ formatCurrency(order.deliveryFee) }}</span>
               </div>
-              <div v-if="order.motoboyNome" class="info-item motoboy-info-item">
+              <div v-if="order.status === 'out_for_delivery' || order.motoboyNome" class="info-item motoboy-info-item">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="8" r="4"></circle>
                   <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"></path>
                 </svg>
                 <span class="info-label">Motoboy:</span>
-                <span class="info-value motoboy-name">{{ order.motoboyNome }}</span>
+                <span class="info-value" :class="order.motoboyNome ? 'motoboy-name' : 'motoboy-empty-name'">
+                  {{ order.motoboyNome || 'Não atribuído' }}
+                </span>
               </div>
             </div>
           </div>
@@ -2251,6 +2253,10 @@ onUnmounted(() => {
 .motoboy-name {
   font-weight: 600;
   color: var(--color-primary);
+}
+.motoboy-empty-name {
+  color: #9ca3af;
+  font-style: italic;
 }
 
 .form-group label {
