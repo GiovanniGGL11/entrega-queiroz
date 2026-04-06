@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   try { verifyUserToken(token) } catch { throw createError({ statusCode: 401, statusMessage: 'Token inválido' }) }
 
   const body = await readBody(event)
-  const { nome, telefone, cpf, placa, status } = body
+  const { nome, telefone, cpf, placa, status, foto } = body
 
   if (!nome || !telefone) {
     throw createError({ statusCode: 400, statusMessage: 'Nome e telefone são obrigatórios' })
@@ -24,6 +24,7 @@ export default defineEventHandler(async (event) => {
     telefone: telefone.trim(),
     cpf: cpf?.trim() || '',
     placa: placa?.trim() || '',
+    foto: foto || '',
     status: status ?? true,
     createdAt: new Date()
   })
