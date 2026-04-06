@@ -47,6 +47,7 @@ export default defineEventHandler(async (event) => {
         storeName: "Minha Loja",
         logo: "/logo.jpg",
         banner: "/not_found.jpg",
+        infoImage: "",
         storePhone: "",
         whatsapp: "",
         location: {

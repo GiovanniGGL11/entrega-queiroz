@@ -32,9 +32,10 @@ export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
     const { 
-      storeName, 
-      logo, 
+      storeName,
+      logo,
       banner,
+      infoImage,
       storePhone,
       whatsapp,
       location,
@@ -167,6 +168,7 @@ export default defineEventHandler(async (event) => {
     if (storeName !== undefined) updateFields.storeName = storeName.trim();
     if (logo !== undefined) updateFields.logo = logo.trim();
     if (banner !== undefined) updateFields.banner = banner.trim();
+    if (infoImage !== undefined) updateFields.infoImage = infoImage.trim();
     if (storePhone !== undefined) updateFields.storePhone = storePhone.trim();
     if (whatsapp !== undefined) updateFields.whatsapp = whatsapp.trim();
     if (location !== undefined) updateFields.location = location;

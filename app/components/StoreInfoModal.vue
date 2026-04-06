@@ -6,9 +6,9 @@
           <div class="scrollable-content">
             <div class="image-container">
               <img
-                v-if="storeSettings.banner"
-                :src="storeSettings.banner"
-                alt="Banner da loja"
+                v-if="storeSettings.infoImage"
+                :src="storeSettings.infoImage"
+                alt="Imagem da loja"
                 class="modal-banner-img"
               />
               <div v-else class="modal-image">
@@ -333,6 +333,8 @@ watch(() => props.show, (newShow) => {
 }
 
 .modal-banner-img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;

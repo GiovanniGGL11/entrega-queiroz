@@ -293,9 +293,9 @@
           <div class="form-group">
             <label for="banner">Banner Principal</label>
             <div class="image-preview-wrapper">
-              <img 
-                :src="form.banner || '/not_found.jpg'" 
-                alt="Banner" 
+              <img
+                :src="form.banner || '/not_found.jpg'"
+                alt="Banner"
                 class="image-preview banner-preview"
                 @click="openImageOverlay(form.banner)"
                 style="cursor: pointer;"
@@ -326,6 +326,50 @@
               <span class="or-divider">ou</span>
               <input
                 v-model="form.banner"
+                type="url"
+                placeholder="Cole uma URL"
+                class="url-input"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="infoImage">Imagem da Aba Informações</label>
+            <p class="field-hint">Aparece no topo do modal de informações da loja (visível para os clientes)</p>
+            <div class="image-preview-wrapper">
+              <img
+                :src="form.infoImage || '/not_found.jpg'"
+                alt="Imagem Informações"
+                class="image-preview banner-preview"
+                @click="openImageOverlay(form.infoImage)"
+                style="cursor: pointer;"
+              />
+              <div class="image-info">
+                <p>Recomendado: 800x400px</p>
+                <p>Formato: JPG, PNG, WEBP</p>
+                <p>Máximo: 5MB</p>
+              </div>
+            </div>
+            <div class="upload-buttons">
+              <label class="btn-upload">
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="handleFileUpload($event, 'infoImage')"
+                  :disabled="uploadingInfoImage"
+                  style="display: none"
+                />
+                <span v-if="uploadingInfoImage" class="loading-spinner-inline"></span>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                {{ uploadingInfoImage ? 'Enviando...' : 'Fazer Upload' }}
+              </label>
+              <span class="or-divider">ou</span>
+              <input
+                v-model="form.infoImage"
                 type="url"
                 placeholder="Cole uma URL"
                 class="url-input"
@@ -1010,6 +1054,7 @@ const storeCep = ref('')
 const originalForm = ref(null)
 const uploadingLogo = ref(false)
 const uploadingBanner = ref(false)
+const uploadingInfoImage = ref(false)
 let map = null
 let mapCircles = []
 let storeMarker = null
@@ -1041,6 +1086,7 @@ const form = ref({
   storeName: '',
   logo: '',
   banner: '',
+  infoImage: '',
   storePhone: '',
   whatsapp: '',
   location: {
@@ -1460,6 +1506,7 @@ const loadSettings = async () => {
       storeName: response.storeName || '',
       logo: response.logo || '',
       banner: response.banner || '',
+      infoImage: response.infoImage || '',
       storePhone: response.storePhone || '',
       whatsapp: response.whatsapp || '',
       location: response.location || form.value.location,
@@ -1801,16 +1848,18 @@ const handleFileUpload = async (event, type) => {
   try {
     if (type === 'logo') {
       uploadingLogo.value = true
+    } else if (type === 'infoImage') {
+      uploadingInfoImage.value = true
     } else {
       uploadingBanner.value = true
     }
-    
+
     // Converter para base64
     const reader = new FileReader()
     reader.onload = async (e) => {
       try {
         const base64 = e.target.result
-        
+
         // Fazer upload
         const response = await authenticatedFetch('/api/upload-image', {
           method: 'POST',
@@ -1820,30 +1869,36 @@ const handleFileUpload = async (event, type) => {
             type: type
           }
         })
-        
+
         // Atualizar formulário com a imagem
         if (type === 'logo') {
           form.value.logo = response.imageUrl
+        } else if (type === 'infoImage') {
+          form.value.infoImage = response.imageUrl
         } else {
           form.value.banner = response.imageUrl
         }
-        
+
         showAlert('Imagem carregada com sucesso!', 'success')
       } catch (error) {
         showAlert(error.data?.message || 'Erro ao fazer upload', 'error')
       } finally {
         if (type === 'logo') {
           uploadingLogo.value = false
+        } else if (type === 'infoImage') {
+          uploadingInfoImage.value = false
         } else {
           uploadingBanner.value = false
         }
       }
     }
-    
+
     reader.onerror = () => {
       showAlert('Erro ao ler o arquivo', 'error')
       if (type === 'logo') {
         uploadingLogo.value = false
+      } else if (type === 'infoImage') {
+        uploadingInfoImage.value = false
       } else {
         uploadingBanner.value = false
       }
@@ -1854,6 +1909,8 @@ const handleFileUpload = async (event, type) => {
     showAlert('Erro ao processar imagem', 'error')
     if (type === 'logo') {
       uploadingLogo.value = false
+    } else if (type === 'infoImage') {
+      uploadingInfoImage.value = false
     } else {
       uploadingBanner.value = false
     }
@@ -2445,6 +2502,13 @@ onUnmounted(() => {
 .image-info {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+}
+
+.field-hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin-top: -0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .image-info p {
