@@ -6,80 +6,221 @@
         <p class="page-description">Cadastre e gerencie os entregadores da loja.</p>
       </div>
       <div class="header-actions">
-        <button @click="abrirModal()" class="btn-primary">
+        <button v-if="abaAtiva === 'lista'" @click="abrirModal()" class="btn-primary">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
           Novo Motoboy
         </button>
+        <button v-if="abaAtiva === 'relatorio'" @click="imprimirRelatorio()" class="btn-secondary-outline">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+          Imprimir
+        </button>
       </div>
     </div>
 
-    <!-- Lista -->
-    <div class="motoboys-list">
-      <div v-if="loading" class="loading-state">
-        <div class="skeleton-card" v-for="n in 3" :key="n"></div>
-      </div>
-
-      <div v-else-if="motoboys.length === 0" class="empty-state">
-        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+    <!-- Tabs -->
+    <div class="tabs-bar">
+      <button @click="abaAtiva = 'lista'" class="tab-btn" :class="{ active: abaAtiva === 'lista' }">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="8" r="4"></circle>
           <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"></path>
         </svg>
-        <h3>Nenhum motoboy cadastrado</h3>
-        <p>Cadastre o primeiro entregador da loja</p>
-        <button @click="abrirModal()" class="btn-primary">Cadastrar Motoboy</button>
+        Motoboys
+      </button>
+      <button @click="abrirRelatorio()" class="tab-btn" :class="{ active: abaAtiva === 'relatorio' }">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        Relatório de Fretes
+      </button>
+    </div>
+
+    <!-- ===== ABA: LISTA ===== -->
+    <div v-if="abaAtiva === 'lista'">
+      <div class="motoboys-list">
+        <div v-if="loading" class="loading-state">
+          <div class="skeleton-card" v-for="n in 3" :key="n"></div>
+        </div>
+
+        <div v-else-if="motoboys.length === 0" class="empty-state">
+          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="8" r="4"></circle>
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"></path>
+          </svg>
+          <h3>Nenhum motoboy cadastrado</h3>
+          <p>Cadastre o primeiro entregador da loja</p>
+          <button @click="abrirModal()" class="btn-primary">Cadastrar Motoboy</button>
+        </div>
+
+        <div v-else class="motoboys-grid">
+          <div v-for="m in motoboys" :key="m._id" class="motoboy-card">
+            <div class="motoboy-avatar">
+              <img v-if="m.foto" :src="m.foto" :alt="m.nome" class="avatar-img" />
+              <span v-else>{{ m.nome.charAt(0).toUpperCase() }}</span>
+            </div>
+            <div class="motoboy-info">
+              <h3>{{ m.nome }}</h3>
+              <p><strong>Tel:</strong> {{ m.telefone }}</p>
+              <p v-if="m.placa"><strong>Placa:</strong> {{ m.placa }}</p>
+              <p v-if="m.cpf"><strong>CPF:</strong> {{ m.cpf }}</p>
+            </div>
+            <div class="motoboy-actions">
+              <span class="status-badge" :class="m.status ? 'active' : 'inactive'">
+                {{ m.status ? 'Ativo' : 'Inativo' }}
+              </span>
+              <!-- Presença hoje -->
+              <button
+                @click="togglePresenca(m)"
+                class="btn-presenca"
+                :class="m.trabalhouHoje ? 'presente' : 'ausente'"
+                :title="m.trabalhouHoje ? 'Veio hoje — clique para desmarcar' : 'Não veio hoje — clique para marcar'"
+              >
+                <svg v-if="m.trabalhouHoje" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                {{ m.trabalhouHoje ? 'Veio hoje' : 'Não veio' }}
+              </button>
+              <div class="card-btns">
+                <button @click="abrirModal(m)" class="btn-edit" title="Editar">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                </button>
+                <button @click="confirmDelete(m)" class="btn-delete" title="Excluir">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6l-1 14H6L5 6"></path>
+                    <path d="M10 11v6"></path>
+                    <path d="M14 11v6"></path>
+                    <path d="M9 6V4h6v2"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ABA: RELATÓRIO ===== -->
+    <div v-if="abaAtiva === 'relatorio'" class="relatorio-section">
+      <!-- Filtros de período -->
+      <div class="periodo-filters">
+        <button
+          v-for="p in periodos"
+          :key="p.value"
+          @click="setPeriodo(p.value)"
+          class="periodo-btn"
+          :class="{ active: periodoAtivo === p.value }"
+        >
+          {{ p.label }}
+        </button>
       </div>
 
-      <div v-else class="motoboys-grid">
-        <div v-for="m in motoboys" :key="m._id" class="motoboy-card">
-          <div class="motoboy-avatar">
-            <img v-if="m.foto" :src="m.foto" :alt="m.nome" class="avatar-img" />
-            <span v-else>{{ m.nome.charAt(0).toUpperCase() }}</span>
-          </div>
-          <div class="motoboy-info">
-            <h3>{{ m.nome }}</h3>
-            <p><strong>Tel:</strong> {{ m.telefone }}</p>
-            <p v-if="m.placa"><strong>Placa:</strong> {{ m.placa }}</p>
-            <p v-if="m.cpf"><strong>CPF:</strong> {{ m.cpf }}</p>
-          </div>
-          <div class="motoboy-actions">
-            <span class="status-badge" :class="m.status ? 'active' : 'inactive'">
-              {{ m.status ? 'Ativo' : 'Inativo' }}
-            </span>
-            <!-- Presença hoje -->
-            <button
-              @click="togglePresenca(m)"
-              class="btn-presenca"
-              :class="m.trabalhouHoje ? 'presente' : 'ausente'"
-              :title="m.trabalhouHoje ? 'Veio hoje — clique para desmarcar' : 'Não veio hoje — clique para marcar'"
-            >
-              <svg v-if="m.trabalhouHoje" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <polyline points="20 6 9 17 4 12"></polyline>
+      <!-- Loading -->
+      <div v-if="relatorioLoading" class="loading-state">
+        <div class="skeleton-card" v-for="n in 3" :key="n"></div>
+      </div>
+
+      <!-- Resumo geral -->
+      <div v-else>
+        <div class="resumo-cards">
+          <div class="resumo-card">
+            <div class="resumo-icon resumo-icon-blue">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="3" width="15" height="13" rx="2"></rect>
+                <path d="M16 8h4l3 3v5h-7V8z"></path>
+                <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                <circle cx="18.5" cy="18.5" r="2.5"></circle>
               </svg>
-              <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </div>
+            <div>
+              <p class="resumo-label">Total de Entregas</p>
+              <p class="resumo-valor">{{ relatorio.totalEntregas }}</p>
+            </div>
+          </div>
+          <div class="resumo-card">
+            <div class="resumo-icon resumo-icon-green">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
               </svg>
-              {{ m.trabalhouHoje ? 'Veio hoje' : 'Não veio' }}
-            </button>
-            <div class="card-btns">
-              <button @click="abrirModal(m)" class="btn-edit" title="Editar">
-                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                </svg>
-              </button>
-              <button @click="confirmDelete(m)" class="btn-delete" title="Excluir">
-                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6l-1 14H6L5 6"></path>
-                  <path d="M10 11v6"></path>
-                  <path d="M14 11v6"></path>
-                  <path d="M9 6V4h6v2"></path>
-                </svg>
-              </button>
+            </div>
+            <div>
+              <p class="resumo-label">Total em Fretes</p>
+              <p class="resumo-valor">{{ formatCurrency(relatorio.totalGeral) }}</p>
+            </div>
+          </div>
+          <div class="resumo-card">
+            <div class="resumo-icon resumo-icon-orange">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="8" r="4"></circle>
+                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"></path>
+              </svg>
+            </div>
+            <div>
+              <p class="resumo-label">Motoboys Ativos</p>
+              <p class="resumo-valor">{{ relatorio.motoboys ? relatorio.motoboys.length : 0 }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sem dados -->
+        <div v-if="!relatorio.motoboys || relatorio.motoboys.length === 0" class="empty-state">
+          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          <h3>Nenhuma entrega no período</h3>
+          <p>Não há pedidos com motoboy atribuído {{ periodoLabel }}</p>
+        </div>
+
+        <!-- Cards por motoboy -->
+        <div v-else class="relatorio-lista">
+          <div v-for="(m, idx) in relatorio.motoboys" :key="m.motoboyId" class="relatorio-card">
+            <div class="relatorio-rank">#{{ idx + 1 }}</div>
+            <div class="relatorio-avatar">
+              <img v-if="m.foto" :src="m.foto" :alt="m.motoboyNome" class="avatar-img" />
+              <span v-else>{{ (m.motoboyNome || '?').charAt(0).toUpperCase() }}</span>
+            </div>
+            <div class="relatorio-info">
+              <h3>{{ m.motoboyNome || 'Desconhecido' }}</h3>
+              <div class="relatorio-stats">
+                <span class="stat-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="1" y="3" width="15" height="13" rx="2"></rect>
+                    <path d="M16 8h4l3 3v5h-7V8z"></path>
+                    <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                    <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                  </svg>
+                  {{ m.totalEntregas }} entrega{{ m.totalEntregas !== 1 ? 's' : '' }}
+                </span>
+              </div>
+            </div>
+            <div class="relatorio-frete">
+              <p class="frete-valor">{{ formatCurrency(m.totalFretes) }}</p>
+              <p class="frete-label">em fretes</p>
+            </div>
+            <!-- Barra de progresso relativa ao maior -->
+            <div class="relatorio-barra-wrap">
+              <div
+                class="relatorio-barra"
+                :style="{ width: calcBarra(m.totalFretes) + '%' }"
+              ></div>
             </div>
           </div>
         </div>
@@ -178,6 +319,10 @@
 <script setup>
 definePageMeta({ layout: 'dashboard' })
 
+// ===== ABA =====
+const abaAtiva = ref('lista')
+
+// ===== LISTA =====
 const motoboys = ref([])
 const loading = ref(true)
 const showModal = ref(false)
@@ -185,17 +330,70 @@ const saving = ref(false)
 const formError = ref('')
 const deleteTarget = ref(null)
 const deleting = ref(false)
-const editando = ref(null) // null = novo, objeto = editando
+const editando = ref(null)
 
 const fotoInput = ref(null)
 const formVazio = () => ({ nome: '', telefone: '', placa: '', cpf: '', status: true, foto: '', trabalhouHoje: false })
 const form = ref(formVazio())
+
+// ===== RELATÓRIO =====
+const periodoAtivo = ref('today')
+const relatorioLoading = ref(false)
+const relatorio = ref({ motoboys: [], totalGeral: 0, totalEntregas: 0 })
+
+const periodos = [
+  { label: 'Hoje', value: 'today' },
+  { label: 'Esta Semana', value: 'week' },
+  { label: 'Este Mês', value: 'month' }
+]
+
+const periodoLabel = computed(() => {
+  if (periodoAtivo.value === 'today') return 'hoje'
+  if (periodoAtivo.value === 'week') return 'esta semana'
+  return 'este mês'
+})
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('auth_token')
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+const formatCurrency = (val) => {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0)
+}
+
+const calcBarra = (val) => {
+  const max = relatorio.value.motoboys?.[0]?.totalFretes || 1
+  return Math.round((val / max) * 100)
+}
+
+const carregarRelatorio = async () => {
+  relatorioLoading.value = true
+  try {
+    const res = await fetch(`/api/motoboys/relatorio?period=${periodoAtivo.value}`, { headers: getAuthHeader() })
+    relatorio.value = await res.json()
+  } catch (e) {
+    console.error('Erro ao carregar relatório:', e)
+  } finally {
+    relatorioLoading.value = false
+  }
+}
+
+const setPeriodo = (p) => {
+  periodoAtivo.value = p
+  carregarRelatorio()
+}
+
+const abrirRelatorio = () => {
+  abaAtiva.value = 'relatorio'
+  carregarRelatorio()
+}
+
+const imprimirRelatorio = () => {
+  window.print()
+}
+
+// ===== FOTO =====
 const handleFoto = (e) => {
   const file = e.target.files[0]
   if (!file) return
@@ -205,6 +403,7 @@ const handleFoto = (e) => {
   reader.readAsDataURL(file)
 }
 
+// ===== CRUD =====
 const abrirModal = (m = null) => {
   editando.value = m
   form.value = m
@@ -253,7 +452,7 @@ const salvar = async () => {
 
 const togglePresenca = async (m) => {
   const novoValor = !m.trabalhouHoje
-  m.trabalhouHoje = novoValor // atualização otimista
+  m.trabalhouHoje = novoValor
   try {
     await fetch(`/api/motoboys/${m._id}`, {
       method: 'PUT',
@@ -261,7 +460,7 @@ const togglePresenca = async (m) => {
       body: JSON.stringify({ ...m, trabalhouHoje: novoValor })
     })
   } catch (e) {
-    m.trabalhouHoje = !novoValor // reverter em caso de erro
+    m.trabalhouHoje = !novoValor
   }
 }
 
@@ -300,13 +499,39 @@ onMounted(carregar)
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
   gap: 1rem;
   flex-wrap: wrap;
 }
 .page-description { color: var(--color-text-secondary); margin: 0.25rem 0 0; font-size: 0.9rem; }
 .header-actions { display: flex; gap: 0.75rem; }
 
+/* Tabs */
+.tabs-bar {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid rgba(0,0,0,0.08);
+}
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.2s, border-color 0.2s;
+}
+.tab-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+.tab-btn:hover:not(.active) { color: var(--color-text-primary); }
+
+/* Motoboys grid */
 .motoboys-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -385,6 +610,7 @@ onMounted(carregar)
 .btn-edit:hover { color: var(--color-primary); background: rgba(255,142,36,0.1); }
 .btn-delete:hover { color: #dc2626; background: #fee2e2; }
 
+/* Empty / loading */
 .empty-state {
   text-align: center;
   padding: 4rem 2rem;
@@ -406,6 +632,132 @@ onMounted(carregar)
   border-radius: var(--radius-lg);
 }
 @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+/* ===== RELATÓRIO ===== */
+.relatorio-section { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.periodo-filters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.periodo-btn {
+  padding: 0.45rem 1.1rem;
+  border-radius: 999px;
+  border: 1.5px solid rgba(0,0,0,0.15);
+  background: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: all 0.2s;
+}
+.periodo-btn.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+.periodo-btn:hover:not(.active) { border-color: var(--color-primary); color: var(--color-primary); }
+
+.resumo-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+.resumo-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.resumo-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.resumo-icon-blue { background: #dbeafe; color: #1d4ed8; }
+.resumo-icon-green { background: #dcfce7; color: #16a34a; }
+.resumo-icon-orange { background: #ffedd5; color: #ea580c; }
+.resumo-label { margin: 0; font-size: 0.8rem; color: var(--color-text-secondary); }
+.resumo-valor { margin: 0.1rem 0 0; font-size: 1.3rem; font-weight: 700; color: var(--color-text-primary); }
+
+.relatorio-lista { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.relatorio-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.relatorio-rank {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.relatorio-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.relatorio-info { flex: 1; min-width: 0; }
+.relatorio-info h3 { margin: 0 0 0.2rem; font-size: 0.95rem; font-weight: 600; }
+.relatorio-stats { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.relatorio-frete { text-align: right; flex-shrink: 0; }
+.frete-valor { margin: 0; font-size: 1.1rem; font-weight: 700; color: #16a34a; }
+.frete-label { margin: 0; font-size: 0.75rem; color: var(--color-text-secondary); }
+
+.relatorio-barra-wrap {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(0,0,0,0.05);
+}
+.relatorio-barra {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 0 2px 2px 0;
+  transition: width 0.4s ease;
+}
 
 /* Foto */
 .foto-upload-area {
@@ -527,6 +879,23 @@ onMounted(carregar)
 }
 .btn-primary:hover:not(:disabled) { background: var(--color-primary-hover); }
 .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+
+.btn-secondary-outline {
+  background: transparent;
+  border: 1.5px solid rgba(0,0,0,0.2);
+  padding: 0.6rem 1.1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s;
+  color: var(--color-text-secondary);
+}
+.btn-secondary-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
 .btn-secondary {
   background: transparent;
   border: 1px solid rgba(0,0,0,0.2);
@@ -550,4 +919,9 @@ onMounted(carregar)
 }
 .btn-danger:hover:not(:disabled) { background: #b91c1c; }
 .btn-danger:disabled { opacity: 0.7; cursor: not-allowed; }
+
+@media print {
+  .tabs-bar, .periodo-filters, .page-header .header-actions { display: none !important; }
+  .relatorio-card { box-shadow: none; border: 1px solid #e5e7eb; }
+}
 </style>
