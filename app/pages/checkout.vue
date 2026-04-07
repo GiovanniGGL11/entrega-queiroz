@@ -38,6 +38,7 @@ const notes = ref('')
 const isSubmitting = ref(false)
 const orderSubmitted = ref(false)
 const orderNumber = ref('')
+const orderId = ref('')
 const isValidatingAddress = ref(false)
 const addressValidationError = ref('')
 let addressValidationTimeout = null
@@ -357,6 +358,7 @@ const submitOrder = async () => {
     
     if (response.success) {
       orderSubmitted.value = true
+      orderId.value = response.id?.toString() || ''
       clearCart()
     } else {
       throw new Error(response.message || 'Erro ao processar pedido')
@@ -470,8 +472,11 @@ useHead({
             Seu pedido foi recebido e está sendo preparado. 
             Tempo estimado de entrega: {{ storeSettings.deliveryMinTime }}-{{ storeSettings.deliveryMaxTime }} minutos.
           </p>
-          <button @click="goBackToMenu" class="continue-shopping-btn">
+          <button v-if="orderId" @click="navigateTo(`/pedido/${orderId}`)" class="continue-shopping-btn">
             Acompanhar pedido
+          </button>
+          <button v-else @click="goBackToMenu" class="continue-shopping-btn">
+            Voltar ao Menu
           </button>
         </div>
 
