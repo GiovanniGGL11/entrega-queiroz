@@ -425,6 +425,66 @@
           </div>
         </div>
       </div>
+
+      <!-- Rank de Entregadores -->
+      <div class="content-card rank-card">
+        <div class="card-header">
+          <h2>Rank de Entregadores</h2>
+          <div class="period-selector">
+            <button
+              v-for="p in [{ v: 'today', l: 'Hoje' }, { v: 'week', l: 'Semana' }, { v: 'month', l: 'Mês' }]"
+              :key="p.v"
+              @click="rankPeriod = p.v; carregarRank()"
+              :class="['period-btn', { active: rankPeriod === p.v }]"
+            >{{ p.l }}</button>
+          </div>
+        </div>
+
+        <div v-if="rankLoading" class="rank-loading">
+          <div v-for="n in 3" :key="n" class="rank-skeleton"></div>
+        </div>
+
+        <div v-else-if="!rankData.length" class="empty-items">
+          <div class="empty-icon-small">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="1" y="3" width="15" height="13" rx="2"></rect>
+              <path d="M16 8h4l3 3v5h-7V8z"></path>
+              <circle cx="5.5" cy="18.5" r="2.5"></circle>
+              <circle cx="18.5" cy="18.5" r="2.5"></circle>
+            </svg>
+          </div>
+          <p>Nenhuma entrega no período</p>
+        </div>
+
+        <div v-else class="rank-list">
+          <div v-for="(m, idx) in rankData" :key="m.motoboyId" class="rank-item">
+            <!-- Medalha -->
+            <div class="rank-pos" :class="['pos-' + (idx + 1)]">
+              <span v-if="idx === 0">🥇</span>
+              <span v-else-if="idx === 1">🥈</span>
+              <span v-else-if="idx === 2">🥉</span>
+              <span v-else>{{ idx + 1 }}º</span>
+            </div>
+            <!-- Avatar -->
+            <div class="rank-avatar">
+              <img v-if="m.foto" :src="m.foto" :alt="m.motoboyNome" />
+              <span v-else>{{ (m.motoboyNome || '?').charAt(0).toUpperCase() }}</span>
+            </div>
+            <!-- Info -->
+            <div class="rank-info">
+              <span class="rank-nome">{{ m.motoboyNome }}</span>
+              <span class="rank-entregas">{{ m.totalEntregas }} entrega{{ m.totalEntregas !== 1 ? 's' : '' }}</span>
+            </div>
+            <!-- Barra + valor -->
+            <div class="rank-right">
+              <span class="rank-valor">{{ formatCurrency(m.totalFretes) }}</span>
+              <div class="rank-barra-wrap">
+                <div class="rank-barra" :style="{ width: rankMax ? Math.round((m.totalFretes / rankMax) * 100) + '%' : '0%' }"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Modal de Detalhes do Pedido -->
@@ -665,6 +725,27 @@ const formatCurrency = (value) => {
   }).format(value)
 }
 
+// ===== Rank de Entregadores =====
+const rankPeriod = ref('today')
+const rankData = ref([])
+const rankLoading = ref(false)
+const rankMax = computed(() => rankData.value[0]?.totalFretes || 1)
+
+const carregarRank = async () => {
+  rankLoading.value = true
+  try {
+    const token = localStorage.getItem('auth_token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    const res = await fetch(`/api/motoboys/relatorio?period=${rankPeriod.value}`, { headers })
+    const data = await res.json()
+    rankData.value = data.motoboys || []
+  } catch (e) {
+    console.error('Erro ao carregar rank:', e)
+  } finally {
+    rankLoading.value = false
+  }
+}
+
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('pt-BR', {
     day: '2-digit',
@@ -828,9 +909,10 @@ onMounted(async () => {
   try {
     await Promise.all([
       loadStats(),
-      loadOrders()
+      loadOrders(),
+      carregarRank()
     ])
-    
+
     // Iniciar notificações em tempo real automaticamente (com delay para evitar múltiplas inicializações)
     setTimeout(() => {
       console.log('[Dashboard] Iniciando notificações...')
@@ -2109,5 +2191,109 @@ onUnmounted(() => {
   100% {
     background-position: 200% 0;
   }
+}
+
+/* ===== Rank de Entregadores ===== */
+.rank-card {
+  grid-column: 1 / -1;
+}
+
+.rank-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.rank-skeleton {
+  height: 56px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.rank-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: #fafafa;
+  border: 1px solid rgba(0,0,0,0.05);
+  transition: background 0.15s;
+}
+.rank-item:hover { background: #f5f5f5; }
+
+.rank-pos {
+  font-size: 1.25rem;
+  width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+  font-weight: 700;
+  color: #aaa;
+}
+.rank-pos.pos-1, .rank-pos.pos-2, .rank-pos.pos-3 { color: #111; }
+
+.rank-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.rank-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.rank-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.rank-nome {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #111;
+}
+.rank-entregas {
+  font-size: 0.78rem;
+  color: #888;
+}
+
+.rank-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  min-width: 120px;
+}
+.rank-valor {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #16a34a;
+}
+.rank-barra-wrap {
+  width: 100%;
+  height: 5px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.rank-barra {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 999px;
+  transition: width 0.5s ease;
 }
 </style>
