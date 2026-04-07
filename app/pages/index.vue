@@ -887,6 +887,49 @@ watch(showHamburgerMenu, (newVal) => {
   document.body.style.overflow = newVal ? "hidden" : "";
 });
 
+// Acompanhar pedido
+const showTrackModal = ref(false)
+const trackInput = ref('')
+const trackLoading = ref(false)
+const trackError = ref('')
+
+const abrirTrack = () => {
+  showHamburgerMenu.value = false
+  trackInput.value = ''
+  trackError.value = ''
+  showTrackModal.value = true
+}
+
+const buscarPedidoTrack = async () => {
+  const val = trackInput.value.trim()
+  if (!val) { trackError.value = 'Informe o número ou ID do pedido'; return }
+  trackLoading.value = true
+  trackError.value = ''
+  try {
+    // Tentar buscar pelo número do pedido via listagem pública — mas sem autenticação
+    // Vamos tentar como ID direto primeiro
+    const res = await fetch(`/api/public/orders/${val}`)
+    if (res.ok) {
+      showTrackModal.value = false
+      navigateTo(`/pedido/${val}`)
+      return
+    }
+    // Tentar buscar pelo número do pedido
+    const res2 = await fetch(`/api/public/orders/numero/${val}`)
+    if (res2.ok) {
+      const data = await res2.json()
+      showTrackModal.value = false
+      navigateTo(`/pedido/${data._id}`)
+      return
+    }
+    trackError.value = 'Pedido não encontrado. Verifique o número e tente novamente.'
+  } catch {
+    trackError.value = 'Erro ao buscar pedido. Tente novamente.'
+  } finally {
+    trackLoading.value = false
+  }
+}
+
 // Watchers do carrinho já são gerenciados pelo composable
 
 // Watchers do carrinho já são gerenciados pelo composable
@@ -1278,6 +1321,15 @@ useHead({
             </svg>
             Conta
           </button>
+          <button class="drawer-item" @click="abrirTrack()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="1" y="3" width="15" height="13" rx="2"></rect>
+              <path d="M16 8h4l3 3v5h-7V8z"></path>
+              <circle cx="5.5" cy="18.5" r="2.5"></circle>
+              <circle cx="18.5" cy="18.5" r="2.5"></circle>
+            </svg>
+            Acompanhar Pedido
+          </button>
           <button class="drawer-item" @click="openStoreInfoModal(); showHamburgerMenu = false">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"/>
@@ -1287,6 +1339,44 @@ useHead({
             Informações
           </button>
         </nav>
+      </div>
+    </Transition>
+
+    <!-- Modal acompanhar pedido -->
+    <Transition name="fade">
+      <div v-if="showTrackModal" class="track-overlay" @click.self="showTrackModal = false">
+        <div class="track-modal">
+          <div class="track-modal-header">
+            <div class="track-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="3" width="15" height="13" rx="2"></rect>
+                <path d="M16 8h4l3 3v5h-7V8z"></path>
+                <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                <circle cx="18.5" cy="18.5" r="2.5"></circle>
+              </svg>
+            </div>
+            <div>
+              <h3>Acompanhar Pedido</h3>
+              <p>Informe o número do seu pedido</p>
+            </div>
+            <button class="track-close" @click="showTrackModal = false">×</button>
+          </div>
+          <div class="track-body">
+            <input
+              v-model="trackInput"
+              type="text"
+              placeholder="Ex: PED12345678"
+              class="track-input"
+              @keydown.enter="buscarPedidoTrack"
+              autofocus
+            />
+            <p v-if="trackError" class="track-error">{{ trackError }}</p>
+            <button @click="buscarPedidoTrack" class="track-btn" :disabled="trackLoading">
+              {{ trackLoading ? 'Buscando...' : 'Ver meu pedido' }}
+            </button>
+            <p class="track-hint">O número do pedido foi enviado na confirmação.</p>
+          </div>
+        </div>
       </div>
     </Transition>
   </Teleport>
@@ -2530,6 +2620,106 @@ body {
 .drawer-overlay-enter-from, .drawer-overlay-leave-to { opacity: 0; }
 .drawer-enter-active, .drawer-leave-active { transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1); }
 .drawer-enter-from, .drawer-leave-to { transform: translateX(-100%); }
+
+/* Modal acompanhar pedido */
+.track-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+.track-modal {
+  background: white;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 400px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.track-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1.25rem 1.25rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+.track-icon {
+  width: 48px;
+  height: 48px;
+  background: #fff3e8;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--primary-color, #f97316);
+}
+.track-modal-header h3 { margin: 0; font-size: 1rem; }
+.track-modal-header p { margin: 0.1rem 0 0; font-size: 0.8rem; color: #888; }
+.track-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #aaa;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+.track-close:hover { color: #555; }
+.track-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.track-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.track-input:focus { border-color: var(--primary-color, #f97316); }
+.track-error {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #dc2626;
+  background: #fef2f2;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+.track-btn {
+  width: 100%;
+  background: var(--primary-color, #f97316);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 0.8rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.track-btn:hover:not(:disabled) { opacity: 0.88; }
+.track-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.track-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #aaa;
+  text-align: center;
+}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
 /* Floating Cart Button - Esconder quando navbar estiver visível */
 .floating-cart-btn {
