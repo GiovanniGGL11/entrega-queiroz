@@ -378,16 +378,17 @@ const cancelToggleStoreStatus = () => {
 // Confirmar alternância de status
 const confirmToggleStoreStatus = async () => {
   if (isTogglingStore.value) return
-  
+
+  const newStatus = pendingStoreStatus.value
+
   // Fechar modal
   showStoreStatusModal.value = false
-  
+
   isTogglingStore.value = true
-  
+
   try {
     const { authenticatedFetch } = useAuthenticatedFetch()
-    const newStatus = pendingStoreStatus.value
-    
+
     // Atualizar override manual
     await authenticatedFetch('/api/settings', {
       method: 'PUT',
@@ -395,30 +396,29 @@ const confirmToggleStoreStatus = async () => {
         manualOverride: newStatus
       }
     })
-    
+
     // Atualizar estado global (isso atualizará o checkbox automaticamente)
     updateManualOverride(newStatus)
     updateStoreStatus(newStatus)
-    
+
     // Recarregar status completo do backend para garantir sincronização
     await reloadStoreStatus()
-    
+
     // Atualizar status público também (com pequeno delay para garantir que o backend processou)
     setTimeout(async () => {
       await loadStoreSettings()
     }, 500)
-
-    // Se está abrindo a loja, perguntar motoboys do dia
-    if (newStatus === true) {
-      setTimeout(verificarModalMotoboys, 300)
-    }
   } catch (error) {
     console.error('Erro ao atualizar status da loja:', error)
     alert('Erro ao atualizar status da loja. Tente novamente.')
-    // Em caso de erro, recarregar o status do backend para garantir consistência
     await reloadStoreStatus()
   } finally {
     isTogglingStore.value = false
+  }
+
+  // Se está abrindo a loja, perguntar motoboys do dia (fora do try para sempre executar)
+  if (newStatus === true) {
+    await verificarModalMotoboys()
   }
 }
 
