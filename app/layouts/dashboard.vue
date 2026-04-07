@@ -215,6 +215,65 @@
       </main>
     </div>
   </div>
+
+  <!-- Modal: Motoboys ativos hoje -->
+  <Teleport to="body">
+    <Transition name="mfade">
+      <div v-if="showMotoboysDayModal" class="mday-overlay">
+        <div class="mday-modal">
+          <div class="mday-header">
+            <div class="mday-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="3" width="15" height="13" rx="2"></rect>
+                <path d="M16 8h4l3 3v5h-7V8z"></path>
+                <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                <circle cx="18.5" cy="18.5" r="2.5"></circle>
+              </svg>
+            </div>
+            <div>
+              <h2>Motoboys de hoje</h2>
+              <p>Quem vai trabalhar hoje?</p>
+            </div>
+          </div>
+
+          <div v-if="mdayLoading" class="mday-loading">
+            <div class="mday-spinner"></div>
+          </div>
+          <div v-else-if="mdayMotoboys.length === 0" class="mday-empty">
+            <p>Nenhum motoboy cadastrado ainda.</p>
+            <NuxtLink to="/dashboard/motoboys" @click="showMotoboysDayModal = false" class="mday-link">Cadastrar motoboys</NuxtLink>
+          </div>
+          <div v-else class="mday-list">
+            <button
+              v-for="m in mdayMotoboys"
+              :key="m._id"
+              class="mday-item"
+              :class="{ selected: m.trabalhouHoje }"
+              @click="m.trabalhouHoje = !m.trabalhouHoje"
+            >
+              <div class="mday-avatar">
+                <img v-if="m.foto" :src="m.foto" :alt="m.nome" />
+                <span v-else>{{ m.nome.charAt(0).toUpperCase() }}</span>
+              </div>
+              <span class="mday-nome">{{ m.nome }}</span>
+              <div class="mday-check">
+                <svg v-if="m.trabalhouHoje" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+            </button>
+          </div>
+
+          <div class="mday-footer">
+            <button @click="fecharSemSalvar" class="mday-btn-skip">Pular</button>
+            <button @click="salvarPresencas" :disabled="mdaySaving" class="mday-btn-save">
+              {{ mdaySaving ? 'Salvando...' : 'Confirmar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup>
@@ -458,6 +517,57 @@ const handleSettingsUpdate = async (event) => {
 }
 
 // Responsividade
+// ===== Motoboys do dia =====
+const showMotoboysDayModal = ref(false)
+const mdayMotoboys = ref([])
+const mdayLoading = ref(false)
+const mdaySaving = ref(false)
+
+const getAuthHeader = () => {
+  const token = localStorage.getItem('auth_token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+const verificarModalMotoboys = async () => {
+  // Mostrar apenas uma vez por dia
+  const hoje = new Date().toDateString()
+  const visto = localStorage.getItem('mday_check')
+  if (visto === hoje) return
+
+  mdayLoading.value = true
+  showMotoboysDayModal.value = true
+  try {
+    const res = await fetch('/api/motoboys', { headers: getAuthHeader() })
+    const lista = await res.json()
+    // Apenas motoboys ativos
+    mdayMotoboys.value = lista.filter((m) => m.status).map((m) => ({ ...m, trabalhouHoje: m.trabalhouHoje ?? false }))
+  } catch {}
+  mdayLoading.value = false
+}
+
+const salvarPresencas = async () => {
+  mdaySaving.value = true
+  try {
+    await Promise.all(
+      mdayMotoboys.value.map((m) =>
+        fetch(`/api/motoboys/${m._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+          body: JSON.stringify({ ...m })
+        })
+      )
+    )
+    localStorage.setItem('mday_check', new Date().toDateString())
+    showMotoboysDayModal.value = false
+  } catch {}
+  mdaySaving.value = false
+}
+
+const fecharSemSalvar = () => {
+  localStorage.setItem('mday_check', new Date().toDateString())
+  showMotoboysDayModal.value = false
+}
+
 onMounted(() => {
   // Carregar configurações da loja
   loadStoreSettings()
@@ -466,6 +576,11 @@ onMounted(() => {
   // Carregar cor primária
   loadPrimaryColor()
   
+  // Verificar motoboys do dia (uma vez por dia)
+  if (process.client) {
+    setTimeout(verificarModalMotoboys, 800)
+  }
+
   // Escutar evento de atualização de configurações
   if (process.client) {
     window.addEventListener('store-settings-updated', handleSettingsUpdate)
@@ -1366,4 +1481,165 @@ onMounted(() => {
     padding: 0.875rem;
   }
 }
+
+/* Modal motoboys do dia */
+.mday-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+.mday-modal {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+  overflow: hidden;
+}
+.mday-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 1.5rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+.mday-icon {
+  width: 52px;
+  height: 52px;
+  background: #fff3e8;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-primary, #f97316);
+}
+.mday-header h2 { margin: 0; font-size: 1.1rem; }
+.mday-header p { margin: 0.15rem 0 0; font-size: 0.82rem; color: #888; }
+
+.mday-loading {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+}
+.mday-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top-color: var(--color-primary, #f97316);
+  border-radius: 50%;
+  animation: mday-spin 0.7s linear infinite;
+}
+@keyframes mday-spin { to { transform: rotate(360deg); } }
+
+.mday-empty {
+  padding: 2rem 1.5rem;
+  text-align: center;
+  color: #888;
+  font-size: 0.9rem;
+}
+.mday-link {
+  display: inline-block;
+  margin-top: 0.5rem;
+  color: var(--color-primary, #f97316);
+  text-decoration: underline;
+}
+
+.mday-list {
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.mday-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 12px;
+  border: 2px solid #f3f4f6;
+  background: white;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+  width: 100%;
+}
+.mday-item:hover { border-color: #d1d5db; }
+.mday-item.selected {
+  border-color: var(--color-primary, #f97316);
+  background: #fff8f3;
+}
+.mday-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-primary, #f97316);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.mday-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.mday-nome { flex: 1; font-size: 0.95rem; font-weight: 500; }
+.mday-check {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  color: white;
+}
+.mday-item.selected .mday-check {
+  background: var(--color-primary, #f97316);
+  border-color: var(--color-primary, #f97316);
+}
+
+.mday-footer {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem 1.5rem;
+  justify-content: flex-end;
+}
+.mday-btn-skip {
+  background: transparent;
+  border: 1px solid #d1d5db;
+  padding: 0.65rem 1.25rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #888;
+  transition: background 0.2s;
+}
+.mday-btn-skip:hover { background: #f9fafb; }
+.mday-btn-save {
+  background: var(--color-primary, #f97316);
+  color: white;
+  border: none;
+  padding: 0.65rem 1.5rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.mday-btn-save:hover:not(:disabled) { opacity: 0.88; }
+.mday-btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.mfade-enter-active, .mfade-leave-active { transition: opacity 0.2s; }
+.mfade-enter-from, .mfade-leave-to { opacity: 0; }
 </style>
