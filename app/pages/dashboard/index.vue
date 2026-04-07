@@ -426,6 +426,56 @@
         </div>
       </div>
 
+      <!-- Top 10 Regiões -->
+      <div class="content-card rank-card">
+        <div class="card-header">
+          <h2>Top 10 Regiões Mais Atendidas</h2>
+          <div class="period-selector">
+            <button
+              v-for="p in [{ v: 'today', l: 'Hoje' }, { v: 'week', l: 'Semana' }, { v: 'month', l: 'Mês' }]"
+              :key="p.v"
+              @click="regioesPeriod = p.v; carregarRegioes()"
+              :class="['period-btn', { active: regioesPeriod === p.v }]"
+            >{{ p.l }}</button>
+          </div>
+        </div>
+
+        <div v-if="regioesLoading" class="rank-loading">
+          <div v-for="n in 5" :key="n" class="rank-skeleton"></div>
+        </div>
+
+        <div v-else-if="!regioesData.length" class="empty-items">
+          <div class="empty-icon-small">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+          </div>
+          <p>Nenhuma entrega no período</p>
+        </div>
+
+        <div v-else class="rank-list">
+          <div v-for="(r, idx) in regioesData" :key="r.regiao" class="rank-item">
+            <div class="rank-pos" :class="['pos-' + (idx + 1)]">
+              <span v-if="idx === 0">🥇</span>
+              <span v-else-if="idx === 1">🥈</span>
+              <span v-else-if="idx === 2">🥉</span>
+              <span v-else>{{ idx + 1 }}º</span>
+            </div>
+            <div class="rank-info">
+              <span class="rank-nome">{{ r.regiao }}</span>
+              <span class="rank-entregas">{{ r.total }} pedido{{ r.total !== 1 ? 's' : '' }}</span>
+            </div>
+            <div class="rank-right">
+              <span class="rank-valor" style="color: #2563eb;">{{ r.total }}</span>
+              <div class="rank-barra-wrap">
+                <div class="rank-barra" style="background: #2563eb;" :style="{ width: regioesMax ? Math.round((r.total / regioesMax) * 100) + '%' : '0%' }"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Rank de Entregadores -->
       <div class="content-card rank-card">
         <div class="card-header">
@@ -725,6 +775,27 @@ const formatCurrency = (value) => {
   }).format(value)
 }
 
+// ===== Top 10 Regiões =====
+const regioesPeriod = ref('month')
+const regioesData = ref([])
+const regioesLoading = ref(false)
+const regioesMax = computed(() => regioesData.value[0]?.total || 1)
+
+const carregarRegioes = async () => {
+  regioesLoading.value = true
+  try {
+    const token = localStorage.getItem('auth_token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    const res = await fetch(`/api/dashboard/regioes?period=${regioesPeriod.value}`, { headers })
+    const data = await res.json()
+    regioesData.value = data.regioes || []
+  } catch (e) {
+    console.error('Erro ao carregar regiões:', e)
+  } finally {
+    regioesLoading.value = false
+  }
+}
+
 // ===== Rank de Entregadores =====
 const rankPeriod = ref('today')
 const rankData = ref([])
@@ -910,7 +981,8 @@ onMounted(async () => {
     await Promise.all([
       loadStats(),
       loadOrders(),
-      carregarRank()
+      carregarRank(),
+      carregarRegioes()
     ])
 
     // Iniciar notificações em tempo real automaticamente (com delay para evitar múltiplas inicializações)
