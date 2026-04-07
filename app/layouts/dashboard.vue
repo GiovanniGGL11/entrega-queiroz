@@ -542,7 +542,7 @@ const abrirModalMotoboysHoje = async () => {
   try {
     const res = await fetch('/api/motoboys', { headers: getAuthHeader() })
     const lista = await res.json()
-    mdayMotoboys.value = lista.filter((m) => m.status).map((m) => ({ ...m, trabalhouHoje: m.trabalhouHoje ?? false }))
+    mdayMotoboys.value = lista.map((m) => ({ ...m, trabalhouHoje: m.trabalhouHoje ?? false }))
   } catch {}
   mdayLoading.value = false
 }
@@ -554,7 +554,7 @@ const verificarModalMotoboys = async () => {
   try {
     const res = await fetch('/api/motoboys', { headers: getAuthHeader() })
     const lista = await res.json()
-    mdayMotoboys.value = lista.filter((m) => m.status).map((m) => ({ ...m, trabalhouHoje: m.trabalhouHoje ?? false }))
+    mdayMotoboys.value = lista.map((m) => ({ ...m, trabalhouHoje: m.trabalhouHoje ?? false }))
   } catch {}
   mdayLoading.value = false
 }
@@ -574,7 +574,7 @@ const salvarPresencas = async () => {
         fetch(`/api/motoboys/${m._id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-          body: JSON.stringify({ ...m })
+          body: JSON.stringify({ ...m, status: m.trabalhouHoje })
         })
       )
     )

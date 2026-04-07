@@ -453,14 +453,16 @@ const salvar = async () => {
 const togglePresenca = async (m) => {
   const novoValor = !m.trabalhouHoje
   m.trabalhouHoje = novoValor
+  m.status = novoValor // veio hoje = ativo, não veio = inativo
   try {
     await fetch(`/api/motoboys/${m._id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-      body: JSON.stringify({ ...m, trabalhouHoje: novoValor })
+      body: JSON.stringify({ ...m, trabalhouHoje: novoValor, status: novoValor })
     })
   } catch (e) {
     m.trabalhouHoje = !novoValor
+    m.status = !novoValor
   }
 }
 
