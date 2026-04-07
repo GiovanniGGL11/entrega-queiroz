@@ -427,21 +427,28 @@
       </div>
 
       <!-- Top 10 Regiões -->
-      <div class="content-card rank-card">
+      <div class="content-card pro-rank-card">
         <div class="card-header">
-          <h2>Top 10 Regiões Mais Atendidas</h2>
+          <div class="card-title-group">
+            <div class="card-title-icon blue">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+            </div>
+            <div>
+              <h2>Regiões Mais Atendidas</h2>
+              <p class="card-subtitle">Top 10 bairros por volume de entregas</p>
+            </div>
+          </div>
           <div class="period-selector">
-            <button
-              v-for="p in [{ v: 'today', l: 'Hoje' }, { v: 'week', l: 'Semana' }, { v: 'month', l: 'Mês' }]"
-              :key="p.v"
-              @click="regioesPeriod = p.v; carregarRegioes()"
-              :class="['period-btn', { active: regioesPeriod === p.v }]"
-            >{{ p.l }}</button>
+            <button v-for="p in [{ v: 'today', l: 'Hoje' }, { v: 'week', l: 'Semana' }, { v: 'month', l: 'Mês' }]" :key="p.v"
+              @click="regioesPeriod = p.v; carregarRegioes()" :class="['period-btn', { active: regioesPeriod === p.v }]">{{ p.l }}</button>
           </div>
         </div>
 
-        <div v-if="regioesLoading" class="rank-loading">
-          <div v-for="n in 5" :key="n" class="rank-skeleton"></div>
+        <div v-if="regioesLoading" class="pro-rank-loading">
+          <div v-for="n in 5" :key="n" class="pro-rank-skeleton"></div>
         </div>
 
         <div v-else-if="!regioesData.length" class="empty-items">
@@ -454,57 +461,74 @@
           <p>Nenhuma entrega no período</p>
         </div>
 
-        <div v-else class="items-list">
-          <div v-for="(r, idx) in regioesData" :key="r.regiao" class="item-row">
-            <div class="item-rank">{{ idx + 1 }}º</div>
-            <div class="item-name">{{ r.regiao }}</div>
-            <div class="item-quantity">{{ r.total }} pedido{{ r.total !== 1 ? 's' : '' }}</div>
+        <div v-else class="pro-rank-list">
+          <div v-for="(r, idx) in regioesData" :key="r.regiao" class="pro-rank-row">
+            <span class="pro-rank-num" :class="idx < 3 ? 'top' : ''">{{ idx + 1 }}º</span>
+            <div class="pro-rank-bar-wrap">
+              <div class="pro-rank-label">{{ r.regiao }}</div>
+              <div class="pro-rank-bar-track">
+                <div class="pro-rank-bar blue" :style="{ width: regioesMax ? Math.round((r.total / regioesMax) * 100) + '%' : '0%' }"></div>
+              </div>
+            </div>
+            <span class="pro-rank-value">{{ r.total }} <small>ped.</small></span>
           </div>
         </div>
       </div>
 
       <!-- Rank de Entregadores -->
-      <div class="content-card rank-card">
+      <div class="content-card pro-rank-card">
         <div class="card-header">
-          <h2>Rank de Entregadores</h2>
+          <div class="card-title-group">
+            <div class="card-title-icon orange">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="3" width="15" height="13" rx="2"></rect>
+                <path d="M16 8h4l3 3v5h-7V8z"></path>
+                <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                <circle cx="18.5" cy="18.5" r="2.5"></circle>
+              </svg>
+            </div>
+            <div>
+              <h2>Rank de Entregadores</h2>
+              <p class="card-subtitle">Desempenho por volume de fretes</p>
+            </div>
+          </div>
           <div class="period-selector">
-            <button
-              v-for="p in [{ v: 'today', l: 'Hoje' }, { v: 'week', l: 'Semana' }, { v: 'month', l: 'Mês' }]"
-              :key="p.v"
-              @click="rankPeriod = p.v; carregarRank()"
-              :class="['period-btn', { active: rankPeriod === p.v }]"
-            >{{ p.l }}</button>
+            <button v-for="p in [{ v: 'today', l: 'Hoje' }, { v: 'week', l: 'Semana' }, { v: 'month', l: 'Mês' }]" :key="p.v"
+              @click="rankPeriod = p.v; carregarRank()" :class="['period-btn', { active: rankPeriod === p.v }]">{{ p.l }}</button>
           </div>
         </div>
 
-        <div v-if="rankLoading" class="rank-loading">
-          <div v-for="n in 3" :key="n" class="rank-skeleton"></div>
+        <div v-if="rankLoading" class="pro-rank-loading">
+          <div v-for="n in 3" :key="n" class="pro-rank-skeleton"></div>
         </div>
 
         <div v-else-if="!rankData.length" class="empty-items">
           <div class="empty-icon-small">
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <rect x="1" y="3" width="15" height="13" rx="2"></rect>
-              <path d="M16 8h4l3 3v5h-7V8z"></path>
-              <circle cx="5.5" cy="18.5" r="2.5"></circle>
-              <circle cx="18.5" cy="18.5" r="2.5"></circle>
+              <circle cx="12" cy="8" r="4"></circle>
+              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"></path>
             </svg>
           </div>
           <p>Nenhuma entrega no período</p>
         </div>
 
-        <div v-else class="items-list">
-          <div v-for="(m, idx) in rankData" :key="m.motoboyId" class="item-row">
-            <div class="item-rank">{{ idx + 1 }}º</div>
-            <div class="rank-avatar">
+        <div v-else class="pro-rank-list">
+          <div v-for="(m, idx) in rankData" :key="m.motoboyId" class="pro-rank-row">
+            <span class="pro-rank-num" :class="idx < 3 ? 'top' : ''">{{ idx + 1 }}º</span>
+            <div class="pro-motoboy-avatar">
               <img v-if="m.foto" :src="m.foto" :alt="m.motoboyNome" />
               <span v-else>{{ (m.motoboyNome || '?').charAt(0).toUpperCase() }}</span>
             </div>
-            <div class="item-name">
-              {{ m.motoboyNome }}
-              <small style="display:block; color:#64748b; font-weight:400; font-size:0.78rem;">{{ m.totalEntregas }} entrega{{ m.totalEntregas !== 1 ? 's' : '' }}</small>
+            <div class="pro-rank-bar-wrap">
+              <div class="pro-rank-label">
+                {{ m.motoboyNome }}
+                <span class="pro-rank-sub">{{ m.totalEntregas }} entrega{{ m.totalEntregas !== 1 ? 's' : '' }}</span>
+              </div>
+              <div class="pro-rank-bar-track">
+                <div class="pro-rank-bar orange" :style="{ width: rankMax ? Math.round((m.totalFretes / rankMax) * 100) + '%' : '0%' }"></div>
+              </div>
             </div>
-            <div class="item-quantity">{{ formatCurrency(m.totalFretes) }}</div>
+            <span class="pro-rank-value green">{{ formatCurrency(m.totalFretes) }}</span>
           </div>
         </div>
       </div>
@@ -2238,107 +2262,144 @@ onUnmounted(() => {
   }
 }
 
-/* ===== Rank de Entregadores ===== */
-.rank-card {
+/* ===== Rankings Profissionais ===== */
+.pro-rank-card {
   grid-column: 1 / -1;
 }
 
-.rank-loading {
+.card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+.card-title-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.card-title-icon.blue { background: #eff6ff; color: #2563eb; }
+.card-title-icon.orange { background: #fff7ed; color: #ea580c; }
+.card-subtitle {
+  margin: 0.1rem 0 0;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.pro-rank-loading {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
 }
-.rank-skeleton {
-  height: 56px;
+.pro-rank-skeleton {
+  height: 48px;
   border-radius: 10px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, #f8fafc 25%, #f1f5f9 50%, #f8fafc 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
 
-.rank-list {
+.pro-rank-list {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
 }
 
-.rank-item {
+.pro-rank-row {
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
-  background: #fafafa;
-  border: 1px solid rgba(0,0,0,0.05);
-  transition: background 0.15s;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  transition: background 0.15s, transform 0.15s;
+  cursor: default;
 }
-.rank-item:hover { background: #f5f5f5; }
+.pro-rank-row:hover {
+  background: #f8fafc;
+  transform: translateX(3px);
+}
 
-.rank-pos {
-  font-size: 1.25rem;
-  width: 32px;
+.pro-rank-num {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  width: 26px;
   text-align: center;
   flex-shrink: 0;
-  font-weight: 700;
-  color: #aaa;
+  letter-spacing: -0.02em;
 }
-.rank-pos.pos-1, .rank-pos.pos-2, .rank-pos.pos-3 { color: #111; }
+.pro-rank-num.top { color: #f97316; }
 
-.rank-avatar {
-  width: 42px;
-  height: 42px;
+.pro-motoboy-avatar {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: var(--color-primary);
+  background: linear-gradient(135deg, #f97316, #fb923c);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: 700;
   flex-shrink: 0;
   overflow: hidden;
+  box-shadow: 0 2px 6px rgba(249,115,22,0.25);
 }
-.rank-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pro-motoboy-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-.rank-info {
-  display: flex;
-  flex-direction: column;
+.pro-rank-bar-wrap {
   flex: 1;
   min-width: 0;
 }
-.rank-nome {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: #111;
-}
-.rank-entregas {
-  font-size: 0.78rem;
-  color: #888;
-}
-
-.rank-right {
+.pro-rank-label {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.35rem;
-  min-width: 120px;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.3rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.rank-valor {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: #16a34a;
+.pro-rank-sub {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: #94a3b8;
 }
-.rank-barra-wrap {
-  width: 100%;
+.pro-rank-bar-track {
   height: 5px;
-  background: #e5e7eb;
+  background: #f1f5f9;
   border-radius: 999px;
   overflow: hidden;
 }
-.rank-barra {
+.pro-rank-bar {
   height: 100%;
-  background: var(--color-primary);
   border-radius: 999px;
-  transition: width 0.5s ease;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.pro-rank-bar.blue { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+.pro-rank-bar.orange { background: linear-gradient(90deg, #f97316, #fb923c); }
+
+.pro-rank-value {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #475569;
+  flex-shrink: 0;
+  min-width: 60px;
+  text-align: right;
+}
+.pro-rank-value.green { color: #16a34a; min-width: 100px; }
+.pro-rank-value small {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: #94a3b8;
 }
 </style>
