@@ -43,9 +43,15 @@ export default defineNuxtConfig({
     // Configurações de cache e performance
     routeRules: {
       // APIs públicas com cache (melhora performance)
-      '/api/public/**': { 
+      '/api/public/**': {
         cors: true,
         headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=600' }, // 5 min cache, 10 min stale
+        prerender: false
+      },
+      // Pedidos mudam frequentemente — sem cache
+      '/api/public/orders/**': {
+        cors: true,
+        headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
         prerender: false
       },
       '/api/categories-with-products': { 
