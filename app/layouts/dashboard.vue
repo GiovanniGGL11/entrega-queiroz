@@ -538,25 +538,54 @@ const abrirModalMotoboysHoje = async () => {
   if (localStorage.getItem('mday_check') === hoje) return
 
   mdayLoading.value = true
+  mdayMotoboys.value = []
   showMotoboysDayModal.value = true
+
+  await new Promise(resolve => setTimeout(resolve, 200))
+
   try {
-    const res = await fetch('/api/motoboys', { headers: getAuthHeader() })
-    const lista = await res.json()
-    mdayMotoboys.value = lista.map((m) => ({ ...m, trabalhouHoje: m.trabalhouHoje ?? false }))
-  } catch {}
-  mdayLoading.value = false
+    const token = localStorage.getItem('auth_token')
+    const res = await fetch('/api/motoboys', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+    if (res.ok) {
+      const lista = await res.json()
+      mdayMotoboys.value = Array.isArray(lista)
+        ? lista.map((m) => ({ ...m, trabalhouHoje: m.trabalhouHoje ?? false }))
+        : []
+    }
+  } catch (e) {
+    console.error('Erro ao carregar motoboys:', e)
+  } finally {
+    mdayLoading.value = false
+  }
 }
 
 // Chamado ao abrir loja manualmente — sempre mostra, ignora o cache do dia
 const verificarModalMotoboys = async () => {
   mdayLoading.value = true
+  mdayMotoboys.value = []
   showMotoboysDayModal.value = true
+
+  // Pequeno delay para garantir que o token já está no localStorage
+  await new Promise(resolve => setTimeout(resolve, 200))
+
   try {
-    const res = await fetch('/api/motoboys', { headers: getAuthHeader() })
-    const lista = await res.json()
-    mdayMotoboys.value = lista.map((m) => ({ ...m, trabalhouHoje: m.trabalhouHoje ?? false }))
-  } catch {}
-  mdayLoading.value = false
+    const token = localStorage.getItem('auth_token')
+    const res = await fetch('/api/motoboys', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+    if (res.ok) {
+      const lista = await res.json()
+      mdayMotoboys.value = Array.isArray(lista)
+        ? lista.map((m) => ({ ...m, trabalhouHoje: m.trabalhouHoje ?? false }))
+        : []
+    }
+  } catch (e) {
+    console.error('Erro ao carregar motoboys:', e)
+  } finally {
+    mdayLoading.value = false
+  }
 }
 
 // Chamado na entrada do dashboard quando loja já abriu por horário automático
