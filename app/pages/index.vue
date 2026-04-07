@@ -893,8 +893,28 @@ const trackInput = ref('')
 const trackLoading = ref(false)
 const trackError = ref('')
 
-const abrirTrack = () => {
+const abrirTrack = async () => {
   showHamburgerMenu.value = false
+
+  // Verificar se há pedido salvo no localStorage
+  const savedId = localStorage.getItem('last_order_id')
+  if (savedId) {
+    try {
+      const res = await fetch(`/api/public/orders/${savedId}`)
+      if (res.ok) {
+        const data = await res.json()
+        // Se pedido ainda está em andamento, ir direto
+        if (data.status !== 'delivered' && data.status !== 'cancelled') {
+          navigateTo(`/pedido/${savedId}`)
+          return
+        }
+        // Pedido já finalizado — limpar e mostrar modal manual
+        localStorage.removeItem('last_order_id')
+      }
+    } catch {}
+  }
+
+  // Sem pedido salvo ou pedido finalizado — abrir modal manual
   trackInput.value = ''
   trackError.value = ''
   showTrackModal.value = true
@@ -902,22 +922,22 @@ const abrirTrack = () => {
 
 const buscarPedidoTrack = async () => {
   const val = trackInput.value.trim()
-  if (!val) { trackError.value = 'Informe o número ou ID do pedido'; return }
+  if (!val) { trackError.value = 'Informe o número do pedido'; return }
   trackLoading.value = true
   trackError.value = ''
   try {
-    // Tentar buscar pelo número do pedido via listagem pública — mas sem autenticação
-    // Vamos tentar como ID direto primeiro
+    // Tentar como ID direto
     const res = await fetch(`/api/public/orders/${val}`)
     if (res.ok) {
       showTrackModal.value = false
       navigateTo(`/pedido/${val}`)
       return
     }
-    // Tentar buscar pelo número do pedido
+    // Tentar pelo número do pedido (ex: PED12345678)
     const res2 = await fetch(`/api/public/orders/numero/${val}`)
     if (res2.ok) {
       const data = await res2.json()
+      localStorage.setItem('last_order_id', data._id)
       showTrackModal.value = false
       navigateTo(`/pedido/${data._id}`)
       return

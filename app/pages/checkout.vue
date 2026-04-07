@@ -359,6 +359,7 @@ const submitOrder = async () => {
     if (response.success) {
       orderSubmitted.value = true
       orderId.value = response.id?.toString() || ''
+      if (orderId.value) localStorage.setItem('last_order_id', orderId.value)
       clearCart()
     } else {
       throw new Error(response.message || 'Erro ao processar pedido')
