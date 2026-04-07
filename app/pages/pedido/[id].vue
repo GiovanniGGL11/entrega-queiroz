@@ -195,6 +195,8 @@
 </template>
 
 <script setup>
+definePageMeta({ layout: false })
+
 const route = useRoute()
 const id = route.params.id
 
