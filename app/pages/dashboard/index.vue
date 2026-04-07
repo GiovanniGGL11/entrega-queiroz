@@ -454,24 +454,11 @@
           <p>Nenhuma entrega no período</p>
         </div>
 
-        <div v-else class="rank-list">
-          <div v-for="(r, idx) in regioesData" :key="r.regiao" class="rank-item">
-            <div class="rank-pos" :class="['pos-' + (idx + 1)]">
-              <span v-if="idx === 0">🥇</span>
-              <span v-else-if="idx === 1">🥈</span>
-              <span v-else-if="idx === 2">🥉</span>
-              <span v-else>{{ idx + 1 }}º</span>
-            </div>
-            <div class="rank-info">
-              <span class="rank-nome">{{ r.regiao }}</span>
-              <span class="rank-entregas">{{ r.total }} pedido{{ r.total !== 1 ? 's' : '' }}</span>
-            </div>
-            <div class="rank-right">
-              <span class="rank-valor" style="color: #2563eb;">{{ r.total }}</span>
-              <div class="rank-barra-wrap">
-                <div class="rank-barra" style="background: #2563eb;" :style="{ width: regioesMax ? Math.round((r.total / regioesMax) * 100) + '%' : '0%' }"></div>
-              </div>
-            </div>
+        <div v-else class="items-list">
+          <div v-for="(r, idx) in regioesData" :key="r.regiao" class="item-row">
+            <div class="item-rank">{{ idx + 1 }}º</div>
+            <div class="item-name">{{ r.regiao }}</div>
+            <div class="item-quantity">{{ r.total }} pedido{{ r.total !== 1 ? 's' : '' }}</div>
           </div>
         </div>
       </div>
@@ -506,32 +493,18 @@
           <p>Nenhuma entrega no período</p>
         </div>
 
-        <div v-else class="rank-list">
-          <div v-for="(m, idx) in rankData" :key="m.motoboyId" class="rank-item">
-            <!-- Medalha -->
-            <div class="rank-pos" :class="['pos-' + (idx + 1)]">
-              <span v-if="idx === 0">🥇</span>
-              <span v-else-if="idx === 1">🥈</span>
-              <span v-else-if="idx === 2">🥉</span>
-              <span v-else>{{ idx + 1 }}º</span>
-            </div>
-            <!-- Avatar -->
+        <div v-else class="items-list">
+          <div v-for="(m, idx) in rankData" :key="m.motoboyId" class="item-row">
+            <div class="item-rank">{{ idx + 1 }}º</div>
             <div class="rank-avatar">
               <img v-if="m.foto" :src="m.foto" :alt="m.motoboyNome" />
               <span v-else>{{ (m.motoboyNome || '?').charAt(0).toUpperCase() }}</span>
             </div>
-            <!-- Info -->
-            <div class="rank-info">
-              <span class="rank-nome">{{ m.motoboyNome }}</span>
-              <span class="rank-entregas">{{ m.totalEntregas }} entrega{{ m.totalEntregas !== 1 ? 's' : '' }}</span>
+            <div class="item-name">
+              {{ m.motoboyNome }}
+              <small style="display:block; color:#64748b; font-weight:400; font-size:0.78rem;">{{ m.totalEntregas }} entrega{{ m.totalEntregas !== 1 ? 's' : '' }}</small>
             </div>
-            <!-- Barra + valor -->
-            <div class="rank-right">
-              <span class="rank-valor">{{ formatCurrency(m.totalFretes) }}</span>
-              <div class="rank-barra-wrap">
-                <div class="rank-barra" :style="{ width: rankMax ? Math.round((m.totalFretes / rankMax) * 100) + '%' : '0%' }"></div>
-              </div>
-            </div>
+            <div class="item-quantity">{{ formatCurrency(m.totalFretes) }}</div>
           </div>
         </div>
       </div>
