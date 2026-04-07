@@ -7,6 +7,11 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     return
   }
 
+  // Rotas de rastreamento de pedido são públicas
+  if (to.path.startsWith('/pedido/')) {
+    return
+  }
+
   // Se estiver no server, valide de forma autoritativa via API usando os cookies do request
   if (process.server) {
     try {
