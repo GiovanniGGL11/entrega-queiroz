@@ -407,6 +407,11 @@ const confirmToggleStoreStatus = async () => {
     setTimeout(async () => {
       await loadStoreSettings()
     }, 500)
+
+    // Se está abrindo a loja, perguntar motoboys do dia
+    if (newStatus === true) {
+      setTimeout(verificarModalMotoboys, 300)
+    }
   } catch (error) {
     console.error('Erro ao atualizar status da loja:', error)
     alert('Erro ao atualizar status da loja. Tente novamente.')
@@ -528,21 +533,30 @@ const getAuthHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
-const verificarModalMotoboys = async () => {
-  // Mostrar apenas uma vez por dia
+const abrirModalMotoboysHoje = async () => {
   const hoje = new Date().toDateString()
-  const visto = localStorage.getItem('mday_check')
-  if (visto === hoje) return
+  if (localStorage.getItem('mday_check') === hoje) return
 
   mdayLoading.value = true
   showMotoboysDayModal.value = true
   try {
     const res = await fetch('/api/motoboys', { headers: getAuthHeader() })
     const lista = await res.json()
-    // Apenas motoboys ativos
     mdayMotoboys.value = lista.filter((m) => m.status).map((m) => ({ ...m, trabalhouHoje: m.trabalhouHoje ?? false }))
   } catch {}
   mdayLoading.value = false
+}
+
+// Chamado ao abrir loja manualmente
+const verificarModalMotoboys = () => {
+  abrirModalMotoboysHoje()
+}
+
+// Chamado na entrada do dashboard quando loja já abriu por horário automático
+const verificarModalMotoboysPorHorario = () => {
+  if (manualOverride.value !== null) return // loja em modo manual — não interferir
+  if (!isStoreOpen.value) return // loja fechada — nada a fazer
+  abrirModalMotoboysHoje()
 }
 
 const salvarPresencas = async () => {
@@ -576,9 +590,9 @@ onMounted(() => {
   // Carregar cor primária
   loadPrimaryColor()
   
-  // Verificar motoboys do dia (uma vez por dia)
+  // Verificar motoboys se loja abriu por horário automático
   if (process.client) {
-    setTimeout(verificarModalMotoboys, 800)
+    setTimeout(verificarModalMotoboysPorHorario, 1200)
   }
 
   // Escutar evento de atualização de configurações
