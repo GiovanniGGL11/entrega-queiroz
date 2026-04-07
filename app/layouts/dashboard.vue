@@ -547,9 +547,16 @@ const abrirModalMotoboysHoje = async () => {
   mdayLoading.value = false
 }
 
-// Chamado ao abrir loja manualmente
-const verificarModalMotoboys = () => {
-  abrirModalMotoboysHoje()
+// Chamado ao abrir loja manualmente — sempre mostra, ignora o cache do dia
+const verificarModalMotoboys = async () => {
+  mdayLoading.value = true
+  showMotoboysDayModal.value = true
+  try {
+    const res = await fetch('/api/motoboys', { headers: getAuthHeader() })
+    const lista = await res.json()
+    mdayMotoboys.value = lista.filter((m) => m.status).map((m) => ({ ...m, trabalhouHoje: m.trabalhouHoje ?? false }))
+  } catch {}
+  mdayLoading.value = false
 }
 
 // Chamado na entrada do dashboard quando loja já abriu por horário automático
