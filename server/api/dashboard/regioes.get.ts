@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
   const db = await getDB()
 
   const orders = await db.collection('orders').find({
-    status: { $in: ['out_for_delivery', 'delivered'] },
+    status: { $nin: ['cancelled'] },
     createdAt: { $gte: startDate }
   }).toArray()
 

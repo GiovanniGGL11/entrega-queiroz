@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
   // Buscar pedidos com motoboy atribuído no período
   const orders = await db.collection('orders').find({
     motoboyId: { $exists: true, $ne: '' },
-    status: { $in: ['out_for_delivery', 'delivered'] },
+    status: { $nin: ['cancelled'] },
     createdAt: { $gte: startDate }
   }).toArray()
 
