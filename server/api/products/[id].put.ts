@@ -102,34 +102,26 @@ export default defineEventHandler(async (event) => {
           complements: complements || [],
           order: order !== undefined ? parseInt(order) : existingProduct.order,
           isVisible: isVisible !== undefined ? Boolean(isVisible) : existingProduct.isVisible,
-          promotion: promotion || null,
+          promotion: promotion
+            ? { ...promotion, price: promotion.price ? parseFloat(promotion.price) : null, active: Boolean(promotion.active), dias: promotion.dias || [] }
+            : null,
           updatedAt: new Date(),
         }
       }
     );
-    
+
     if (result.matchedCount === 0) {
       throw createError({
         statusCode: 404,
         message: "Produto não encontrado",
       });
     }
-    
-    return { 
+
+    const updatedProduct = await products.findOne({ _id: new ObjectId(id) });
+
+    return {
       message: "Produto atualizado com sucesso",
-      product: {
-        _id: new ObjectId(id),
-        name: name.trim(),
-        description: description?.trim() || '',
-        price: parseFloat(price),
-        image: image?.trim() || '/not_found.jpg',
-        categoryId: categoryId,
-        complements: complements || [],
-        order: order !== undefined ? parseInt(order) : existingProduct.order,
-        isVisible: isVisible !== undefined ? Boolean(isVisible) : existingProduct.isVisible,
-        createdAt: existingProduct.createdAt,
-        updatedAt: new Date()
-      }
+      product: updatedProduct
     };
   } catch (err: any) {
     if (err.statusCode) {

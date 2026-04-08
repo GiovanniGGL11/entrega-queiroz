@@ -80,7 +80,9 @@ export default defineEventHandler(async (event) => {
       complements: complements || [],
       order: parseInt(order) || 0,
       isVisible: Boolean(isVisible),
-      promotion: promotion || null,
+      promotion: promotion
+        ? { ...promotion, price: promotion.price ? parseFloat(promotion.price) : null, active: Boolean(promotion.active), dias: promotion.dias || [] }
+        : null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

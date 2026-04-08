@@ -889,7 +889,7 @@ const updateProduct = async () => {
     
     const index = products.value.findIndex(p => p._id === editingProduct.value._id)
     if (index !== -1) {
-      products.value[index] = response.product
+      products.value[index] = { ...response.product, _id: response.product._id?.toString() || editingProduct.value._id }
     }
     
     showAlert('Produto atualizado com sucesso!', 'success')
