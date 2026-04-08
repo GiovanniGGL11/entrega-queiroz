@@ -1246,7 +1246,7 @@ useHead({
             <div class="description">
               <div class="item-name-row">
                 <h4>{{ item.name }}</h4>
-                <span v-if="getPromoAtiva(item)" class="promo-badge">Promoção</span>
+                <span v-if="getPromoAtiva(item)" class="promo-badge">Promoção do Dia</span>
               </div>
               <p>{{ item.description }}</p>
               <div class="price-row">
