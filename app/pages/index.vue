@@ -175,7 +175,9 @@ const loadCategories = async () => {
     loadingCategories.value = true
     
     // OTIMIZAÇÃO: Carregar apenas categorias primeiro (mais rápido)
-    const apiCategories = await $fetch('/api/categories-with-products')
+    const apiCategories = await $fetch('/api/categories-with-products', {
+      headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+    })
     
     // Mapear categorias da API para o formato esperado
     // Filtrar categorias e produtos ocultos no frontend também (segurança dupla)
@@ -237,7 +239,9 @@ const loadCategoryProducts = async (categoryId) => {
     const category = categories.value.find(cat => compareIds(cat.id, normalizedCategoryId))
     if (!category || category.items.length === 0) {
       // Se não tem produtos carregados, buscar da API
-      const apiCategories = await $fetch('/api/categories-with-products')
+      const apiCategories = await $fetch('/api/categories-with-products', {
+      headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+    })
       const apiCategory = apiCategories.find(cat => compareIds(cat._id || cat.id, normalizedCategoryId))
       
       if (apiCategory && apiCategory.isVisible !== false) {
