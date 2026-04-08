@@ -321,7 +321,9 @@ const filteredCategories = computed(() => {
 const totalPrice = computed(() => {
   if (!selectedItem.value) return 0;
 
-  let total = selectedItem.value.price * quantity.value;
+  const promo = getPromoAtiva(selectedItem.value)
+  const basePrice = promo ? Number(promo.price) : selectedItem.value.price
+  let total = basePrice * quantity.value;
 
   Object.entries(complementsQty.value).forEach(([name, qty]) => {
     const comp = selectedItem.value.complements.find((c) => c.name === name);
@@ -334,7 +336,15 @@ const totalPrice = computed(() => {
 });
 
 // Formatação
-const formatPrice = (value) => `R$ ${value.toFixed(2).replace(".", ",")}`;
+const formatPrice = (value) => `R$ ${Number(value).toFixed(2).replace(".", ",")}`;
+
+const getPromoAtiva = (item) => {
+  const p = item.promotion
+  if (!p || !p.active || !p.price) return null
+  const hoje = new Date().getDay()
+  if (!p.dias || !p.dias.includes(hoje)) return null
+  return p
+}
 
 // Intersection Observer
 let observer = null;
@@ -454,7 +464,11 @@ const addToCart = () => {
       return { name, quantity: qty, price: comp?.price || 0 };
     });
 
-  addToCartComposable(selectedItem.value, quantity.value, complements, observation.value);
+  const promoAtiva = getPromoAtiva(selectedItem.value)
+  const itemComPreco = promoAtiva
+    ? { ...selectedItem.value, price: Number(promoAtiva.price) }
+    : selectedItem.value
+  addToCartComposable(itemComPreco, quantity.value, complements, observation.value);
   closeModal();
 };
 
@@ -1226,9 +1240,15 @@ useHead({
               <img :src="item.image" :alt="item.name" class="item-image" />
             </div>
             <div class="description">
-              <h4>{{ item.name }}</h4>
+              <div class="item-name-row">
+                <h4>{{ item.name }}</h4>
+                <span v-if="getPromoAtiva(item)" class="promo-badge">Promoção</span>
+              </div>
               <p>{{ item.description }}</p>
-              <span class="price">{{ formatPrice(item.price) }}</span>
+              <div class="price-row">
+                <span v-if="getPromoAtiva(item)" class="price price-original">{{ formatPrice(item.price) }}</span>
+                <span class="price" :class="{ 'price-promo': getPromoAtiva(item) }">{{ formatPrice(getPromoAtiva(item) ? getPromoAtiva(item).price : item.price) }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -2245,7 +2265,43 @@ body {
   font-weight: 600;
   color: var(--color-primary, #ff8e24);
   font-size: 1rem;
-  margin-top: auto; /* Empurra o preço para o final do card */
+  margin-top: auto;
+}
+.price-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: auto;
+  flex-wrap: wrap;
+}
+.price-original {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #aaa;
+  text-decoration: line-through;
+  margin-top: 0;
+}
+.price-promo {
+  color: #16a34a;
+}
+.item-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.promo-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 /* Loading Overlay */

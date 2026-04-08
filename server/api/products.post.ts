@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
   }
   
   const body = await readBody(event);
-  const { name, description, price, image, categoryId, complements, order = 0, isVisible = true } = body;
+  const { name, description, price, image, categoryId, complements, order = 0, isVisible = true, promotion = null } = body;
 
   if (!name || name.trim() === '') {
     throw createError({
@@ -80,6 +80,7 @@ export default defineEventHandler(async (event) => {
       complements: complements || [],
       order: parseInt(order) || 0,
       isVisible: Boolean(isVisible),
+      promotion: promotion || null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

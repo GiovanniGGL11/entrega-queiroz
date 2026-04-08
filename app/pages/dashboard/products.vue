@@ -500,6 +500,60 @@
             </div>
           </div>
           
+          <!-- Promoção do dia -->
+          <div class="promo-section">
+            <div class="promo-header" @click="showPromoConfig = !showPromoConfig">
+              <div class="promo-header-left">
+                <div class="promo-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                  </svg>
+                </div>
+                <div>
+                  <span class="promo-title">Promoção do Dia</span>
+                  <span class="promo-desc" v-if="productForm.promotion?.active">
+                    R$ {{ Number(productForm.promotion.price).toFixed(2) }} — {{ diasSelecionados }}
+                  </span>
+                  <span class="promo-desc" v-else>Nenhuma promoção configurada</span>
+                </div>
+              </div>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :style="{ transform: showPromoConfig ? 'rotate(180deg)' : 'none', transition: '0.2s' }">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+
+            <div v-if="showPromoConfig" class="promo-body">
+              <label class="promo-toggle-row">
+                <span>Ativar promoção</span>
+                <label class="visibility-toggle-switch">
+                  <input type="checkbox" v-model="productForm.promotion.active" />
+                  <span class="toggle-slider" :class="{ checked: productForm.promotion.active }"></span>
+                </label>
+              </label>
+
+              <div v-if="productForm.promotion.active" class="promo-fields">
+                <div class="form-group">
+                  <label>Preço promocional (R$)</label>
+                  <input v-model="productForm.promotion.price" type="number" step="0.01" min="0.01" placeholder="0.00" />
+                </div>
+                <div class="form-group">
+                  <label>Dias da semana</label>
+                  <div class="dias-semana">
+                    <button
+                      v-for="d in diasSemana"
+                      :key="d.v"
+                      type="button"
+                      class="dia-btn"
+                      :class="{ active: productForm.promotion.dias?.includes(d.v) }"
+                      @click="toggleDia(d.v)"
+                    >{{ d.l }}</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="form-actions">
             <button type="button" @click="closeModal" class="btn-secondary" :disabled="submitting">
               Cancelar
@@ -622,7 +676,28 @@ const productForm = ref({
   categoryId: '',
   order: 0,
   complements: [],
-  isVisible: true
+  isVisible: true,
+  promotion: { active: false, price: '', dias: [] }
+})
+
+const showPromoConfig = ref(false)
+
+const diasSemana = [
+  { v: 0, l: 'Dom' }, { v: 1, l: 'Seg' }, { v: 2, l: 'Ter' },
+  { v: 3, l: 'Qua' }, { v: 4, l: 'Qui' }, { v: 5, l: 'Sex' }, { v: 6, l: 'Sáb' }
+]
+
+const toggleDia = (v) => {
+  const dias = productForm.value.promotion.dias
+  const idx = dias.indexOf(v)
+  if (idx === -1) dias.push(v)
+  else dias.splice(idx, 1)
+}
+
+const diasSelecionados = computed(() => {
+  const dias = productForm.value.promotion?.dias || []
+  if (!dias.length) return 'Nenhum dia'
+  return dias.sort().map(d => diasSemana.find(x => x.v === d)?.l).join(', ')
 })
 
 // Alert
@@ -794,8 +869,12 @@ const editProduct = (product) => {
     categoryId: product.categoryId,
     order: product.order || 0,
     complements: complements,
-    isVisible: product.isVisible !== false // Default true se não definido
+    isVisible: product.isVisible !== false,
+    promotion: product.promotion
+      ? { ...product.promotion, price: product.promotion.price?.toString() || '', dias: product.promotion.dias || [] }
+      : { active: false, price: '', dias: [] }
   }
+  showPromoConfig.value = !!product.promotion?.active
   showEditModal.value = true
 }
 
@@ -874,8 +953,10 @@ const closeModal = () => {
     categoryId: '',
     order: 0,
     complements: [],
-    isVisible: true
+    isVisible: true,
+    promotion: { active: false, price: '', dias: [] }
   }
+  showPromoConfig.value = false
 }
 
 // Gerenciar complementos
@@ -2520,4 +2601,93 @@ onUnmounted(() => {
   background: #fee2e2;
   color: #991b1b;
 }
+
+/* Promoção */
+.promo-section {
+  border: 1.5px solid #fde68a;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fffbeb;
+}
+.promo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.promo-header:hover { background: #fef3c7; }
+.promo-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.promo-icon {
+  width: 36px;
+  height: 36px;
+  background: #fef3c7;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d97706;
+  flex-shrink: 0;
+}
+.promo-title {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #92400e;
+}
+.promo-desc {
+  display: block;
+  font-size: 0.75rem;
+  color: #b45309;
+  margin-top: 0.1rem;
+}
+.promo-body {
+  border-top: 1.5px solid #fde68a;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  background: white;
+}
+.promo-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.promo-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.dias-semana {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.dia-btn {
+  padding: 0.35rem 0.7rem;
+  border-radius: 8px;
+  border: 1.5px solid #e5e7eb;
+  background: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.15s;
+}
+.dia-btn.active {
+  background: #f97316;
+  border-color: #f97316;
+  color: white;
+}
+.dia-btn:hover:not(.active) { border-color: #f97316; color: #f97316; }
 </style>

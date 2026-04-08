@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
   
   const id = getRouterParam(event, 'id');
   const body = await readBody(event);
-  const { name, description, price, image, categoryId, complements, order, isVisible } = body;
+  const { name, description, price, image, categoryId, complements, order, isVisible, promotion } = body;
 
   if (!id || !ObjectId.isValid(id)) {
     throw createError({
@@ -102,6 +102,7 @@ export default defineEventHandler(async (event) => {
           complements: complements || [],
           order: order !== undefined ? parseInt(order) : existingProduct.order,
           isVisible: isVisible !== undefined ? Boolean(isVisible) : existingProduct.isVisible,
+          promotion: promotion || null,
           updatedAt: new Date(),
         }
       }
