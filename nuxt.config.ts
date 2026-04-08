@@ -54,9 +54,9 @@ export default defineNuxtConfig({
         headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
         prerender: false
       },
-      '/api/categories-with-products': { 
+      '/api/categories-with-products': {
         cors: true,
-        headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' }
+        headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
       },
       '/api/categories': { 
         cors: true,

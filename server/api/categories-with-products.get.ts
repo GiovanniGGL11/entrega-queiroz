@@ -45,7 +45,8 @@ export default defineEventHandler(async () => {
                 price: 1,
                 image: 1,
                 complements: 1,
-                isVisible: 1 // Incluir isVisible no projection
+                isVisible: 1,
+                promotion: 1
               }
             },
             { $sort: { order: 1, createdAt: -1 } }
