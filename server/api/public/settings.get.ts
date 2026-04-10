@@ -284,7 +284,7 @@ export default defineEventHandler(async (event) => {
               cepRanges: ["01", "02", "03", "04", "05", "06", "07"]
             },
             {
-              name: "Zona 2", 
+              name: "Zona 2",
               maxDistance: 10,
               fee: 10,
               cepRanges: ["08"]
@@ -295,7 +295,9 @@ export default defineEventHandler(async (event) => {
               fee: 15,
               cepRanges: []
             }
-          ]
+          ],
+      restrictedZipCodes: Array.isArray(storeSettings.restrictedZipCodes) ? storeSettings.restrictedZipCodes : [],
+      extraZipCodes: Array.isArray(storeSettings.extraZipCodes) ? storeSettings.extraZipCodes : []
     };
     
     // Garantir que os dados sejam serializáveis (remover _id e outros campos do MongoDB)
@@ -341,6 +343,11 @@ export default defineEventHandler(async (event) => {
         maxDistance: Number(zone.maxDistance || 0),
         fee: Number(zone.fee || 0),
         cepRanges: Array.isArray(zone.cepRanges) ? zone.cepRanges.map((r: any) => String(r)) : []
+      })) : [],
+      restrictedZipCodes: Array.isArray(result.restrictedZipCodes) ? result.restrictedZipCodes.map((z: any) => String(z)) : [],
+      extraZipCodes: Array.isArray(result.extraZipCodes) ? result.extraZipCodes.map((item: any) => ({
+        cep: String(item.cep || ''),
+        endereco: String(item.endereco || '')
       })) : []
     };
     

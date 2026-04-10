@@ -34,6 +34,12 @@ const deliveryInfo = ref({
 const paymentMethod = ref('pix')
 const notes = ref('')
 
+// Cupom de desconto
+const couponCode = ref('')
+const appliedCoupon = ref(null)
+const discountAmount = ref(0)
+const applyingCoupon = ref(false)
+
 // Estado de carregamento
 const isSubmitting = ref(false)
 const orderSubmitted = ref(false)
@@ -264,7 +270,7 @@ const hasEnabledPaymentMethods = computed(() => {
 })
 
 const totalAmount = computed(() => {
-  return cartSubtotal.value + deliveryInfo.value.deliveryFee
+  return Math.max(0, cartSubtotal.value + deliveryInfo.value.deliveryFee - discountAmount.value)
 })
 
 const formatPrice = (value) => `R$ ${value.toFixed(2).replace(".", ",")}`
@@ -347,9 +353,10 @@ const submitOrder = async () => {
         complements: item.complements || []
       })),
       paymentMethod: paymentMethod.value,
-      notes: notes.value.trim()
+      notes: notes.value.trim(),
+      couponCode: appliedCoupon.value?.code || null
     }
-    
+
     // Enviar para API
     const response = await $fetch('/api/orders', {
       method: 'POST',
@@ -360,6 +367,7 @@ const submitOrder = async () => {
       orderSubmitted.value = true
       orderId.value = response.id?.toString() || ''
       if (orderId.value) localStorage.setItem('last_order_id', orderId.value)
+      sessionStorage.removeItem('applied_coupon')
       clearCart()
     } else {
       throw new Error(response.message || 'Erro ao processar pedido')
@@ -389,12 +397,56 @@ const goBackToMenu = () => {
   navigateTo('/')
 }
 
+// Funções de cupom
+const applyCoupon = async () => {
+  if (!couponCode.value.trim()) return;
+  applyingCoupon.value = true;
+  try {
+    const res = await fetch('/api/public/validate-coupon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: couponCode.value.trim(), subtotal: cartSubtotal.value })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showAlert('Cupom inválido', data.message || 'Cupom não aplicável.', 'error');
+    } else {
+      appliedCoupon.value = data;
+      discountAmount.value = data.discountAmount;
+      couponCode.value = '';
+      sessionStorage.setItem('applied_coupon', JSON.stringify(data));
+      showAlert('Cupom aplicado!', `Desconto de ${data.type === 'percentage' ? data.value + '%' : 'R$ ' + data.value.toFixed(2).replace('.', ',')} aplicado com sucesso!`, 'success');
+    }
+  } catch (e) {
+    showAlert('Erro', 'Não foi possível validar o cupom.', 'error');
+  } finally {
+    applyingCoupon.value = false;
+  }
+};
+
+const removeCoupon = () => {
+  appliedCoupon.value = null;
+  discountAmount.value = 0;
+  couponCode.value = '';
+  sessionStorage.removeItem('applied_coupon');
+};
+
 // Lifecycle
 onMounted(async () => {
   await Promise.all([
     loadStoreSettings(),
     loadPrimaryColor()
   ])
+
+  // Carregar cupom aplicado do cardápio
+  const savedCoupon = sessionStorage.getItem('applied_coupon')
+  if (savedCoupon) {
+    try {
+      const c = JSON.parse(savedCoupon)
+      appliedCoupon.value = c
+      discountAmount.value = c.discountAmount || 0
+    } catch (e) {}
+  }
 
   // Pré-preencher dados do cliente logado
   const customerData = localStorage.getItem('customer_data')
@@ -540,6 +592,34 @@ useHead({
                   </span>
                   <span v-else>{{ formatPrice(deliveryInfo.deliveryFee) }}</span>
                 </div>
+                <!-- Cupom de desconto -->
+                <div class="coupon-checkout-section">
+                  <div v-if="appliedCoupon" class="coupon-applied-checkout">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    <span>Cupom <strong>{{ appliedCoupon.code }}</strong></span>
+                    <button @click="removeCoupon" class="coupon-remove-small" type="button">✕</button>
+                  </div>
+                  <div v-else class="coupon-input-checkout">
+                    <input
+                      v-model="couponCode"
+                      type="text"
+                      placeholder="Código do cupom"
+                      class="coupon-field"
+                      @keydown.enter="applyCoupon"
+                    />
+                    <button @click="applyCoupon" class="coupon-apply-btn" type="button" :disabled="applyingCoupon || !couponCode.trim()">
+                      {{ applyingCoupon ? '...' : 'Aplicar' }}
+                    </button>
+                  </div>
+                </div>
+
+                <div v-if="discountAmount > 0" class="total-line discount-line">
+                  <span>Desconto</span>
+                  <span class="discount-value">-{{ formatPrice(discountAmount) }}</span>
+                </div>
+
                 <div class="total-line total">
                   <span>Total</span>
                   <span v-if="isValidatingAddress" class="calculating-total">
@@ -878,6 +958,88 @@ useHead({
 </template>
 
 <style scoped>
+/* Cupom no checkout */
+.coupon-checkout-section {
+  padding: 0.75rem 0;
+  border-bottom: 1px dashed #e2e8f0;
+  margin-bottom: 0.5rem;
+}
+
+.coupon-input-checkout {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.coupon-field {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: border-color 0.2s;
+}
+
+.coupon-field:focus {
+  outline: none;
+  border-color: var(--color-primary, #ff8e24);
+}
+
+.coupon-apply-btn {
+  padding: 0.5rem 1rem;
+  background: var(--color-primary, #ff8e24);
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter 0.2s;
+}
+
+.coupon-apply-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.coupon-applied-checkout {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.coupon-applied-checkout svg {
+  flex-shrink: 0;
+}
+
+.coupon-remove-small {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #166534;
+  font-size: 0.875rem;
+  padding: 0 0.25rem;
+  line-height: 1;
+}
+
+.discount-line {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.discount-value {
+  color: #16a34a;
+}
+
 .checkout-page {
   min-height: 100vh;
   background: #f8fafc;

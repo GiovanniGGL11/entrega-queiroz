@@ -9,14 +9,14 @@ export function getJwtSecret(): string {
   return (config.jwtSecret as string) || process.env.JWT_SECRET || 'your-secret-key'
 }
 
-export function signUserToken(payload: { userId: string; email: string }): string {
+export function signUserToken(payload: { userId: string; email: string; role?: string; name?: string }): string {
   const secret = getJwtSecret()
   return jwt.sign(payload, secret, { expiresIn: '7d' })
 }
 
-export function verifyUserToken(token: string): { userId: string; email: string } {
+export function verifyUserToken(token: string): { userId: string; email: string; role?: string; name?: string } {
   const secret = getJwtSecret()
-  return jwt.verify(token, secret) as { userId: string; email: string }
+  return jwt.verify(token, secret) as { userId: string; email: string; role?: string; name?: string }
 }
 
 export function readTokenFromEvent(event: any): string | undefined {

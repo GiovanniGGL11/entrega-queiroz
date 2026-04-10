@@ -9,7 +9,7 @@
         <div v-if="loadingSettings" class="skeleton-title"></div>
         <h1 v-else>{{ storeSettings.storeName || 'Queiroz Hamburgueria' }}</h1>
       </div>
-      <form @submit.prevent="handleLogin" class="login-form">
+      <form @submit.prevent="handleLogin" class="login-form" autocomplete="off">
         <div class="form-group">
           <label for="email">Email</label>
           <input
@@ -18,7 +18,7 @@
             type="email"
             required
             placeholder="seu@email.com"
-            autocomplete="email"
+            autocomplete="off"
           />
         </div>
          <div class="form-group">
@@ -30,7 +30,7 @@
                :type="showPassword ? 'text' : 'password'"
                required
                placeholder="Digite sua senha"
-               autocomplete="current-password"
+               autocomplete="new-password"
              />
              <button 
                type="button" 
@@ -133,14 +133,11 @@ const checkAuth = async () => {
 // Carregar ao montar o componente
 onMounted(() => {
   if (process.client) {
-    if (sessionStorage.getItem('justLoggedOut') === 'true') {
-      sessionStorage.removeItem('justLoggedOut');
-    } else {
-      checkAuth();
-    }
+    sessionStorage.removeItem('justLoggedOut');
   }
   loadStoreSettings();
   loadPrimaryColor();
+  checkAuth();
 });
  
 const handleLogin = async () => {

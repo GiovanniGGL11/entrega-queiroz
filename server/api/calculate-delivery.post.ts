@@ -62,7 +62,27 @@ export default defineEventHandler(async (event) => {
           });
         }
       }
-      
+
+      // Verificar se o CEP está na lista de CEPs extras (atendimento especial)
+      const extraZipCodes = config.extraZipCodes || [];
+      if (extraZipCodes.length > 0) {
+        const formattedZipCode = cleanZipCode.substring(0, 5) + '-' + cleanZipCode.substring(5, 8);
+        const isExtra = extraZipCodes.some((item: any) => {
+          const itemCep = (item.cep || '').replace(/\D/g, '');
+          return itemCep === cleanZipCode;
+        });
+
+        if (isExtra) {
+          return {
+            canDeliver: true,
+            deliveryFee: config.deliveryFee !== undefined ? config.deliveryFee : 0,
+            deliveryZone: 'CEP Extra',
+            estimatedTime: `${config.deliveryMinTime || 30}-${config.deliveryMaxTime || 45} min`,
+            zipCode: cleanZipCode
+          };
+        }
+      }
+
       // Definir zonas de entrega baseadas em CEP
       const deliveryZones = config.deliveryZones || [];
       const cepPrefix = cleanZipCode.substring(0, 5); // Primeiros 5 dígitos do CEP

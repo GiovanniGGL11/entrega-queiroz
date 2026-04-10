@@ -135,9 +135,16 @@
               <span>Taxa de entrega</span>
               <span>{{ pedido.deliveryInfo.deliveryFee > 0 ? formatCurrency(pedido.deliveryInfo.deliveryFee) : 'Grátis' }}</span>
             </div>
+            <div v-if="pedido.discount > 0" class="total-row coupon-row">
+              <span>
+                Desconto
+                <span v-if="pedido.coupon" class="coupon-badge">{{ pedido.coupon.code }}</span>
+              </span>
+              <span class="discount-val">-{{ formatCurrency(pedido.discount) }}</span>
+            </div>
             <div class="total-row total-final">
               <span>Total</span>
-              <span>{{ formatCurrency(pedido.total) }}</span>
+              <span>{{ formatCurrency(pedido.totalAmount) }}</span>
             </div>
           </div>
         </div>
@@ -582,6 +589,22 @@ onUnmounted(() => {
   font-size: 0.875rem;
   color: #666;
 }
+.coupon-row { color: #16a34a; font-weight: 600; }
+.coupon-badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+  border-radius: 99px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.5rem;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+.discount-val { color: #16a34a; }
+
 .total-final {
   font-size: 1rem;
   font-weight: 700;

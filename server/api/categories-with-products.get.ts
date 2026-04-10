@@ -46,7 +46,8 @@ export default defineEventHandler(async () => {
                 image: 1,
                 complements: 1,
                 isVisible: 1,
-                promotion: 1
+                promotion: 1,
+                ageRestricted: 1
               }
             },
             { $sort: { order: 1, createdAt: -1 } }

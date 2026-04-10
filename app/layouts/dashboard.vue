@@ -33,38 +33,42 @@
           </svg>
         </button>
       </div>
+      <!-- Badge de role do usuário -->
+      <div v-if="!sidebarCollapsed" class="user-role-badge" :class="isOwner ? 'role-owner' : 'role-employee'">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>{{ userName || userEmail || 'Usuário' }}</span>
+        <span class="role-label">{{ isOwner ? 'Dono' : 'Funcionário' }}</span>
+      </div>
+
       <nav class="sidebar-nav">
         <ul>
+          <!-- Pedidos — todos veem -->
           <li>
-            <NuxtLink to="/dashboard" class="nav-link" :class="{ active: $route.path === '/dashboard' }" :title="sidebarCollapsed ? 'Dashboard' : ''" @click="closeSidebarOnMobile">
+            <NuxtLink to="/dashboard/orders" class="nav-link" :class="{ active: $route.path === '/dashboard/orders' }" :title="sidebarCollapsed ? 'Pedidos' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="7" height="7"></rect>
-                <rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="14" y="14" width="7" height="7"></rect>
-                <rect x="3" y="14" width="7" height="7"></rect>
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
               </svg>
-              <span class="nav-text">Dashboard</span>
+              <span class="nav-text">Pedidos</span>
             </NuxtLink>
           </li>
+
+          <!-- Motoboys — todos veem -->
           <li>
-            <NuxtLink to="/dashboard/categories" class="nav-link" :class="{ active: $route.path === '/dashboard/categories' }" :title="sidebarCollapsed ? 'Categorias' : ''" @click="closeSidebarOnMobile">
+            <NuxtLink to="/dashboard/motoboys" class="nav-link" :class="{ active: $route.path === '/dashboard/motoboys' }" :title="sidebarCollapsed ? 'Motoboys' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 3h18l-2 14H5L3 3z"></path>
-                <path d="M8 21h8"></path>
+                <circle cx="12" cy="8" r="4"></circle>
+                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"></path>
+                <path d="M17 14l2 2 4-4"></path>
               </svg>
-              <span class="nav-text">Categorias</span>
+              <span class="nav-text">Motoboys</span>
             </NuxtLink>
           </li>
-          <li>
-            <NuxtLink to="/dashboard/products" class="nav-link" :class="{ active: $route.path === '/dashboard/products' }" :title="sidebarCollapsed ? 'Produtos' : ''" @click="closeSidebarOnMobile">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <path d="M16 10a4 4 0 0 1-8 0"></path>
-              </svg>
-              <span class="nav-text">Produtos</span>
-            </NuxtLink>
-          </li>
+
+          <!-- Estoque — todos veem (entrada de mercadoria é tarefa do funcionário) -->
           <li>
             <NuxtLink to="/dashboard/inventory" class="nav-link" :class="{ active: $route.path === '/dashboard/inventory' }" :title="sidebarCollapsed ? 'Estoque' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -76,26 +80,87 @@
               <span class="nav-text">Estoque</span>
             </NuxtLink>
           </li>
-          <li>
-            <NuxtLink to="/dashboard/orders" class="nav-link" :class="{ active: $route.path === '/dashboard/orders' }" :title="sidebarCollapsed ? 'Pedidos' : ''" @click="closeSidebarOnMobile">
+
+          <!-- Separador — apenas dono vê o restante -->
+          <li v-if="isOwner" class="nav-separator">
+            <span v-if="!sidebarCollapsed" class="separator-label">Gerenciamento</span>
+          </li>
+
+          <!-- Dashboard — só dono -->
+          <li v-if="isOwner">
+            <NuxtLink to="/dashboard" class="nav-link" :class="{ active: $route.path === '/dashboard' }" :title="sidebarCollapsed ? 'Dashboard' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
               </svg>
-              <span class="nav-text">Pedidos</span>
+              <span class="nav-text">Dashboard</span>
             </NuxtLink>
           </li>
-          <li>
-            <NuxtLink to="/dashboard/motoboys" class="nav-link" :class="{ active: $route.path === '/dashboard/motoboys' }" :title="sidebarCollapsed ? 'Motoboys' : ''" @click="closeSidebarOnMobile">
+
+          <!-- Categorias — só dono -->
+          <li v-if="isOwner">
+            <NuxtLink to="/dashboard/categories" class="nav-link" :class="{ active: $route.path === '/dashboard/categories' }" :title="sidebarCollapsed ? 'Categorias' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="8" r="4"></circle>
-                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"></path>
-                <path d="M17 14l2 2 4-4"></path>
+                <path d="M3 3h18l-2 14H5L3 3z"></path>
+                <path d="M8 21h8"></path>
               </svg>
-              <span class="nav-text">Motoboys</span>
+              <span class="nav-text">Categorias</span>
             </NuxtLink>
           </li>
-          <li>
+
+          <!-- Produtos — só dono -->
+          <li v-if="isOwner">
+            <NuxtLink to="/dashboard/products" class="nav-link" :class="{ active: $route.path === '/dashboard/products' }" :title="sidebarCollapsed ? 'Produtos' : ''" @click="closeSidebarOnMobile">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <path d="M16 10a4 4 0 0 1-8 0"></path>
+              </svg>
+              <span class="nav-text">Produtos</span>
+            </NuxtLink>
+          </li>
+
+          <!-- Clientes — só dono -->
+          <li v-if="isOwner">
+            <NuxtLink to="/dashboard/customers" class="nav-link" :class="{ active: $route.path === '/dashboard/customers' }" :title="sidebarCollapsed ? 'Clientes' : ''" @click="closeSidebarOnMobile">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              <span class="nav-text">Clientes</span>
+            </NuxtLink>
+          </li>
+
+          <!-- Cupons — só dono -->
+          <li v-if="isOwner">
+            <NuxtLink to="/dashboard/coupons" class="nav-link" :class="{ active: $route.path === '/dashboard/coupons' }" :title="sidebarCollapsed ? 'Cupons' : ''" @click="closeSidebarOnMobile">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                <line x1="7" y1="7" x2="7.01" y2="7"></line>
+              </svg>
+              <span class="nav-text">Cupons</span>
+            </NuxtLink>
+          </li>
+
+          <!-- Funcionários — só dono -->
+          <li v-if="isOwner">
+            <NuxtLink to="/dashboard/employees" class="nav-link" :class="{ active: $route.path === '/dashboard/employees' }" :title="sidebarCollapsed ? 'Funcionários' : ''" @click="closeSidebarOnMobile">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              <span class="nav-text">Funcionários</span>
+            </NuxtLink>
+          </li>
+
+          <!-- Configurações — só dono -->
+          <li v-if="isOwner">
             <NuxtLink to="/dashboard/settings" class="nav-link" :class="{ active: $route.path === '/dashboard/settings' }" :title="sidebarCollapsed ? 'Configurações' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
@@ -277,11 +342,16 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
 import { useAuthenticatedFetch } from '~/composables/useAuthenticatedFetch'
 import { useStoreStatus } from '~/composables/useStoreStatus'
 import { usePrimaryColor } from '~/composables/usePrimaryColor'
+import { useUserRole } from '~/composables/useUserRole'
 const router = useRouter()
+
+// Role do usuário
+const { userRole, userName, userEmail, loadUserRole } = useUserRole()
+const isOwner = computed(() => userRole.value !== 'employee')
 
 // Carregar cor primária
 const { loadPrimaryColor } = usePrimaryColor()
@@ -506,6 +576,10 @@ const pageTitle = computed(() => {
     '/dashboard/products': 'Produtos',
     '/dashboard/inventory': 'Estoque',
     '/dashboard/orders': 'Pedidos',
+    '/dashboard/motoboys': 'Motoboys',
+    '/dashboard/customers': 'Clientes',
+    '/dashboard/coupons': 'Cupons',
+    '/dashboard/employees': 'Funcionários',
     '/dashboard/settings': 'Configurações'
   }
   return titles[route.path] || 'Dashboard'
@@ -619,6 +693,8 @@ const fecharSemSalvar = () => {
 }
 
 onMounted(() => {
+  // Carregar role do usuário
+  loadUserRole()
   // Carregar configurações da loja
   loadStoreSettings()
   // Carregar status manual
@@ -1074,6 +1150,70 @@ onMounted(() => {
 
 .sidebar-collapsed .store-status-indicator {
   justify-content: center;
+}
+
+.user-role-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0.75rem 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  overflow: hidden;
+}
+
+.user-role-badge span:first-of-type {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.role-owner {
+  background: #fff7ed;
+  color: #92400e;
+  border: 1px solid #fed7aa;
+}
+
+.role-owner .role-label {
+  background: #ff8e24;
+  color: white;
+}
+
+.role-employee {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.role-employee .role-label {
+  background: #3b82f6;
+  color: white;
+}
+
+.nav-separator {
+  padding: 0.625rem 0.875rem 0.25rem;
+  list-style: none;
+}
+
+.separator-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9ca3af;
 }
 
 .sidebar-footer {

@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
   
   try {
     const body = await readBody(event);
-    const { 
+    const {
       storeName,
       logo,
       banner,
@@ -41,16 +41,21 @@ export default defineEventHandler(async (event) => {
       location,
       deliveryZones,
       openingHours,
-      deliveryMinTime, 
+      deliveryMinTime,
       deliveryMaxTime,
       deliveryFee,
       minimumOrder,
       enabledPaymentMethods,
       checkoutFields,
       restrictedZipCodes,
+      extraZipCodes,
       manualOverride,
       storeMode,
-      primaryColor
+      primaryColor,
+      whatsappNotificationsEnabled,
+      whatsappApiUrl,
+      whatsappApiToken,
+      whatsappInstanceName
     } = body;
     
     // Validações
@@ -214,6 +219,17 @@ export default defineEventHandler(async (event) => {
         .map((zip: string) => zip.substring(0, 5) + '-' + zip.substring(5, 8));
       updateFields.restrictedZipCodes = cleanedZipCodes;
     }
+    if (extraZipCodes !== undefined) {
+      if (!Array.isArray(extraZipCodes)) {
+        throw createError({
+          statusCode: 400,
+          message: "CEPs extras devem ser um array",
+        });
+      }
+      updateFields.extraZipCodes = extraZipCodes.filter(
+        (item: any) => item && typeof item.cep === 'string' && item.cep.replace(/\D/g, '').length === 8
+      );
+    }
     if (storeMode !== undefined) {
       // Validar que é 'automatic' ou 'manual'
       if (storeMode !== 'automatic' && storeMode !== 'manual') {
@@ -239,6 +255,10 @@ export default defineEventHandler(async (event) => {
       }
       updateFields.primaryColor = primaryColor;
     }
+    if (whatsappNotificationsEnabled !== undefined) updateFields.whatsappNotificationsEnabled = Boolean(whatsappNotificationsEnabled);
+    if (whatsappApiUrl !== undefined) updateFields.whatsappApiUrl = String(whatsappApiUrl || '').trim();
+    if (whatsappApiToken !== undefined) updateFields.whatsappApiToken = String(whatsappApiToken || '').trim();
+    if (whatsappInstanceName !== undefined) updateFields.whatsappInstanceName = String(whatsappInstanceName || '').trim();
 
     const result = await settings.updateOne(
       { _id: "store-config" },

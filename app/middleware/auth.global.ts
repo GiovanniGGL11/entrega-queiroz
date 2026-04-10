@@ -1,8 +1,30 @@
+// Rotas que só o dono pode acessar
+const ownerOnlyRoutes = [
+  '/dashboard',
+  '/dashboard/categories',
+  '/dashboard/products',
+  '/dashboard/customers',
+  '/dashboard/coupons',
+  '/dashboard/employees',
+  '/dashboard/settings'
+]
+
+const getTokenRole = () => {
+  if (!process.client) return null
+  try {
+    const token = localStorage.getItem('auth_token')
+    if (!token) return null
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.role || 'owner'
+  } catch {
+    return null
+  }
+}
+
 export default defineNuxtRouteMiddleware(async (to, from) => {
   // Páginas públicas que não precisam de autenticação
   const publicPages = ['/login', '/', '/checkout', '/auth/google-cliente', '/auth/google-sucesso']
 
-  // Se está tentando acessar página pública, permitir
   if (publicPages.includes(to.path)) {
     return
   }
@@ -12,61 +34,51 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     return
   }
 
-  // Se estiver no server, valide de forma autoritativa via API usando os cookies do request
+  // SSR: validar via cookie
   if (process.server) {
     try {
       const headers = useRequestHeaders(['cookie'])
       await $fetch('/api/auth/me', { headers })
-      // Autenticado no SSR, permitir
       return
     } catch (error) {
       return navigateTo('/login')
     }
   }
 
-  // Client: validação autoritativa via API
-
-  // Todas as outras rotas (incluindo /dashboard/*) requerem autenticação
+  // Client: validação via API
   try {
-    // Tentar múltiplas vezes com pequenos delays para casos de propagação
     let lastError = null
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        // Preparar headers
         const headers: any = {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0'
         }
-        
-        // Sempre usar localStorage para autenticação (necessário para Vercel)
         if (process.client) {
           const token = localStorage.getItem('auth_token')
           if (token) {
             headers['Authorization'] = `Bearer ${token}`
           }
         }
-        
-        const response = await $fetch(`/api/auth/me?t=${Date.now()}`, {
+        await $fetch(`/api/auth/me?t=${Date.now()}`, {
           credentials: 'include',
           headers
         })
-        return // Sucesso, sair do middleware
+        const role = getTokenRole()
+        if (role === 'employee' && ownerOnlyRoutes.includes(to.path)) {
+          return navigateTo('/dashboard/orders')
+        }
+        return
       } catch (error: any) {
         lastError = error
-        
-        // Se não é a última tentativa, aguardar um pouco
         if (attempt < 3) {
           await new Promise(resolve => setTimeout(resolve, 200))
         }
       }
     }
-    
-    // Todas as tentativas falharam
     return navigateTo('/login')
   } catch (error) {
-    // Erro inesperado
     return navigateTo('/login')
   }
 })
-

@@ -335,8 +335,8 @@
             </div>
           </div>
           <div class="inventory-actions">
-            <button 
-              @click="editInventory(item)" 
+            <button
+              @click="editInventory(item)"
               class="btn-edit"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -345,18 +345,28 @@
               </svg>
               <span class="btn-text">Editar</span>
             </button>
-            <button 
-              @click="adjustStock(item)" 
-              class="btn-adjust"
+            <button
+              @click="openMovementModal(item._id, 'entrada')"
+              class="btn-entrada"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
-              <span class="btn-text">Ajustar</span>
+              <span class="btn-text">Entrada</span>
             </button>
-            <button 
-              @click="deleteInventory(item._id)" 
+            <button
+              @click="openHistoryModal(item)"
+              class="btn-history"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12,6 12,12 16,14"></polyline>
+              </svg>
+              <span class="btn-text">Histórico</span>
+            </button>
+            <button
+              @click="deleteInventory(item._id)"
               class="btn-delete"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -409,7 +419,7 @@
           <div class="form-row">
             <div class="form-group">
               <label for="initialStock">
-                Estoque Inicial *
+                {{ showEditModal ? 'Estoque Atual' : 'Estoque Inicial' }} *
               </label>
               <input
                 id="initialStock"
@@ -580,11 +590,10 @@
             <div class="form-group">
               <label for="movementType">Tipo de Movimentação</label>
               <select id="movementType" v-model="movementForm.type" required>
-                <option value="entrada">Entrada</option>
-                <option value="saida">Saída</option>
-                <option value="ajuste">Ajuste</option>
-                <option value="perda">Perda</option>
-                <option value="transferencia">Transferência</option>
+                <option value="entrada">Entrada (Compra / Reposição)</option>
+                <option value="saida">Saída Manual</option>
+                <option value="ajuste">Ajuste de Inventário</option>
+                <option value="perda">Perda / Descarte</option>
               </select>
             </div>
             
@@ -672,6 +681,70 @@
           <button @click="confirmDelete" class="btn-delete-confirm" :disabled="deleting">
             <span v-if="deleting">Excluindo...</span>
             <span v-else>Sim, Excluir</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Histórico de Movimentações -->
+    <div v-if="showHistoryModal" class="modal-overlay" @click="showHistoryModal = false">
+      <div class="history-modal" @click.stop>
+        <div class="modal-header">
+          <div>
+            <h2>Histórico de Movimentações</h2>
+            <p class="modal-subtitle">{{ historyItem?.productName }} — Estoque atual: {{ historyItem?.currentStock }} un.</p>
+          </div>
+          <button @click="showHistoryModal = false" class="close-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="history-body">
+          <div v-if="loadingHistory" class="history-loading">
+            <div class="history-spinner"></div>
+            <p>Carregando histórico...</p>
+          </div>
+
+          <div v-else-if="historyMovements.length === 0" class="history-empty">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12,6 12,12 16,14"></polyline>
+            </svg>
+            <p>Nenhuma movimentação registrada ainda.</p>
+            <small>As movimentações aparecem aqui ao adicionar ou vender estoque.</small>
+          </div>
+
+          <div v-else class="history-list">
+            <div v-for="mov in historyMovements" :key="mov._id" class="history-row">
+              <div :class="['history-type-badge', mov.type === 'saida' && mov.reason && mov.reason.startsWith('Venda -') ? 'venda' : mov.type]">
+                {{ getMovementLabel(mov.type, mov.reason) }}
+              </div>
+              <div class="history-info">
+                <div class="history-qty-row">
+                  <span :class="['history-qty', mov.type === 'entrada' ? 'qty-positive' : 'qty-negative']">
+                    {{ mov.type === 'entrada' ? '+' : mov.type === 'ajuste' ? '' : '-' }}{{ mov.quantity }}
+                  </span>
+                  <span class="history-stock-arrow">
+                    {{ mov.previousStock }} → {{ mov.newStock }} un.
+                  </span>
+                </div>
+                <div v-if="mov.reason" class="history-reason">{{ mov.reason }}</div>
+                <div class="history-date">{{ formatDate(mov.createdAt) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="history-footer">
+          <button @click="openMovementModal(historyItem._id, 'entrada'); showHistoryModal = false" class="btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nova Entrada
           </button>
         </div>
       </div>
@@ -767,6 +840,10 @@ const showAdjustModal = ref(false)
 const showMovementModal = ref(false)
 const showReportsModal = ref(false)
 const showDeleteModal = ref(false)
+const showHistoryModal = ref(false)
+const historyItem = ref(null)
+const historyMovements = ref([])
+const loadingHistory = ref(false)
 const selectedItem = ref(null)
 const editingItem = ref(null)
 const adjustingItem = ref(null)
@@ -1038,8 +1115,8 @@ const createInventory = async () => {
 // Editar controle de estoque
 const editInventory = (item) => {
   editingItem.value = item
-  
-  editForm.value = {
+
+  createForm.value = {
     productId: item.productId,
     initialStock: item.currentStock,
     minStock: item.minStock,
@@ -1056,10 +1133,10 @@ const updateInventory = async () => {
     const response = await authenticatedFetch(`/api/inventory/${editingItem.value._id}`, {
       method: 'PUT',
       body: {
-        currentStock: editForm.value.initialStock,
-        minStock: editForm.value.minStock,
-        maxStock: editForm.value.maxStock,
-        costPrice: editForm.value.costPrice
+        currentStock: createForm.value.initialStock,
+        minStock: createForm.value.minStock,
+        maxStock: createForm.value.maxStock,
+        costPrice: createForm.value.costPrice
       }
     })
     
@@ -1228,11 +1305,44 @@ const formatDate = (date) => {
   }
 }
 
+// Histórico de movimentações
+const openHistoryModal = async (item) => {
+  historyItem.value = item
+  historyMovements.value = []
+  loadingHistory.value = true
+  showHistoryModal.value = true
+  try {
+    const response = await authenticatedFetch(`/api/inventory/movements?inventoryId=${item._id}&limit=50`)
+    historyMovements.value = response.movements || []
+  } catch (error) {
+    showError('Erro ao carregar histórico')
+  } finally {
+    loadingHistory.value = false
+  }
+}
+
+const getMovementLabel = (type, reason) => {
+  if (type === 'saida' && reason && reason.startsWith('Venda -')) return 'Venda'
+  const labels = {
+    entrada: 'Entrada',
+    saida: 'Saída',
+    ajuste: 'Ajuste',
+    perda: 'Perda',
+    transferencia: 'Transferência',
+    venda: 'Venda'
+  }
+  return labels[type] || type
+}
+
 // Lifecycle
 const handleEscKey = (event) => {
   if (event.key === 'Escape') {
-    if (showDeleteModal.value) {
+    if (showHistoryModal.value) {
+      showHistoryModal.value = false
+    } else if (showDeleteModal.value) {
       showDeleteModal.value = false
+    } else if (showMovementModal.value) {
+      showMovementModal.value = false
     } else if (showCreateModal.value || showEditModal.value || showAdjustModal.value) {
       closeModal()
       showAdjustModal.value = false
@@ -1683,14 +1793,14 @@ onUnmounted(() => {
   padding: 0 1.5rem 1.5rem 1.5rem;
 }
 
-.btn-edit, .btn-adjust, .btn-delete {
+.btn-edit, .btn-entrada, .btn-history, .btn-delete {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
+  padding: 0.65rem 1rem;
   border: 1px solid;
   border-radius: 0.75rem;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -1710,17 +1820,30 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(255, 142, 36, 0.4);
 }
 
-.btn-adjust {
+.btn-entrada {
   background: #ffffff;
-  color: #ff8e24;
-  border-color: #ff8e24;
+  color: #10b981;
+  border-color: #10b981;
 }
 
-.btn-adjust:hover {
-  background: #ff8e24;
+.btn-entrada:hover {
+  background: #10b981;
   color: white;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 142, 36, 0.4);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.btn-history {
+  background: #ffffff;
+  color: #6366f1;
+  border-color: #6366f1;
+}
+
+.btn-history:hover {
+  background: #6366f1;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
 }
 
 .btn-delete {
@@ -1781,7 +1904,7 @@ onUnmounted(() => {
     gap: 0.5rem;
   }
   
-  .btn-edit, .btn-adjust, .btn-delete {
+  .btn-edit, .btn-entrada, .btn-history, .btn-delete {
     justify-content: center;
     width: 100%;
   }
@@ -2432,6 +2555,180 @@ onUnmounted(() => {
 
 .hover-lift:hover {
   transform: translateY(-2px);
+}
+
+/* History Modal */
+.history-modal {
+  background: white;
+  border-radius: 0.75rem;
+  width: 90%;
+  max-width: 580px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.history-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+.history-footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.history-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.history-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid #e5e7eb;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 3rem 2rem;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.history-empty svg {
+  color: #d1d5db;
+}
+
+.history-empty p {
+  margin: 0;
+  font-size: 1rem;
+  color: #6b7280;
+}
+
+.history-empty small {
+  font-size: 0.875rem;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.history-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+}
+
+.history-type-badge {
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.history-type-badge.entrada {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.history-type-badge.saida {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.history-type-badge.ajuste {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.history-type-badge.perda {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.history-type-badge.transferencia {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.history-type-badge.venda {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
+.history-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-qty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.history-qty {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.qty-positive {
+  color: #10b981;
+}
+
+.qty-negative {
+  color: #ef4444;
+}
+
+.history-stock-arrow {
+  font-size: 0.75rem;
+  color: #6b7280;
+  background: #e5e7eb;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+}
+
+.history-reason {
+  font-size: 0.875rem;
+  color: #374151;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-date {
+  font-size: 0.75rem;
+  color: #9ca3af;
 }
 
 @media (max-width: 640px) {

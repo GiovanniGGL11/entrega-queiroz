@@ -500,6 +500,29 @@
             </div>
           </div>
           
+          <!-- Restrição de Idade -->
+          <div class="age-restrict-section">
+            <div class="visibility-toggle-wrapper">
+              <div class="visibility-toggle-header">
+                <div class="visibility-toggle-info">
+                  <div class="visibility-toggle-icon" :class="{ 'visible': productForm.ageRestricted, 'hidden': !productForm.ageRestricted }" style="background: #fef3c7;">
+                    <span style="font-size: 1.1rem; line-height:1;">18+</span>
+                  </div>
+                  <div class="visibility-toggle-text">
+                    <span class="visibility-toggle-title">Produto para Maiores de Idade</span>
+                    <span class="visibility-toggle-description">
+                      {{ productForm.ageRestricted ? 'O cliente precisará confirmar que tem 18+ anos' : 'Sem restrição de idade' }}
+                    </span>
+                  </div>
+                </div>
+                <label class="visibility-toggle-switch">
+                  <input type="checkbox" v-model="productForm.ageRestricted" :disabled="submitting" />
+                  <span class="toggle-slider" :class="{ 'checked': productForm.ageRestricted }"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
           <!-- Promoção do dia -->
           <div class="promo-section">
             <div class="promo-header" @click="showPromoConfig = !showPromoConfig">
@@ -677,6 +700,7 @@ const productForm = ref({
   order: 0,
   complements: [],
   isVisible: true,
+  ageRestricted: false,
   promotion: { active: false, price: '', dias: [] }
 })
 
@@ -870,6 +894,7 @@ const editProduct = (product) => {
     order: product.order || 0,
     complements: complements,
     isVisible: product.isVisible !== false,
+    ageRestricted: product.ageRestricted === true,
     promotion: product.promotion
       ? { ...product.promotion, price: product.promotion.price?.toString() || '', dias: product.promotion.dias || [] }
       : { active: false, price: '', dias: [] }

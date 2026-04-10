@@ -34,6 +34,8 @@ export default defineEventHandler(async (event) => {
       return {
         userId: decoded.userId,
         email: decoded.email,
+        role: decoded.role || 'owner',
+        name: decoded.name || '',
         authenticated: true
       }
     } catch (jwtError) {

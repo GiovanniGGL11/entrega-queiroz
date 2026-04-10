@@ -54,6 +54,10 @@ export default defineNuxtConfig({
         headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
         prerender: false
       },
+      '/api/public/validate-coupon': {
+        cors: true,
+        headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
+      },
       '/api/categories-with-products': {
         cors: true,
         headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' }

@@ -44,8 +44,10 @@ export default defineEventHandler(async (event) => {
       name: order.customerInfo?.name || ''
     },
     paymentMethod: order.paymentMethod,
-    total: order.total,
-    subtotal: order.subtotal,
+    totalAmount: order.totalAmount ?? order.total ?? 0,
+    subtotal: (order.items || []).reduce((sum: number, item: any) => sum + (item.subtotal ?? item.price * item.quantity ?? 0), 0),
+    discount: order.discount ?? 0,
+    coupon: order.coupon ?? null,
     notes: order.notes || ''
   }
 })

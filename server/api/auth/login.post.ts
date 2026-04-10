@@ -43,9 +43,10 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Gerar token JWT
-    const token = signUserToken({ userId: user._id.toString(), email: user.email })
-    
+    // Gerar token JWT incluindo role e name
+    const role = user.role || 'owner'
+    const token = signUserToken({ userId: user._id.toString(), email: user.email, role, name: user.name || '' })
+
     // Na produção (Vercel), não usar cookies httpOnly devido a limitações
     if (process.env.NODE_ENV !== 'production') {
       setAuthCookie(event, token)
@@ -56,9 +57,10 @@ export default defineEventHandler(async (event) => {
       message: 'Login realizado com sucesso',
       user: {
         id: user._id.toString(),
-        email: user.email
+        email: user.email,
+        role,
+        name: user.name || ''
       },
-      // Sempre retornar token para produção (Vercel)
       token: token
     }
   } catch (error: any) {

@@ -12,6 +12,18 @@
           </svg>
           Novo Pedido
         </button>
+        <button
+          v-if="lateOrders.length > 0"
+          @click="markAllLateAsDelivered"
+          class="btn-mark-late"
+          :disabled="markingLate"
+          :title="`Marcar ${lateOrders.length} pedido(s) em atraso como entregue`"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          {{ markingLate ? 'Aguarde...' : `Entregar atrasados (${lateOrders.length})` }}
+        </button>
         <button @click="refreshOrders" class="btn-refresh" :disabled="loading">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="23 4 23 10 17 10"></polyline>
@@ -113,7 +125,16 @@
       </div>
 
       <div v-else class="orders-grid">
-        <div v-for="order in orders" :key="order.id" class="order-card">
+        <div v-for="order in [...orders].sort((a, b) => (isOrderLate(b) ? 1 : 0) - (isOrderLate(a) ? 1 : 0))" :key="order.id" :class="['order-card', { 'order-card--late': isOrderLate(order) }]">
+          <!-- Banner de atraso -->
+          <div v-if="isOrderLate(order)" class="late-banner">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>Em atraso há {{ minutesLate(order) }} min</span>
+          </div>
+
           <!-- Header do Card -->
           <div class="order-header">
             <div class="order-number-section">
@@ -226,6 +247,15 @@
             </div>
           </div>
           
+          <!-- Desconto cupom -->
+          <div v-if="order.discount > 0" class="order-discount-row">
+            <span class="discount-label-card">
+              Desconto
+              <span v-if="order.coupon" class="coupon-badge-card">{{ order.coupon.code }}</span>
+            </span>
+            <span class="discount-val-card">-{{ formatCurrency(order.discount) }}</span>
+          </div>
+
           <!-- Total -->
           <div class="order-total-section">
             <div class="total-label">Total do Pedido</div>
@@ -234,8 +264,8 @@
           
           <!-- Ações -->
           <div class="order-actions">
-            <button 
-              @click="showEditStatusModal(order)" 
+            <button
+              @click="showEditStatusModal(order)"
               class="btn-action btn-edit"
               title="Editar status"
             >
@@ -245,8 +275,20 @@
               </svg>
               Status
             </button>
-            <button 
-              @click="viewOrderDetails(order)" 
+            <button
+              @click="printComanda(order)"
+              class="btn-action btn-print"
+              title="Imprimir comanda"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                <rect x="6" y="14" width="12" height="8"></rect>
+              </svg>
+              Comanda
+            </button>
+            <button
+              @click="viewOrderDetails(order)"
               class="btn-action btn-view"
               title="Ver detalhes completos"
             >
@@ -256,8 +298,8 @@
               </svg>
               Detalhes
             </button>
-            <button 
-              @click="confirmDeleteOrder(order)" 
+            <button
+              @click="confirmDeleteOrder(order)"
               class="btn-action btn-delete"
               title="Excluir pedido"
             >
@@ -337,6 +379,13 @@
               <div class="detail-row" v-if="selectedOrder.deliveryFee">
                 <span class="label">Taxa de entrega:</span>
                 <span class="value">{{ formatCurrency(selectedOrder.deliveryFee) }}</span>
+              </div>
+              <div class="detail-row" v-if="selectedOrder.discount > 0" style="color:#16a34a; font-weight:600;">
+                <span class="label">
+                  Desconto
+                  <span v-if="selectedOrder.coupon" style="margin-left:0.4rem;background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:99px;font-size:0.7rem;font-weight:700;padding:0.1rem 0.5rem;letter-spacing:0.04em;">{{ selectedOrder.coupon.code }}</span>
+                </span>
+                <span class="value" style="color:#16a34a;">-{{ formatCurrency(selectedOrder.discount) }}</span>
               </div>
               <div class="detail-row">
                 <span class="label">Total:</span>
@@ -663,6 +712,9 @@ definePageMeta({
 // Composable de alert
 const { alert, showSuccess, showError, showWarning, showInfo } = useAlert()
 
+// Nome da loja (para comanda)
+const storeName = ref('Queiroz Hamburgueria')
+
 // Estado da página
 const loading = ref(false)
 const orders = ref([])
@@ -758,11 +810,14 @@ const viewOrderFromNotification = (order) => {
     complement: order.deliveryInfo?.complement,
     status: order.status,
     total: order.totalAmount,
-    subtotal: order.totalAmount - (order.deliveryInfo?.deliveryFee || 0),
+    subtotal: (order.items || []).reduce((s, i) => s + (i.subtotal ?? i.price * i.quantity ?? 0), 0),
+    discount: order.discount ?? 0,
+    coupon: order.coupon ?? null,
     deliveryFee: order.deliveryInfo?.deliveryFee,
     paymentMethod: order.paymentMethod,
     notes: order.notes,
     createdAt: order.createdAt,
+    estimatedTime: order.deliveryInfo?.estimatedTime || '',
     items: order.items?.map(item => ({
       id: item.productId,
       name: item.name,
@@ -827,6 +882,166 @@ const { authenticatedFetch, clearCache } = useAuthenticatedFetch()
 const hasActiveFilters = computed(() => {
   return statusFilter.value !== '' || periodFilter.value !== 'all'
 })
+
+// Verifica se pedido está em atraso (apenas status ativos, não entregues/cancelados)
+const activeStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery']
+
+const isOrderLate = (order) => {
+  if (!activeStatuses.includes(order.status)) return false
+  const created = new Date(order.createdAt).getTime()
+  const now = Date.now()
+  const elapsedMin = (now - created) / 60000
+
+  // Tentar extrair tempo máximo do estimatedTime (ex: "30-45 min" → 45)
+  let maxMin = 60 // padrão: 60 min
+  if (order.estimatedTime) {
+    const match = order.estimatedTime.match(/(\d+)-(\d+)/)
+    if (match) maxMin = parseInt(match[2])
+    else {
+      const single = order.estimatedTime.match(/(\d+)/)
+      if (single) maxMin = parseInt(single[1])
+    }
+  }
+  return elapsedMin > maxMin
+}
+
+const printComanda = (order) => {
+  const name = storeName.value || 'Queiroz Hamburgueria'
+
+  const itemsHtml = order.items.map(item => {
+    const complementsHtml = item.complements && item.complements.length
+      ? item.complements.map(c => `<div class="complement">+ ${c.quantity}x ${c.name}</div>`).join('')
+      : ''
+    return `
+      <div class="item-row">
+        <span class="item-qty">${item.quantity}x</span>
+        <div class="item-info">
+          <span class="item-name">${item.name}</span>
+          ${complementsHtml}
+        </div>
+      </div>`
+  }).join('')
+
+  const address = order.address
+    ? `${order.address}${order.number ? ', ' + order.number : ''}${order.neighborhood ? ' - ' + order.neighborhood : ''}`
+    : '—'
+
+  const now = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Comanda #${order.id}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Courier New', monospace; font-size: 13px; width: 80mm; padding: 8px; color: #000; }
+    .center { text-align: center; }
+    .bold { font-weight: bold; }
+    .big { font-size: 18px; font-weight: bold; }
+    .divider { border-top: 1px dashed #000; margin: 8px 0; }
+    .divider-solid { border-top: 2px solid #000; margin: 8px 0; }
+    .row { display: flex; justify-content: space-between; margin: 2px 0; }
+    .label { color: #555; font-size: 11px; text-transform: uppercase; margin-top: 6px; margin-bottom: 2px; }
+    .item-row { display: flex; gap: 6px; margin: 4px 0; }
+    .item-qty { font-weight: bold; min-width: 24px; }
+    .item-name { font-weight: bold; }
+    .complement { color: #333; font-size: 12px; padding-left: 8px; }
+    .total { font-size: 16px; font-weight: bold; }
+    .notes-box { border: 1px dashed #000; padding: 4px 6px; margin-top: 4px; font-size: 12px; }
+    .payment-tag { display: inline-block; border: 1px solid #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; margin-top: 2px; }
+    @media print {
+      body { width: 80mm; }
+      @page { margin: 0; size: 80mm auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="center">
+    <div class="big">${name}</div>
+    <div style="font-size:11px; margin-top:2px;">${now}</div>
+  </div>
+  <div class="divider-solid"></div>
+
+  <div class="center big">PEDIDO #${order.id}</div>
+  <div class="divider"></div>
+
+  <div class="label">Cliente</div>
+  <div class="bold">${order.customer || '—'}</div>
+  ${order.phone ? `<div>${order.phone}</div>` : ''}
+
+  <div class="label">Endereço</div>
+  <div>${address}</div>
+
+  <div class="divider"></div>
+  <div class="label">Itens</div>
+  ${itemsHtml}
+  <div class="divider"></div>
+
+  <div class="row"><span>Subtotal</span><span>${formatCurrency(order.subtotal || order.total)}</span></div>
+  ${order.deliveryFee > 0 ? `<div class="row"><span>Entrega</span><span>${formatCurrency(order.deliveryFee)}</span></div>` : ''}
+  ${order.discount > 0 ? `<div class="row"><span>Desconto${order.coupon ? ' (' + order.coupon.code + ')' : ''}</span><span>-${formatCurrency(order.discount)}</span></div>` : ''}
+  <div class="divider-solid"></div>
+  <div class="row"><span class="total">TOTAL</span><span class="total">${formatCurrency(order.total)}</span></div>
+
+  <div class="label">Pagamento</div>
+  <div class="payment-tag">${getPaymentMethodText(order.paymentMethod)}</div>
+
+  ${order.notes && order.notes.trim() ? `
+  <div class="label">Observações</div>
+  <div class="notes-box">${order.notes}</div>` : ''}
+
+  <div class="divider"></div>
+  <div class="center" style="font-size:11px;">Obrigado pela preferência!</div>
+</body>
+</html>`
+
+  const win = window.open('', '_blank', 'width=400,height=600')
+  win.document.write(html)
+  win.document.close()
+  win.focus()
+  setTimeout(() => { win.print(); win.close() }, 300)
+}
+
+const lateOrders = computed(() => orders.value.filter(o => isOrderLate(o)))
+const markingLate = ref(false)
+
+const markAllLateAsDelivered = async () => {
+  if (markingLate.value) return
+  const late = lateOrders.value
+  if (late.length === 0) return
+  markingLate.value = true
+  try {
+    await Promise.all(late.map(order =>
+      authenticatedFetch(`/api/orders/${order._id}`, {
+        method: 'PUT',
+        body: { status: 'delivered' }
+      }).then(() => { order.status = 'delivered' })
+      .catch(() => {})
+    ))
+    showAlert(`${late.length} pedido(s) marcado(s) como entregue`, 'success')
+  } catch {
+    showAlert('Erro ao atualizar pedidos', 'error')
+  } finally {
+    markingLate.value = false
+  }
+}
+
+const minutesLate = (order) => {
+  const created = new Date(order.createdAt).getTime()
+  const now = Date.now()
+  const elapsedMin = Math.floor((now - created) / 60000)
+  let maxMin = 60
+  if (order.estimatedTime) {
+    const match = order.estimatedTime.match(/(\d+)-(\d+)/)
+    if (match) maxMin = parseInt(match[2])
+    else {
+      const single = order.estimatedTime.match(/(\d+)/)
+      if (single) maxMin = parseInt(single[1])
+    }
+  }
+  return elapsedMin - maxMin
+}
 
 // Calcular datas baseadas no período
 const getDateRange = () => {
@@ -951,11 +1166,14 @@ const loadOrders = async (showLoading = true, forceRefresh = false) => {
         complement: deliveryInfo.complement || '',
         status: order.status || 'pending',
         total: order.totalAmount || 0,
-        subtotal: (order.totalAmount || 0) - (deliveryInfo.deliveryFee || 0),
+        subtotal: (order.items || []).reduce((s, i) => s + (i.subtotal ?? i.price * i.quantity ?? 0), 0),
+        discount: order.discount ?? 0,
+        coupon: order.coupon ?? null,
         deliveryFee: deliveryInfo.deliveryFee || 0,
         paymentMethod: order.paymentMethod || 'dinheiro',
         notes: order.notes || '',
         createdAt: order.createdAt || new Date(),
+        estimatedTime: deliveryInfo.estimatedTime || '',
         motoboyNome: order.motoboyNome || '',
         motoboyId: order.motoboyId || '',
         items: items.map(item => ({
@@ -1182,6 +1400,12 @@ const performStatusUpdate = async (orderId, newStatus, motoboyId = null, motoboy
     if (motoboyNome) order.motoboyNome = motoboyNome
     if (motoboyId) order.motoboyId = motoboyId
     showAlert(`Status do pedido #${orderId} atualizado para ${getStatusText(newStatus)}`, 'success')
+
+    // Enviar notificação WhatsApp em background (fire-and-forget, não bloqueia UI)
+    authenticatedFetch(`/api/orders/${order._id}/notify`, {
+      method: 'POST',
+      body: { status: newStatus }
+    }).catch(() => {}) // falha silenciosa
   } catch (error) {
     console.error('Erro ao atualizar pedido:', error)
     const errorMessage = error.data?.message || error.message || 'Erro ao atualizar status do pedido'
@@ -1265,8 +1489,13 @@ const showAlert = (message, type = 'success') => {
 }
 
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
   loadOrders()
+  // Carregar nome da loja para comanda
+  try {
+    const settings = await $fetch('/api/public/settings')
+    if (settings?.storeName) storeName.value = settings.storeName
+  } catch {}
   // Iniciar notificações em tempo real automaticamente
   if (process.client) {
     // Aguardar um pouco para garantir que a página está completamente carregada
@@ -1530,6 +1759,32 @@ onUnmounted(() => {
   box-shadow: 0 0 0 3px rgba(255, 142, 36, 0.1);
 }
 
+.btn-mark-late {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-mark-late:hover:not(:disabled) {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.btn-mark-late:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn-refresh {
   display: flex;
   align-items: center;
@@ -1594,6 +1849,30 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
+}
+
+.order-card--late {
+  border-color: #f87171 !important;
+  box-shadow: 0 0 0 2px #fecaca, 0 4px 16px rgba(220, 38, 38, 0.12) !important;
+  animation: pulse-late 2s ease-in-out infinite;
+}
+
+@keyframes pulse-late {
+  0%, 100% { box-shadow: 0 0 0 2px #fecaca, 0 4px 16px rgba(220, 38, 38, 0.12); }
+  50% { box-shadow: 0 0 0 3px #fca5a5, 0 4px 20px rgba(220, 38, 38, 0.22); }
+}
+
+.late-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #fca5a5;
+  border-radius: 0.75rem 0.75rem 0 0;
 }
 
 .order-card {
@@ -1884,6 +2163,29 @@ onUnmounted(() => {
   line-height: 1.5;
 }
 
+/* Desconto cupom no card */
+.order-discount-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  color: #16a34a;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.discount-label-card { display: flex; align-items: center; gap: 0.4rem; }
+.coupon-badge-card {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+  border-radius: 99px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.5rem;
+  letter-spacing: 0.04em;
+}
+.discount-val-card { color: #16a34a; }
+
 /* Seção de Total */
 .order-total-section {
   display: flex;
@@ -1933,6 +2235,17 @@ onUnmounted(() => {
 
 .btn-action svg {
   flex-shrink: 0;
+}
+
+.btn-print {
+  background: white;
+  color: #6366f1;
+  border-color: #6366f1;
+}
+
+.btn-print:hover {
+  background: #6366f1;
+  color: white;
 }
 
 .btn-view {

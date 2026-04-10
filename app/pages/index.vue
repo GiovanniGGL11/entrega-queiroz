@@ -25,9 +25,15 @@ const showSidebar = ref(false);
 const selectedCategory = ref(null);
 const searchQuery = ref("");
 
+// Modal de confirmação de idade
+const showAgeModal = ref(false)
+const pendingAgeCallback = ref(null)
+
 // Estado do cupom
 const couponCode = ref("");
 const discountAmount = ref(0);
+const appliedCoupon = ref(null);
+const applyingCoupon = ref(false);
 
 // Estado mobile
 const isMobile = ref(false);
@@ -342,6 +348,26 @@ const totalPrice = computed(() => {
 // Formatação
 const formatPrice = (value) => `R$ ${Number(value).toFixed(2).replace(".", ",")}`;
 
+const getCategoryEmoji = (name) => {
+  if (!name) return '🍽️'
+  const n = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  if (n.includes('combo')) return '🍔'
+  if (n.includes('hamburguer') || n.includes('hamburger') || n.includes('burguer') || n.includes('burger') || n.includes('smash')) return '🍔'
+  if (n.includes('bebida') || n.includes('drink') || n.includes('suco') || n.includes('refrigerante') || n.includes('cerveja') || n.includes('agua')) return '🥤'
+  if (n.includes('sobremesa') || n.includes('doce') || n.includes('sorvete') || n.includes('milk') || n.includes('shake') || n.includes('torta') || n.includes('bolo')) return '🍰'
+  if (n.includes('pizza')) return '🍕'
+  if (n.includes('frango') || n.includes('chicken') || n.includes('galinha')) return '🍗'
+  if (n.includes('porcao') || n.includes('porcoes') || n.includes('porcão') || n.includes('acompanhamento') || n.includes('batata') || n.includes('frita')) return '🍟'
+  if (n.includes('salada') || n.includes('vegano') || n.includes('vegetariano') || n.includes('fit')) return '🥗'
+  if (n.includes('pastel') || n.includes('salgado') || n.includes('coxinha') || n.includes('empanado')) return '🥟'
+  if (n.includes('lanche') || n.includes('sanduiche') || n.includes('hot dog') || n.includes('cachorro')) return '🌭'
+  if (n.includes('massa') || n.includes('macarrao') || n.includes('lasanha') || n.includes('espaguete')) return '🍝'
+  if (n.includes('churrasco') || n.includes('espeto') || n.includes('carne') || n.includes('steak') || n.includes('picanha')) return '🥩'
+  if (n.includes('cafe') || n.includes('cappuccino') || n.includes('expresso')) return '☕'
+  if (n.includes('peixe') || n.includes('frutos do mar') || n.includes('camarao') || n.includes('peixada')) return '🐟'
+  return '🍽️'
+}
+
 const getPromoAtiva = (item) => {
   const p = item.promotion
   if (!p || !p.active || !p.price) return null
@@ -453,13 +479,25 @@ const closeAlert = () => {
 // Carrinho
 const addToCart = () => {
   if (!selectedItem.value) return;
-  
+
   // Verificar se a loja está aberta antes de permitir adicionar ao carrinho
   if (!storeSettings.value.isOpen) {
     showAlert('Loja Fechada', 'A loja está fechada no momento. Não é possível adicionar itens ao carrinho.', 'warning')
     closeModal();
     return;
   }
+
+  // Verificar restrição de idade
+  if (selectedItem.value.ageRestricted) {
+    pendingAgeCallback.value = () => doAddToCart()
+    showAgeModal.value = true
+    return
+  }
+
+  doAddToCart()
+}
+
+const doAddToCart = () => {
 
   const complements = Object.entries(complementsQty.value)
     .filter(([_, qty]) => qty > 0)
@@ -475,6 +513,19 @@ const addToCart = () => {
   addToCartComposable(itemComPreco, quantity.value, complements, observation.value);
   closeModal();
 };
+
+const confirmAge = () => {
+  showAgeModal.value = false
+  if (pendingAgeCallback.value) {
+    pendingAgeCallback.value()
+    pendingAgeCallback.value = null
+  }
+}
+
+const cancelAge = () => {
+  showAgeModal.value = false
+  pendingAgeCallback.value = null
+}
 
 // Funções do carrinho já vêm do composable
 
@@ -793,15 +844,40 @@ const handleScrollForNavbar = () => {
   isAtTop.value = window.scrollY < 100;
 };
 
-const applyCoupon = () => {
-  const subtotal = cartSubtotal.value;
-  if (couponCode.value.toUpperCase() === "DESCONTO10") {
-    discountAmount.value = subtotal * 0.1;
-  } else {
-    showAlert('Cupom Inválido', 'O cupom informado não é válido. Verifique e tente novamente.', 'error')
-    discountAmount.value = 0;
+const applyCoupon = async () => {
+  if (!couponCode.value.trim()) return;
+  applyingCoupon.value = true;
+  try {
+    const res = await fetch('/api/public/validate-coupon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: couponCode.value.trim(), subtotal: cartSubtotal.value })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showAlert('Cupom inválido', data.message || 'Cupom não aplicável.', 'error');
+      discountAmount.value = 0;
+      appliedCoupon.value = null;
+      sessionStorage.removeItem('applied_coupon');
+    } else {
+      discountAmount.value = data.discountAmount;
+      appliedCoupon.value = data;
+      couponCode.value = '';
+      sessionStorage.setItem('applied_coupon', JSON.stringify(data));
+      showAlert('Cupom aplicado!', `Desconto de ${data.type === 'percentage' ? data.value + '%' : 'R$ ' + data.value.toFixed(2).replace('.', ',')} aplicado.`, 'success');
+    }
+  } catch (e) {
+    showAlert('Erro', 'Não foi possível validar o cupom.', 'error');
+  } finally {
+    applyingCoupon.value = false;
   }
-  couponCode.value = "";
+};
+
+const removeCoupon = () => {
+  appliedCoupon.value = null;
+  discountAmount.value = 0;
+  couponCode.value = '';
+  sessionStorage.removeItem('applied_coupon');
 };
 
 // Keyboard shortcut handler
@@ -1205,10 +1281,10 @@ useHead({
         {{ category.name }}
       </button>
     </div>
-    
+
     <!-- Barra de categorias fixa -->
-    <div 
-      class="category-tabs-fixed" 
+    <div
+      class="category-tabs-fixed"
       v-if="!loadingCategories && filteredCategories.length && showFixedCategoryBar"
     >
       <button
@@ -1221,8 +1297,6 @@ useHead({
         {{ category.name }}
       </button>
     </div>
-    
-    
 
     <!-- Categories -->
     <div class="categories" v-if="filteredCategories.length">
@@ -1247,6 +1321,7 @@ useHead({
               <div class="item-name-row">
                 <h4>{{ item.name }}</h4>
                 <span v-if="getPromoAtiva(item)" class="promo-badge">Promoção do Dia</span>
+                <span v-if="item.ageRestricted" class="age-badge">18+</span>
               </div>
               <p>{{ item.description }}</p>
               <div class="price-row">
@@ -1501,14 +1576,28 @@ useHead({
 
     <div class="sidebar-footer">
 
-      <!-- <div class="coupon-section">
-        <input
-          type="text"
-          v-model="couponCode"
-          placeholder="Cupom de desconto"
-        />
-        <button class="apply-coupon-btn" @click="applyCoupon">Aplicar</button>
-      </div> -->
+      <!-- Cupom de desconto -->
+      <div class="coupon-section">
+        <div v-if="appliedCoupon" class="coupon-applied">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          <span>Cupom <strong>{{ appliedCoupon.code }}</strong> aplicado!</span>
+          <button @click="removeCoupon" class="coupon-remove-btn" type="button">✕</button>
+        </div>
+        <div v-else class="coupon-input-row">
+          <input
+            type="text"
+            v-model="couponCode"
+            placeholder="Código do cupom"
+            class="coupon-input"
+            @keydown.enter="applyCoupon"
+          />
+          <button class="apply-coupon-btn" @click="applyCoupon" :disabled="applyingCoupon || !couponCode.trim()">
+            {{ applyingCoupon ? '...' : 'Aplicar' }}
+          </button>
+        </div>
+      </div>
       
       <!-- Subtotal -->
       <div class="subtotal">
@@ -1525,7 +1614,7 @@ useHead({
       
       <div class="total">
         <span class="total-label">Total</span>
-        <span class="total-value">{{ formatPrice(cartTotal) }}</span>
+        <span class="total-value">{{ formatPrice(Math.max(0, cartSubtotal - discountAmount)) }}</span>
       </div>
       <button 
         class="finalize-btn" 
@@ -1818,6 +1907,19 @@ useHead({
 
   <!-- Modal de Alerta -->
   <Teleport to="body">
+    <Transition name="modal">
+      <div v-if="showAgeModal" class="alert-modal-overlay" @click="cancelAge">
+        <div class="alert-modal age-modal" @click.stop>
+          <div class="age-modal-icon">18+</div>
+          <h3>Confirmação de Idade</h3>
+          <p>Este produto é permitido apenas para maiores de 18 anos. Você confirma que tem 18 anos ou mais?</p>
+          <div class="age-modal-actions">
+            <button @click="cancelAge" class="age-btn-cancel">Não tenho 18 anos</button>
+            <button @click="confirmAge" class="age-btn-confirm">Sim, tenho 18+</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
     <Transition name="modal">
       <div v-if="alertModal.show" class="alert-modal-overlay" @click="closeAlert">
         <div class="alert-modal" @click.stop>
@@ -2307,6 +2409,88 @@ body {
   text-transform: uppercase;
   white-space: nowrap;
 }
+
+.age-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+/* Modal de idade */
+.age-modal {
+  text-align: center;
+  padding: 2rem 1.5rem;
+  max-width: 340px;
+}
+
+.age-modal-icon {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 3px solid #fca5a5;
+  border-radius: 50%;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  letter-spacing: -1px;
+}
+
+.age-modal h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+  color: #1e293b;
+}
+
+.age-modal p {
+  color: #64748b;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  margin: 0 0 1.5rem;
+}
+
+.age-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.age-btn-confirm {
+  padding: 0.75rem;
+  background: var(--color-primary, #ff8e24);
+  color: #fff;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+.age-btn-confirm:hover { filter: brightness(0.9); }
+
+.age-btn-cancel {
+  padding: 0.75rem;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.age-btn-cancel:hover { background: #e2e8f0; }
 
 /* Loading Overlay */
 .loading-overlay {

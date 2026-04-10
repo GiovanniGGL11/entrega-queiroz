@@ -16,12 +16,13 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
-  const { 
-    customerInfo, 
-    items, 
-    deliveryInfo, 
-    paymentMethod, 
-    notes 
+  const {
+    customerInfo,
+    items,
+    deliveryInfo,
+    paymentMethod,
+    notes,
+    couponCode
   } = body;
 
   // Validações básicas
@@ -299,7 +300,38 @@ export default defineEventHandler(async (event) => {
     }
     
     calculatedTotal += realDeliveryFee;
-    
+
+    // Aplicar cupom de desconto
+    let appliedCoupon: any = null;
+    let discountAmount = 0;
+    if (couponCode && couponCode.trim()) {
+      const coupons = db.collection("coupons");
+      const coupon = await coupons.findOne({ code: couponCode.trim().toUpperCase() });
+      if (coupon && coupon.active) {
+        const subtotalSemFrete = calculatedTotal - realDeliveryFee;
+        if (!coupon.expiresAt || new Date(coupon.expiresAt) >= new Date()) {
+          if (coupon.maxUses === null || coupon.usedCount < coupon.maxUses) {
+            if (subtotalSemFrete >= (coupon.minOrder || 0)) {
+              if (coupon.type === 'percentage') {
+                discountAmount = subtotalSemFrete * (coupon.value / 100);
+              } else {
+                discountAmount = coupon.value;
+              }
+              discountAmount = Math.min(discountAmount, subtotalSemFrete);
+              discountAmount = parseFloat(discountAmount.toFixed(2));
+              calculatedTotal = parseFloat((calculatedTotal - discountAmount).toFixed(2));
+              appliedCoupon = {
+                code: coupon.code,
+                type: coupon.type,
+                value: coupon.value,
+                discountAmount
+              };
+            }
+          }
+        }
+      }
+    }
+
     // Validação final: garantir que o total calculado seja válido
     if (calculatedTotal <= 0) {
       throw createError({
@@ -358,6 +390,8 @@ export default defineEventHandler(async (event) => {
       },
       paymentMethod: paymentMethod || 'dinheiro',
       totalAmount: calculatedTotal,
+      discount: discountAmount,
+      coupon: appliedCoupon,
       notes: notes?.trim() || '',
       status: 'pending', // pending, confirmed, preparing, ready, out_for_delivery, delivered, cancelled
       createdAt: new Date(),
@@ -365,6 +399,14 @@ export default defineEventHandler(async (event) => {
     };
 
     const result = await orders.insertOne(order);
+
+    // Incrementar uso do cupom
+    if (appliedCoupon) {
+      await db.collection("coupons").updateOne(
+        { code: appliedCoupon.code },
+        { $inc: { usedCount: 1 } }
+      );
+    }
 
     // Notificar clientes conectados sobre o novo pedido (em tempo real)
     try {
@@ -389,33 +431,54 @@ export default defineEventHandler(async (event) => {
     }
 
     // Atualizar estoque dos produtos usando dados validados
+    const movements = db.collection("inventory_movements");
     for (const item of validatedItems) {
       if (item.productId) {
         try {
           // O productId no inventário é armazenado como string, então converter ObjectId para string
-          const productIdString = item.productId instanceof ObjectId 
-            ? item.productId.toString() 
+          const productIdString = item.productId instanceof ObjectId
+            ? item.productId.toString()
             : String(item.productId);
-          
+
+          const inventoryItem = await inventory.findOne({ productId: productIdString });
+
           const updateResult = await inventory.updateOne(
             { productId: productIdString },
-            { 
-              $inc: { 
+            {
+              $inc: {
                 currentStock: -item.quantity,
                 totalSold: item.quantity
               },
-              $set: { 
+              $set: {
                 lastUpdated: new Date(),
                 updatedAt: new Date()
               }
             }
           );
-          
-          // Log para debug se não encontrou o produto no inventário
+
           if (updateResult.matchedCount === 0) {
             console.warn(`[Orders POST] Produto ${productIdString} não encontrado no inventário para atualização de estoque`);
           } else {
             console.log(`[Orders POST] Estoque atualizado para produto ${productIdString}: -${item.quantity} unidades`);
+            // Registrar movimentação de saída por venda
+            if (inventoryItem) {
+              await movements.insertOne({
+                inventoryId: inventoryItem._id,
+                productId: productIdString,
+                productName: item.name,
+                type: 'saida',
+                quantity: item.quantity,
+                previousStock: inventoryItem.currentStock,
+                newStock: inventoryItem.currentStock - item.quantity,
+                reason: `Venda - Pedido ${orderNumber}`,
+                costPrice: inventoryItem.costPrice || 0,
+                notes: '',
+                orderId: result.insertedId,
+                orderNumber: orderNumber,
+                createdAt: new Date(),
+                createdBy: 'system'
+              });
+            }
           }
         } catch (stockError) {
           // Log do erro mas não falhar o pedido

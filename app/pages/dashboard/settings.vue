@@ -636,6 +636,86 @@
         </button>
       </div>
 
+      <!-- CEPs de Atendimento Extra -->
+      <div id="ceps-extras" class="settings-section card">
+        <div class="section-header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          <h2>CEPs de Atendimento Extra</h2>
+        </div>
+
+        <div class="info-banner" style="margin-bottom: 1.5rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span>CEPs adicionados aqui serão atendidos mesmo fora das zonas normais. Use para endereços específicos que você conhece e deseja atender.</span>
+        </div>
+
+        <!-- Verificador de endereço -->
+        <div class="cep-verificador">
+          <h4>Verificar Endereço por CEP</h4>
+          <div class="cep-verificador-row">
+            <input
+              v-model="cepVerificar"
+              type="text"
+              placeholder="00000-000"
+              maxlength="9"
+              class="cep-input"
+              @input="cepVerificar = formatCepStr($event.target.value)"
+              @keydown.enter="verificarCep"
+            />
+            <button @click="verificarCep" type="button" class="btn-verificar" :disabled="verificandoCep">
+              {{ verificandoCep ? 'Buscando...' : 'Verificar' }}
+            </button>
+          </div>
+          <div v-if="cepResultado" class="cep-resultado" :class="cepResultado.tipo">
+            <svg v-if="cepResultado.tipo === 'sucesso'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span>{{ cepResultado.texto }}</span>
+          </div>
+        </div>
+
+        <!-- Lista de CEPs extras -->
+        <div class="restricted-ceps-list" style="margin-top: 1.5rem;">
+          <div v-if="!form.extraZipCodes || form.extraZipCodes.length === 0" class="ceps-empty">
+            Nenhum CEP extra cadastrado ainda.
+          </div>
+          <div v-for="(item, index) in form.extraZipCodes" :key="index" class="restricted-cep-item extra-cep-item">
+            <div class="cep-input-wrapper">
+              <div class="extra-cep-info">
+                <span class="extra-cep-num">{{ item.cep }}</span>
+                <span class="extra-cep-addr">{{ item.endereco || '' }}</span>
+              </div>
+              <button @click="removeExtraCep(index)" class="btn-remove-cep" type="button" title="Remover">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button @click="addExtraCep" type="button" class="btn-add-cep btn-add-cep--green" style="margin-top: 1rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Adicionar CEP Extra
+        </button>
+      </div>
+
       <!-- Campos do Checkout -->
       <div id="campos-checkout" class="settings-section card">
         <div class="section-header">
@@ -945,6 +1025,80 @@
         </div>
       </div>
 
+      <!-- Notificações WhatsApp -->
+      <div id="whatsapp-notifications" class="settings-section card">
+        <div class="section-header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <h2>Notificações WhatsApp</h2>
+        </div>
+
+        <div class="whatsapp-info-box">
+          <strong>Como funciona:</strong> Quando o status de um pedido muda, o sistema envia automaticamente uma mensagem WhatsApp para o cliente. Requer uma instância da <strong>Evolution API</strong> configurada e ativa.
+        </div>
+
+        <div class="form-group">
+          <div class="toggle-row">
+            <div>
+              <label>Ativar notificações automáticas</label>
+              <small>Envia WhatsApp ao cliente a cada mudança de status</small>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" v-model="form.whatsappNotificationsEnabled" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div v-if="form.whatsappNotificationsEnabled" class="whatsapp-api-fields">
+          <div class="form-group">
+            <label for="whatsappApiUrl">URL da Evolution API *</label>
+            <input
+              id="whatsappApiUrl"
+              v-model="form.whatsappApiUrl"
+              type="url"
+              placeholder="Ex: https://api.seuservidor.com.br"
+            />
+            <small>URL base da sua instância Evolution API (sem barra no final)</small>
+          </div>
+
+          <div class="form-group">
+            <label for="whatsappInstanceName">Nome da Instância *</label>
+            <input
+              id="whatsappInstanceName"
+              v-model="form.whatsappInstanceName"
+              type="text"
+              placeholder="Ex: delivery"
+            />
+            <small>Nome da instância configurada na Evolution API</small>
+          </div>
+
+          <div class="form-group">
+            <label for="whatsappApiToken">Chave da API (apikey) *</label>
+            <input
+              id="whatsappApiToken"
+              v-model="form.whatsappApiToken"
+              type="password"
+              placeholder="Cole aqui a chave da sua API"
+            />
+            <small>Token de autenticação da Evolution API</small>
+          </div>
+
+          <div class="info-box" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;font-size:0.875rem;color:#92400e;">
+            <strong>Mensagens enviadas por status:</strong>
+            <ul style="margin:8px 0 0 0;padding-left:16px;line-height:1.8;">
+              <li>Confirmado — "Seu pedido foi confirmado! Ja estamos preparando."</li>
+              <li>Preparando — "Seu pedido esta sendo preparado agora!"</li>
+              <li>Pronto — "Seu pedido esta pronto! Em breve saira para entrega."</li>
+              <li>Saiu para entrega — "Seu pedido saiu para entrega! Aguarde."</li>
+              <li>Entregue — "Pedido entregue! Obrigado pela preferencia."</li>
+              <li>Cancelado — "Seu pedido foi cancelado."</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       <!-- Botões de Ação -->
       <div class="actions-fixed">
         <div class="actions-container">
@@ -1035,6 +1189,7 @@ import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import ImageOverlay from '~/components/ImageOverlay.vue'
 import { useImageOverlay } from '~/composables/useImageOverlay'
 import { useStoreStatus } from '~/composables/useStoreStatus'
+import { useAuthenticatedFetch } from '~/composables/useAuthenticatedFetch'
 
 // Image overlay
 const { showImageOverlay, currentImageUrl, openImageOverlay, closeImageOverlay } = useImageOverlay()
@@ -1070,7 +1225,9 @@ const navigationSections = [
   { id: 'localizacao-loja', title: 'Localização da Loja' },
   { id: 'zonas-entrega', title: 'Zonas de Entrega' },
   { id: 'ceps-restritos', title: 'CEPs Restritos' },
-  { id: 'campos-checkout', title: 'Campos do Checkout' }
+  { id: 'ceps-extras', title: 'CEPs de Atendimento Extra' },
+  { id: 'campos-checkout', title: 'Campos do Checkout' },
+  { id: 'whatsapp-notifications', title: 'Notificações WhatsApp' }
 ]
 
 // Campos de endereço separados
@@ -1089,6 +1246,10 @@ const form = ref({
   infoImage: '',
   storePhone: '',
   whatsapp: '',
+  whatsappNotificationsEnabled: false,
+  whatsappApiUrl: '',
+  whatsappApiToken: '',
+  whatsappInstanceName: '',
   location: {
     address: '',
     latitude: -23.550520,
@@ -1101,6 +1262,7 @@ const form = ref({
     { maxDistance: 15, fee: 15.00, label: "10-15km - R$ 15,00" }
   ],
   restrictedZipCodes: [],
+  extraZipCodes: [],
   openingHours: [
     { day: 0, open: "11:00", close: "22:00", enabled: false },
     { day: 1, open: "11:00", close: "22:00", enabled: true },
@@ -1509,6 +1671,10 @@ const loadSettings = async () => {
       infoImage: response.infoImage || '',
       storePhone: response.storePhone || '',
       whatsapp: response.whatsapp || '',
+      whatsappNotificationsEnabled: response.whatsappNotificationsEnabled || false,
+      whatsappApiUrl: response.whatsappApiUrl || '',
+      whatsappApiToken: response.whatsappApiToken || '',
+      whatsappInstanceName: response.whatsappInstanceName || '',
       location: response.location || form.value.location,
       deliveryZones: response.deliveryZones || form.value.deliveryZones,
       openingHours: response.openingHours || form.value.openingHours,
@@ -1524,7 +1690,8 @@ const loadSettings = async () => {
         cartao: true
       },
       checkoutFields: response.checkoutFields || form.value.checkoutFields,
-      restrictedZipCodes: response.restrictedZipCodes || []
+      restrictedZipCodes: response.restrictedZipCodes || [],
+      extraZipCodes: response.extraZipCodes || []
     }
     originalForm.value = JSON.parse(JSON.stringify(form.value))
     
@@ -1788,6 +1955,73 @@ const formatCepInput = (index) => {
   
   form.value.restrictedZipCodes[index] = cep
 }
+
+// === CEPs de Atendimento Extra ===
+const cepVerificar = ref('')
+const verificandoCep = ref(false)
+const cepResultado = ref(null)
+
+const formatCepStr = (val) => {
+  if (!val) return ''
+  let v = val.replace(/\D/g, '')
+  if (v.length > 5) v = v.substring(0, 5) + '-' + v.substring(5, 8)
+  return v
+}
+
+const verificarCep = async () => {
+  const cepLimpo = cepVerificar.value.replace(/\D/g, '')
+  if (cepLimpo.length !== 8) {
+    cepResultado.value = { tipo: 'erro', texto: 'CEP inválido. Digite 8 dígitos.' }
+    return
+  }
+  verificandoCep.value = true
+  cepResultado.value = null
+  try {
+    const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
+    const data = await res.json()
+    if (data.erro) {
+      cepResultado.value = { tipo: 'erro', texto: 'CEP não encontrado.' }
+    } else {
+      const partes = [data.logradouro, data.bairro, data.localidade, data.uf].filter(Boolean)
+      cepResultado.value = {
+        tipo: 'sucesso',
+        texto: partes.join(', '),
+        cep: data.cep,
+        endereco: partes.join(', ')
+      }
+    }
+  } catch (e) {
+    cepResultado.value = { tipo: 'erro', texto: 'Erro ao consultar o CEP.' }
+  } finally {
+    verificandoCep.value = false
+  }
+}
+
+const addExtraCep = () => {
+  if (!cepResultado.value || cepResultado.value.tipo !== 'sucesso') {
+    cepResultado.value = { tipo: 'erro', texto: 'Primeiro verifique um CEP válido acima.' }
+    return
+  }
+  const jaExiste = (form.value.extraZipCodes || []).some(
+    (item) => item.cep === cepResultado.value.cep
+  )
+  if (jaExiste) {
+    cepResultado.value = { tipo: 'erro', texto: 'Este CEP já foi adicionado.' }
+    return
+  }
+  if (!form.value.extraZipCodes) form.value.extraZipCodes = []
+  form.value.extraZipCodes.push({
+    cep: cepResultado.value.cep,
+    endereco: cepResultado.value.endereco
+  })
+  cepVerificar.value = ''
+  cepResultado.value = null
+}
+
+const removeExtraCep = (index) => {
+  form.value.extraZipCodes.splice(index, 1)
+}
+// === Fim CEPs Extra ===
 
 // Validar zonas de entrega
 const validateZones = () => {
@@ -2832,6 +3066,134 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
 }
 
+/* CEPs Extra */
+.cep-verificador {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+}
+
+.cep-verificador h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cep-verificador-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.cep-verificador-row .cep-input {
+  flex: 1;
+  padding: 0.625rem 0.875rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: 0.5rem;
+  font-size: 0.9375rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition: border-color 0.2s;
+}
+
+.cep-verificador-row .cep-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.btn-verificar {
+  padding: 0.625rem 1.25rem;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-verificar:hover:not(:disabled) {
+  filter: brightness(0.9);
+  transform: translateY(-1px);
+}
+
+.btn-verificar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cep-resultado {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.cep-resultado.sucesso {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.cep-resultado.erro {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.extra-cep-item .cep-input-wrapper {
+  justify-content: space-between;
+}
+
+.extra-cep-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.extra-cep-num {
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--color-text);
+  font-family: monospace;
+}
+
+.extra-cep-addr {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.btn-add-cep--green {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.btn-add-cep--green:hover {
+  background: #bbf7d0;
+  border-color: #4ade80;
+  box-shadow: 0 4px 12px rgba(22, 101, 52, 0.15);
+}
+
+.ceps-empty {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 1.25rem;
+  border: 1.5px dashed var(--color-border);
+  border-radius: 0.75rem;
+}
+
 .delivery-preview {
   margin-top: var(--spacing-xl);
 }
@@ -3101,6 +3463,43 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.toggle-row label:first-child {
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 0;
+}
+
+.toggle-row small {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.whatsapp-api-fields {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.whatsapp-info-box {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+  color: #166534;
 }
 
 .toggle-switch {
