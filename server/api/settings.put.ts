@@ -55,7 +55,8 @@ export default defineEventHandler(async (event) => {
       whatsappNotificationsEnabled,
       whatsappApiUrl,
       whatsappApiToken,
-      whatsappInstanceName
+      whatsappInstanceName,
+      banners
     } = body;
     
     // Validações
@@ -259,6 +260,7 @@ export default defineEventHandler(async (event) => {
     if (whatsappApiUrl !== undefined) updateFields.whatsappApiUrl = String(whatsappApiUrl || '').trim();
     if (whatsappApiToken !== undefined) updateFields.whatsappApiToken = String(whatsappApiToken || '').trim();
     if (whatsappInstanceName !== undefined) updateFields.whatsappInstanceName = String(whatsappInstanceName || '').trim();
+    if (banners !== undefined) updateFields.banners = Array.isArray(banners) ? banners.filter((b: string) => b && b.trim()) : [];
 
     const result = await settings.updateOne(
       { _id: "store-config" },

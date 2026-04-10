@@ -333,6 +333,31 @@
             </div>
           </div>
 
+          <!-- Banners extras para carrossel -->
+          <div class="form-group">
+            <label>Banners Extras (Carrossel)</label>
+            <p class="field-hint">Adicione mais banners para criar um carrossel automático. O banner principal será sempre o primeiro.</p>
+
+            <div v-for="(banner, index) in form.banners" :key="index" class="banner-extra-row">
+              <img :src="banner || '/not_found.jpg'" class="banner-extra-thumb" @click="openImageOverlay(banner)" style="cursor:pointer;" />
+              <input v-model="form.banners[index]" type="url" placeholder="URL do banner" class="url-input" style="flex:1;" />
+              <button type="button" @click="removeBannerExtra(index)" class="btn-remove-banner">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+
+            <button type="button" @click="addBannerExtra" class="btn-add-banner">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Adicionar Banner
+            </button>
+          </div>
+
           <div class="form-group">
             <label for="infoImage">Imagem da Aba Informações</label>
             <p class="field-hint">Aparece no topo do modal de informações da loja (visível para os clientes)</p>
@@ -1250,6 +1275,7 @@ const form = ref({
   whatsappApiUrl: '',
   whatsappApiToken: '',
   whatsappInstanceName: '',
+  banners: [],
   location: {
     address: '',
     latitude: -23.550520,
@@ -1675,6 +1701,7 @@ const loadSettings = async () => {
       whatsappApiUrl: response.whatsappApiUrl || '',
       whatsappApiToken: response.whatsappApiToken || '',
       whatsappInstanceName: response.whatsappInstanceName || '',
+      banners: Array.isArray(response.banners) ? response.banners : [],
       location: response.location || form.value.location,
       deliveryZones: response.deliveryZones || form.value.deliveryZones,
       openingHours: response.openingHours || form.value.openingHours,
@@ -2061,6 +2088,14 @@ const validateZones = () => {
   }
   
   return !hasError
+}
+
+const addBannerExtra = () => {
+  form.value.banners.push('')
+}
+
+const removeBannerExtra = (index) => {
+  form.value.banners.splice(index, 1)
 }
 
 const handleFileUpload = async (event, type) => {
@@ -3490,6 +3525,54 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.banner-extra-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.banner-extra-thumb {
+  width: 80px;
+  height: 45px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.btn-remove-banner {
+  background: none;
+  border: 1px solid #dc2626;
+  color: #dc2626;
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.btn-add-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-secondary);
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.btn-add-banner:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .whatsapp-info-box {

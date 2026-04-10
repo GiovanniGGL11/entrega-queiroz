@@ -90,6 +90,37 @@ const avatarPreview = ref('')
 const categories = ref([])
 const loadingCategories = ref(false)
 
+// Carrossel de banners
+const currentBanner = ref(0)
+let carouselInterval = null
+
+const carouselBanners = computed(() => {
+  const banners = []
+  if (storeSettings.value.banner) banners.push(storeSettings.value.banner)
+  if (storeSettings.value.banners && Array.isArray(storeSettings.value.banners)) {
+    storeSettings.value.banners.forEach(b => { if (b && !banners.includes(b)) banners.push(b) })
+  }
+  return banners
+})
+
+const nextBanner = () => {
+  currentBanner.value = (currentBanner.value + 1) % carouselBanners.value.length
+}
+const prevBanner = () => {
+  currentBanner.value = (currentBanner.value - 1 + carouselBanners.value.length) % carouselBanners.value.length
+}
+const goToBanner = (i) => { currentBanner.value = i }
+
+const startCarousel = () => {
+  stopCarousel()
+  if (carouselBanners.value.length > 1) {
+    carouselInterval = setInterval(nextBanner, 4000)
+  }
+}
+const stopCarousel = () => {
+  if (carouselInterval) { clearInterval(carouselInterval); carouselInterval = null }
+}
+
 // Configurações da loja
 const storeSettings = ref({
   storeName: "",
@@ -1132,6 +1163,9 @@ onMounted(async () => {
   
   // Adicionar listener de scroll para barra fixa
   window.addEventListener('scroll', handleScroll);
+
+  // Iniciar carrossel após carregar settings
+  startCarousel()
 });
 
 onUnmounted(() => {
@@ -1140,6 +1174,7 @@ onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
   document.body.style.overflow = "";
   document.removeEventListener("keydown", handleKeydown);
+  stopCarousel()
 });
 
 useHead({
@@ -1163,11 +1198,28 @@ useHead({
   <div class="container">
     <!-- Hero Section -->
     <div class="hero">
-      <img
-        :src="storeSettings.banner"
-        alt="Banner da loja"
-        class="banner"
-      />
+      <!-- Carrossel de banners -->
+      <div class="banner-carousel" v-if="carouselBanners.length > 0">
+        <div class="carousel-track" :style="{ transform: `translateX(-${currentBanner * 100}%)` }">
+          <img
+            v-for="(src, i) in carouselBanners"
+            :key="i"
+            :src="src"
+            alt="Banner da loja"
+            class="banner carousel-slide"
+          />
+        </div>
+        <div v-if="carouselBanners.length > 1" class="carousel-dots">
+          <button
+            v-for="(_, i) in carouselBanners"
+            :key="i"
+            :class="['carousel-dot', { active: i === currentBanner }]"
+            @click="goToBanner(i)"
+          />
+        </div>
+        <button v-if="carouselBanners.length > 1" class="carousel-arrow left" @click="prevBanner">&#8249;</button>
+        <button v-if="carouselBanners.length > 1" class="carousel-arrow right" @click="nextBanner">&#8250;</button>
+      </div>
       
       <div class="profile">
         <img :src="storeSettings.logo" :alt="`Logo da ${storeSettings.storeName}`" />
@@ -2026,6 +2078,81 @@ body {
   gap: 2rem;
 }
 
+.banner-carousel {
+  position: relative;
+  width: 100%;
+  height: 328px;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.carousel-track {
+  display: flex;
+  height: 100%;
+  transition: transform 0.5s ease;
+}
+
+.carousel-slide {
+  min-width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+.carousel-dots {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+.carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.6);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s;
+}
+
+.carousel-dot.active {
+  background: white;
+  width: 20px;
+  border-radius: 4px;
+}
+
+.carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.35);
+  color: white;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.carousel-arrow:hover {
+  background: rgba(0,0,0,0.6);
+}
+
+.carousel-arrow.left { left: 10px; }
+.carousel-arrow.right { right: 10px; }
+
 .banner {
   width: 100%;
   height: 328px;
@@ -2034,6 +2161,10 @@ body {
 }
 
 @media (max-width: 768px) {
+  .banner-carousel {
+    height: 200px;
+    border-radius: 0.5rem;
+  }
   .banner {
     height: 200px;
     border-radius: 0.5rem;
