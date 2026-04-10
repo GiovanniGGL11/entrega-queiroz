@@ -348,7 +348,8 @@ export default defineEventHandler(async (event) => {
       extraZipCodes: Array.isArray(result.extraZipCodes) ? result.extraZipCodes.map((item: any) => ({
         cep: String(item.cep || ''),
         endereco: String(item.endereco || '')
-      })) : []
+      })) : [],
+      banners: Array.isArray(storeSettings.banners) ? storeSettings.banners.map((b: any) => String(b)).filter((b: string) => b) : []
     };
     
     console.log('[public/settings] ✅ Retornando configurações:', {
