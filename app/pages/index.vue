@@ -2179,7 +2179,8 @@ body {
   border: none;
   background: rgba(255,255,255,0.6);
   cursor: pointer;
-  padding: 0;
+  padding: 8px; /* área de toque maior */
+  box-sizing: content-box;
   transition: background 0.2s;
 }
 
@@ -2196,10 +2197,10 @@ body {
   background: rgba(0,0,0,0.35);
   color: white;
   border: none;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  font-size: 22px;
+  font-size: 26px;
   line-height: 1;
   cursor: pointer;
   z-index: 2;
@@ -2207,6 +2208,12 @@ body {
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
+}
+
+@media (max-width: 480px) {
+  .carousel-arrow {
+    display: none; /* em telas muito pequenas, usar apenas os dots */
+  }
 }
 
 .carousel-arrow:hover {
@@ -2863,7 +2870,8 @@ body {
   align-items: center;
   justify-content: space-between;
   margin: 0 0.75rem 0.3rem;
-  padding: 0.4rem 0.75rem 0.4rem 0.5rem;
+  padding: 0.6rem 0.75rem 0.6rem 0.75rem;
+  min-height: 56px;
   background: var(--color-primary);
   border-radius: 12px;
   border: none;
@@ -2897,7 +2905,7 @@ body {
 
 .finalize-bar-label {
   color: white;
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   font-weight: 800;
   letter-spacing: 0.03em;
 }
@@ -2912,7 +2920,7 @@ body {
   align-items: center;
   gap: 0.35rem;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 500;
 }
 
@@ -3735,8 +3743,8 @@ body {
 }
 
 .qty-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: 1px solid #efefef;
   background: #fff;
   border-radius: 0.5rem;
@@ -4494,9 +4502,9 @@ body {
   }
 
   .qty-btn {
-    width: 34px;
-    height: 34px;
-    font-size: 1rem;
+    width: 44px;
+    height: 44px;
+    font-size: 1.1rem;
   }
 
   .qty-value {
@@ -4594,9 +4602,9 @@ body {
   }
 
   .qty-btn {
-    width: 32px;
-    height: 32px;
-    font-size: 0.875rem;
+    width: 40px;
+    height: 40px;
+    font-size: 0.95rem;
   }
 
   .qty-value {
@@ -4670,8 +4678,17 @@ body {
     padding: 1rem 0.5rem 0;
   }
 
+  .banner-carousel {
+    height: 160px;
+    border-radius: 0.35rem;
+  }
+
   .banner {
     height: 160px;
+  }
+
+  .modal-image {
+    height: 200px;
   }
 
   .profile img {
@@ -4699,8 +4716,8 @@ body {
   }
 
   .close-btn {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     font-size: 1.5rem;
     top: 0.5rem;
     right: 0.5rem;

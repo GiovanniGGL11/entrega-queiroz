@@ -2542,8 +2542,8 @@ onUnmounted(() => {
 .motoboy-option.selected { background: #eff6ff; border-color: var(--color-primary); }
 
 .motoboy-opt-avatar {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--color-primary);
   color: white;
@@ -2621,9 +2621,10 @@ onUnmounted(() => {
 /* Alert */
 .alert {
   position: fixed;
-  top: 2rem;
-  right: 2rem;
-  padding: 1rem 1.5rem;
+  top: 1rem;
+  right: 1rem;
+  left: 1rem;
+  padding: 1rem 1.25rem;
   border-radius: 0.5rem;
   color: white;
   font-weight: 500;
@@ -2632,6 +2633,16 @@ onUnmounted(() => {
   align-items: center;
   gap: 1rem;
   max-width: 400px;
+  margin: 0 auto;
+}
+
+@media (min-width: 640px) {
+  .alert {
+    top: 2rem;
+    right: 2rem;
+    left: auto;
+    margin: 0;
+  }
 }
 
 .alert.success {
@@ -2767,8 +2778,8 @@ onUnmounted(() => {
   background: #fee2e2;
   color: #dc2626;
   border: 1px solid #fecaca;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 0.375rem;
   cursor: pointer;
   display: flex;

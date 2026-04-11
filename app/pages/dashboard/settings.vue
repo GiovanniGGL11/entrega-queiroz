@@ -3095,8 +3095,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   background: #fee2e2;
   border: 2px solid #fecaca;
   border-radius: 0.5rem;
@@ -3509,8 +3509,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   background: #f3f4f6;
   border-radius: 0.5rem;
   font-weight: 600;
@@ -3960,8 +3960,8 @@ input:checked + .toggle-slider:before {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   color: white;
   border-radius: 50%;
@@ -4259,8 +4259,8 @@ input:checked + .toggle-slider:before {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   background: #f3f4f6;
   border: 1px solid #d1d5db;
