@@ -42,13 +42,4 @@ export default defineNuxtConfig({
       },
     },
   },
-  routeRules: {
-    '/api/public/**': { headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=600' } },
-    '/api/public/orders/**': { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } },
-    '/api/public/validate-coupon': { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } },
-    '/api/categories-with-products': { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } },
-    '/api/categories': { headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' } },
-    '/api/products': { headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' } },
-    '/api/product': { headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' } },
-  },
 });
