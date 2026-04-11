@@ -338,15 +338,36 @@
             <label>Banners Extras (Carrossel)</label>
             <p class="field-hint">Adicione mais banners para criar um carrossel automático. O banner principal será sempre o primeiro.</p>
 
-            <div v-for="(banner, index) in form.banners" :key="index" class="banner-extra-row">
-              <img :src="banner || '/not_found.jpg'" class="banner-extra-thumb" @click="openImageOverlay(banner)" style="cursor:pointer;" />
-              <input v-model="form.banners[index]" type="url" placeholder="URL do banner" class="url-input" style="flex:1;" />
-              <button type="button" @click="removeBannerExtra(index)" class="btn-remove-banner">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
+            <div v-for="(banner, index) in form.banners" :key="index" class="banner-extra-item">
+              <div class="banner-extra-preview-row">
+                <img :src="banner || '/not_found.jpg'" class="banner-extra-thumb" @click="openImageOverlay(banner)" style="cursor:pointer;" />
+                <div class="banner-extra-actions">
+                  <label class="btn-upload btn-upload-sm">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      @change="handleBannerExtraUpload($event, index)"
+                      :disabled="uploadingBannerExtra[index]"
+                      style="display:none"
+                    />
+                    <span v-if="uploadingBannerExtra[index]" class="loading-spinner-inline"></span>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    {{ uploadingBannerExtra[index] ? 'Enviando...' : 'Upload' }}
+                  </label>
+                  <button type="button" @click="removeBannerExtra(index)" class="btn-remove-banner">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    Remover
+                  </button>
+                </div>
+              </div>
+              <input v-model="form.banners[index]" type="url" placeholder="ou cole uma URL" class="url-input" style="margin-top:6px;" />
             </div>
 
             <button type="button" @click="addBannerExtra" class="btn-add-banner">
@@ -1235,6 +1256,7 @@ const originalForm = ref(null)
 const uploadingLogo = ref(false)
 const uploadingBanner = ref(false)
 const uploadingInfoImage = ref(false)
+const uploadingBannerExtra = ref({})
 let map = null
 let mapCircles = []
 let storeMarker = null
@@ -2096,6 +2118,36 @@ const addBannerExtra = () => {
 
 const removeBannerExtra = (index) => {
   form.value.banners.splice(index, 1)
+}
+
+const handleBannerExtraUpload = async (event, index) => {
+  const file = event.target.files[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    showAlert('Selecione uma imagem válida', 'error')
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    showAlert('Imagem muito grande. Máximo 5MB', 'error')
+    return
+  }
+  uploadingBannerExtra.value[index] = true
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    try {
+      const response = await authenticatedFetch('/api/upload-image', {
+        method: 'POST',
+        body: { image: e.target.result, filename: file.name, type: 'banner' }
+      })
+      form.value.banners[index] = response.imageUrl
+      showAlert('Banner carregado com sucesso!', 'success')
+    } catch (error) {
+      showAlert(error.data?.message || 'Erro ao fazer upload', 'error')
+    } finally {
+      uploadingBannerExtra.value[index] = false
+    }
+  }
+  reader.readAsDataURL(file)
 }
 
 const handleFileUpload = async (event, type) => {
@@ -3527,11 +3579,29 @@ onUnmounted(() => {
   gap: 1rem;
 }
 
-.banner-extra-row {
+.banner-extra-item {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-secondary, #f9fafb);
+}
+
+.banner-extra-preview-row {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 0.75rem;
+}
+
+.banner-extra-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-upload-sm {
+  font-size: 0.8rem;
+  padding: 6px 10px;
 }
 
 .banner-extra-thumb {
