@@ -41,51 +41,21 @@ export default defineNuxtConfig({
         target: "es2022",
       },
     },
-    // Configurações de cache e performance
-    routeRules: {
-      // APIs públicas com cache (melhora performance)
-      '/api/public/**': {
-        cors: true,
-        headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=600' }, // 5 min cache, 10 min stale
-        prerender: false
-      },
-      // Pedidos mudam frequentemente — sem cache
-      '/api/public/orders/**': {
-        cors: true,
-        headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
-        prerender: false
-      },
-      '/api/public/validate-coupon': {
-        cors: true,
-        headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
-      },
-      '/api/categories-with-products': {
-        cors: true,
-        headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
-      },
-      '/api/categories': { 
-        cors: true,
-        headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' }
-      },
-      '/api/products': { 
-        cors: true,
-        headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' }
-      },
-      '/api/product': { 
-        cors: true,
-        headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' }
-      },
-      
-      // APIs sem cache (mudam frequentemente)
-      '/api/auth/**': { cors: true },
-      '/api/orders': { cors: true },
-      '/api/calculate-delivery': { cors: true },
-      
-      // APIs administrativas (protegidas por middleware)
-      '/api/dashboard/**': { cors: true },
-      '/api/inventory/**': { cors: true },
-      '/api/settings': { cors: true },
-      '/api/upload-image': { cors: true },
-    },
+  },
+  routeRules: {
+    '/api/public/**': { cors: true, headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=600' } },
+    '/api/public/orders/**': { cors: true, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } },
+    '/api/public/validate-coupon': { cors: true, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } },
+    '/api/categories-with-products': { cors: true, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } },
+    '/api/categories': { cors: true, headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' } },
+    '/api/products': { cors: true, headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' } },
+    '/api/product': { cors: true, headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' } },
+    '/api/auth/**': { cors: true },
+    '/api/orders': { cors: true },
+    '/api/calculate-delivery': { cors: true },
+    '/api/dashboard/**': { cors: true },
+    '/api/inventory/**': { cors: true },
+    '/api/settings': { cors: true },
+    '/api/upload-image': { cors: true },
   },
 });
