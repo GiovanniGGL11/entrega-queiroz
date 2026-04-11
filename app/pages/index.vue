@@ -2173,21 +2173,48 @@ body {
 }
 
 .carousel-dot {
-  width: 8px;
-  height: 8px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: none;
-  background: rgba(255,255,255,0.6);
+  background: transparent;
   cursor: pointer;
-  padding: 8px; /* área de toque maior */
-  box-sizing: content-box;
+  padding: 0;
+  position: relative;
   transition: background 0.2s;
 }
 
-.carousel-dot.active {
+.carousel-dot::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.6);
+  transition: background 0.2s, width 0.2s, border-radius 0.2s;
+}
+
+.carousel-dot.active::after {
   background: white;
   width: 20px;
   border-radius: 4px;
+}
+
+@media (max-width: 640px) {
+  .carousel-dot {
+    width: 16px;
+    height: 16px;
+  }
+  .carousel-dot::after {
+    width: 6px;
+    height: 6px;
+  }
+  .carousel-dot.active::after {
+    width: 14px;
+  }
 }
 
 .carousel-arrow {
