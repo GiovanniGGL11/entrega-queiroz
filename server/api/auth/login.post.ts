@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Gerar token JWT incluindo role e name
-    const role = user.role || 'owner'
+    const role = (user.role === 'employee') ? 'employee' : 'owner'
     const token = signUserToken({ userId: user._id.toString(), email: user.email, role, name: user.name || '' })
 
     // Na produção (Vercel), não usar cookies httpOnly devido a limitações

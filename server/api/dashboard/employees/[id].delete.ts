@@ -19,8 +19,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Token inválido' })
   }
 
-  const role = decoded.role || 'owner'
-  if (role !== 'owner') {
+  if (decoded.role === 'employee') {
     throw createError({ statusCode: 403, statusMessage: 'Somente o dono pode remover funcionários' })
   }
 
