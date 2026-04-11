@@ -2,6 +2,7 @@
 import { getDB } from "../utils/db";
 import { verifyUserToken } from "../utils/auth";
 import { getRequestHeader, createError } from 'h3';
+import { sanitizeName, sanitizeString, InputValidator } from '../utils/security';
 
 export default defineEventHandler(async (event) => {
   // Autenticação direta sem middleware
@@ -31,21 +32,11 @@ export default defineEventHandler(async (event) => {
   }
   
   const body = await readBody(event);
-  const { name, description, price, image, categoryId, complements, order = 0, isVisible = true, promotion = null } = body;
+  const { image, categoryId, complements, order = 0, isVisible = true, promotion = null } = body;
 
-  if (!name || name.trim() === '') {
-    throw createError({
-      statusCode: 400,
-      message: "Nome do produto é obrigatório",
-    });
-  }
-
-  if (!price || price <= 0) {
-    throw createError({
-      statusCode: 400,
-      message: "Preço deve ser maior que zero",
-    });
-  }
+  const name = sanitizeName(body?.name, 'Nome do produto', 150)
+  const description = sanitizeString(body?.description || '').slice(0, 500)
+  const price = InputValidator.validatePositiveNumber(body?.price, 'Preço', 0.01)
 
   if (!categoryId) {
     throw createError({

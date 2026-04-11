@@ -1,14 +1,24 @@
 import bcrypt from 'bcryptjs'
 import { connectToDatabase } from '../../utils/db'
 import { signCustomerToken } from '../../utils/customer-auth'
+import { RateLimiter, InputValidator, sanitizeName } from '../../utils/security'
+import { getRequestHeader } from 'h3'
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
-  const { name, email, phone, password, address, number, neighborhood, city, zipCode } = body
+  const ip = getRequestHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 'unknown'
+  RateLimiter.enforce(`register:${ip}`, 5, 60_000, 600_000)
 
-  if (!name || !email || !phone || !password) {
-    throw createError({ statusCode: 400, statusMessage: 'Nome, email, telefone e senha são obrigatórios' })
-  }
+  const body = await readBody(event)
+
+  const name = sanitizeName(body?.name, 'Nome', 100)
+  const email = InputValidator.validateEmail(body?.email)
+  const phone = InputValidator.validatePhone(body?.phone)
+  const password = InputValidator.validatePassword(body?.password)
+  const address = InputValidator.validateOptionalString(body?.address, 'Endereço', 200)
+  const number = InputValidator.validateOptionalString(body?.number, 'Número', 20)
+  const neighborhood = InputValidator.validateOptionalString(body?.neighborhood, 'Bairro', 100)
+  const city = InputValidator.validateOptionalString(body?.city, 'Cidade', 100)
+  const zipCode = body?.zipCode ? InputValidator.validateCEP(body.zipCode) : ''
 
   const { db } = await connectToDatabase()
   const customers = db.collection('customers')
@@ -25,11 +35,11 @@ export default defineEventHandler(async (event) => {
     email,
     phone,
     password: hash,
-    address: address || '',
-    number: number || '',
-    neighborhood: neighborhood || '',
-    city: city || '',
-    zipCode: zipCode || '',
+    address,
+    number,
+    neighborhood,
+    city,
+    zipCode,
     createdAt: new Date()
   })
 

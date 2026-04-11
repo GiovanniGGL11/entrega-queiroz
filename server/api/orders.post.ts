@@ -1,6 +1,8 @@
 // server/api/orders.post.ts
 import { getDB } from "../utils/db";
 import { ObjectId } from "mongodb";
+import { RateLimiter, sanitizeString, InputValidator } from "../utils/security";
+import { getRequestHeader } from "h3";
 
 // Função para calcular distância entre duas coordenadas (Haversine)
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -15,6 +17,9 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 export default defineEventHandler(async (event) => {
+  const ip = getRequestHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 'unknown'
+  RateLimiter.enforce(`order:${ip}`, 15, 60_000)
+
   const body = await readBody(event);
   const {
     customerInfo,
@@ -32,6 +37,11 @@ export default defineEventHandler(async (event) => {
       message: "Informações do cliente são obrigatórias",
     });
   }
+
+  // Sanitizar dados do cliente
+  customerInfo.name = sanitizeString(customerInfo.name).slice(0, 100)
+  customerInfo.phone = sanitizeString(customerInfo.phone).slice(0, 20)
+  customerInfo.email = sanitizeString(customerInfo.email || '').slice(0, 254)
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     throw createError({
@@ -392,7 +402,7 @@ export default defineEventHandler(async (event) => {
       totalAmount: calculatedTotal,
       discount: discountAmount,
       coupon: appliedCoupon,
-      notes: notes?.trim() || '',
+      notes: sanitizeString(notes || '').slice(0, 500),
       status: 'pending', // pending, confirmed, preparing, ready, out_for_delivery, delivered, cancelled
       createdAt: new Date(),
       updatedAt: new Date(),

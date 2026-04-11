@@ -1,14 +1,16 @@
 import bcrypt from 'bcryptjs'
 import { connectToDatabase } from '../../utils/db'
 import { signCustomerToken } from '../../utils/customer-auth'
+import { RateLimiter, InputValidator } from '../../utils/security'
+import { getRequestHeader } from 'h3'
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
-  const { email, password } = body
+  const ip = getRequestHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 'unknown'
+  RateLimiter.enforce(`customer-login:${ip}`, 10, 60_000, 300_000)
 
-  if (!email || !password) {
-    throw createError({ statusCode: 400, statusMessage: 'Email e senha são obrigatórios' })
-  }
+  const body = await readBody(event)
+  const email = InputValidator.validateEmail(body?.email)
+  const password = InputValidator.validatePassword(body?.password)
 
   const { db } = await connectToDatabase()
   const customers = db.collection('customers')

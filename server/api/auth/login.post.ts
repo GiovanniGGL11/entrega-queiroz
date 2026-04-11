@@ -1,20 +1,19 @@
 import bcrypt from 'bcryptjs'
 import { connectDB } from '../../utils/db'
 import { setAuthCookie, signUserToken } from '../../utils/auth'
+import { RateLimiter, InputValidator } from '../../utils/security'
+import { getRequestHeader } from 'h3'
 
 export default defineEventHandler(async (event) => {
   console.log('[login.ts] Requisição recebida')
   try {
-    const body = await readBody(event)
-    const { email, password } = body
-    console.log('[login.ts] Email:', email)
+    const ip = getRequestHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 'unknown'
+    RateLimiter.enforce(`admin-login:${ip}`, 5, 60_000, 300_000)
 
-    if (!email || !password) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Email e senha são obrigatórios'
-      })
-    }
+    const body = await readBody(event)
+    const email = InputValidator.validateEmail(body?.email)
+    const password = InputValidator.validatePassword(body?.password)
+    console.log('[login.ts] Email:', email)
 
     // Conectar ao banco
     console.log('[login.ts] Conectando ao banco...')
