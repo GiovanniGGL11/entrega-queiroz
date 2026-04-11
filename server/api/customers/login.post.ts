@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   const { db } = await connectToDatabase()
   const customers = db.collection('customers')
 
-  const customer = await customers.findOne({ email })
+  const customer = await customers.findOne({ email: { $regex: new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } })
   if (!customer || !customer.password) {
     throw createError({ statusCode: 401, statusMessage: 'Credenciais inválidas' })
   }

@@ -21,8 +21,8 @@ export default defineEventHandler(async (event) => {
     console.log('[login.ts] Banco conectado')
     const usersCollection = db.collection('users')
 
-    // Buscar usuário
-    const user = await usersCollection.findOne({ email })
+    // Buscar usuário (case-insensitive para email)
+    const user = await usersCollection.findOne({ email: { $regex: new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } })
     console.log('[login.ts] Usuário encontrado:', !!user)
 
     if (!user) {
