@@ -161,10 +161,10 @@ const compareIds = (id1, id2) => {
 // Carregar configurações da loja
 const loadStoreSettings = async () => {
   try {
-    // Timeout de 5 segundos no cliente também
+    // Timeout de 12 segundos (Vercel cold start pode demorar)
     const settingsPromise = $fetch('/api/public/settings');
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout')), 5000)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout')), 12000)
     );
     const settings = await Promise.race([settingsPromise, timeoutPromise]);
     
@@ -193,6 +193,7 @@ const loadStoreSettings = async () => {
       storeName: "Queiroz Hamburgueria",
       logo: "/logo.jpg",
       banner: "",
+      banners: [],
       isOpen: false,
       deliveryMinTime: 30,
       deliveryMaxTime: 60,
