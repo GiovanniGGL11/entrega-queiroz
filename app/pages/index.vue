@@ -2179,21 +2179,25 @@ body {
 }
 
 .carousel-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255, 255, 255, 0.5);
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  background: rgba(255, 255, 255, 0.5) !important;
   cursor: pointer;
-  padding: 0;
+  padding: 0 !important;
+  margin: 0 !important;
   transition: all 0.3s ease;
   flex-shrink: 0;
+  min-width: unset !important;
+  min-height: unset !important;
+  box-shadow: none !important;
 }
 
 .carousel-dot.active {
-  background: white;
-  width: 18px;
-  border-radius: 3px;
+  background: white !important;
+  width: 18px !important;
+  border-radius: 3px !important;
 }
 
 .carousel-arrow {
