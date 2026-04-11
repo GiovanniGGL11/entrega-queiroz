@@ -2164,57 +2164,36 @@ body {
 
 .carousel-dots {
   position: absolute;
-  bottom: 12px;
+  bottom: 14px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 5px;
   z-index: 2;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  padding: 5px 8px;
+  border-radius: 20px;
 }
 
 .carousel-dot {
-  width: 24px;
-  height: 24px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   border: none;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   padding: 0;
-  position: relative;
-  transition: background 0.2s;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
 }
 
-.carousel-dot::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.6);
-  transition: background 0.2s, width 0.2s, border-radius 0.2s;
-}
-
-.carousel-dot.active::after {
+.carousel-dot.active {
   background: white;
-  width: 20px;
-  border-radius: 4px;
-}
-
-@media (max-width: 640px) {
-  .carousel-dot {
-    width: 16px;
-    height: 16px;
-  }
-  .carousel-dot::after {
-    width: 6px;
-    height: 6px;
-  }
-  .carousel-dot.active::after {
-    width: 14px;
-  }
+  width: 18px;
+  border-radius: 3px;
 }
 
 .carousel-arrow {
