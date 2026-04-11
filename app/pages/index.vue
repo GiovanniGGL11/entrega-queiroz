@@ -161,12 +161,7 @@ const compareIds = (id1, id2) => {
 // Carregar configurações da loja
 const loadStoreSettings = async () => {
   try {
-    // Timeout de 12 segundos (Vercel cold start pode demorar)
-    const settingsPromise = $fetch('/api/public/settings');
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Timeout')), 12000)
-    );
-    const settings = await Promise.race([settingsPromise, timeoutPromise]);
+    const settings = await $fetch('/api/public/settings');
     
     storeSettings.value = {
       storeName: settings.storeName || "",
