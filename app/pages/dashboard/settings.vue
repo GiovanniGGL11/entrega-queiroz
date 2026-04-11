@@ -290,87 +290,48 @@
             </div>
           </div>
 
+          <!-- Carrossel de Banners -->
           <div class="form-group">
-            <label for="banner">Banner Principal</label>
-            <div class="image-preview-wrapper">
-              <img
-                :src="form.banner || '/not_found.jpg'"
-                alt="Banner"
-                class="image-preview banner-preview"
-                @click="openImageOverlay(form.banner)"
-                style="cursor: pointer;"
-              />
-              <div class="image-info">
-                <p>Recomendado: 1200x400px</p>
-                <p>Formato: JPG, PNG, WEBP</p>
-                <p>Máximo: 5MB</p>
-              </div>
-            </div>
-            <div class="upload-buttons">
-              <label class="btn-upload">
-                <input
-                  type="file"
-                  accept="image/*"
-                  @change="handleFileUpload($event, 'banner')"
-                  :disabled="uploadingBanner"
-                  style="display: none"
+            <label>Banners do Carrossel</label>
+            <p class="field-hint">Adicione um ou mais banners. Se houver mais de um, eles vão rotacionar automaticamente no cardápio. Recomendado: 1200x400px.</p>
+
+            <div class="carousel-manager">
+              <div v-for="(banner, index) in allBanners" :key="index" class="carousel-banner-item">
+                <div class="carousel-banner-number">{{ index + 1 }}</div>
+                <img
+                  :src="banner || '/not_found.jpg'"
+                  class="carousel-banner-thumb"
+                  @click="openImageOverlay(banner)"
+                  style="cursor:pointer;"
                 />
-                <span v-if="uploadingBanner" class="loading-spinner-inline"></span>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="17 8 12 3 7 8"></polyline>
-                  <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
-                {{ uploadingBanner ? 'Enviando...' : 'Fazer Upload' }}
-              </label>
-              <span class="or-divider">ou</span>
-              <input
-                v-model="form.banner"
-                type="url"
-                placeholder="Cole uma URL"
-                class="url-input"
-              />
-            </div>
-          </div>
-
-          <!-- Banners extras para carrossel -->
-          <div class="form-group">
-            <label>Banners Extras (Carrossel)</label>
-            <p class="field-hint">Adicione mais banners para criar um carrossel automático. O banner principal será sempre o primeiro.</p>
-
-            <div v-for="(banner, index) in form.banners" :key="index" class="banner-extra-item">
-              <div class="banner-extra-preview-row">
-                <img :src="banner || '/not_found.jpg'" class="banner-extra-thumb" @click="openImageOverlay(banner)" style="cursor:pointer;" />
-                <div class="banner-extra-actions">
+                <div class="carousel-banner-controls">
                   <label class="btn-upload btn-upload-sm">
                     <input
                       type="file"
                       accept="image/*"
-                      @change="handleBannerExtraUpload($event, index)"
-                      :disabled="uploadingBannerExtra[index]"
+                      @change="handleCarouselUpload($event, index)"
+                      :disabled="uploadingCarousel[index]"
                       style="display:none"
                     />
-                    <span v-if="uploadingBannerExtra[index]" class="loading-spinner-inline"></span>
+                    <span v-if="uploadingCarousel[index]" class="loading-spinner-inline"></span>
                     <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                       <polyline points="17 8 12 3 7 8"></polyline>
                       <line x1="12" y1="3" x2="12" y2="15"></line>
                     </svg>
-                    {{ uploadingBannerExtra[index] ? 'Enviando...' : 'Upload' }}
+                    {{ uploadingCarousel[index] ? 'Enviando...' : 'Upload' }}
                   </label>
-                  <button type="button" @click="removeBannerExtra(index)" class="btn-remove-banner">
+                  <button v-if="allBanners.length > 1" type="button" @click="removeCarouselBanner(index)" class="btn-remove-banner">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <line x1="18" y1="6" x2="6" y2="18"></line>
                       <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
-                    Remover
                   </button>
                 </div>
               </div>
-              <input v-model="form.banners[index]" type="url" placeholder="ou cole uma URL" class="url-input" style="margin-top:6px;" />
             </div>
 
-            <button type="button" @click="addBannerExtra" class="btn-add-banner">
+            <button type="button" @click="addCarouselBanner" class="btn-add-banner">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -1231,7 +1192,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick, reactive } from 'vue'
 import ImageOverlay from '~/components/ImageOverlay.vue'
 import { useImageOverlay } from '~/composables/useImageOverlay'
 import { useStoreStatus } from '~/composables/useStoreStatus'
@@ -1257,6 +1218,7 @@ const uploadingLogo = ref(false)
 const uploadingBanner = ref(false)
 const uploadingInfoImage = ref(false)
 const uploadingBannerExtra = ref({})
+const uploadingCarousel = ref({})
 let map = null
 let mapCircles = []
 let storeMarker = null
@@ -2112,15 +2074,34 @@ const validateZones = () => {
   return !hasError
 }
 
-const addBannerExtra = () => {
-  form.value.banners.push('')
+// Carrossel unificado: banner + banners extras como lista única
+const allBanners = computed({
+  get() {
+    const list = []
+    if (form.value.banner) list.push(form.value.banner)
+    else list.push('') // sempre pelo menos 1 slot
+    if (Array.isArray(form.value.banners)) {
+      form.value.banners.forEach(b => list.push(b))
+    }
+    return list
+  },
+  set(newList) {
+    form.value.banner = newList[0] || ''
+    form.value.banners = newList.slice(1)
+  }
+})
+
+const addCarouselBanner = () => {
+  const list = [...allBanners.value, '']
+  allBanners.value = list
 }
 
-const removeBannerExtra = (index) => {
-  form.value.banners.splice(index, 1)
+const removeCarouselBanner = (index) => {
+  const list = allBanners.value.filter((_, i) => i !== index)
+  allBanners.value = list.length ? list : ['']
 }
 
-const handleBannerExtraUpload = async (event, index) => {
+const handleCarouselUpload = async (event, index) => {
   const file = event.target.files[0]
   if (!file) return
   if (!file.type.startsWith('image/')) {
@@ -2131,7 +2112,7 @@ const handleBannerExtraUpload = async (event, index) => {
     showAlert('Imagem muito grande. Máximo 5MB', 'error')
     return
   }
-  uploadingBannerExtra.value[index] = true
+  uploadingCarousel.value[index] = true
   const reader = new FileReader()
   reader.onload = async (e) => {
     try {
@@ -2139,12 +2120,14 @@ const handleBannerExtraUpload = async (event, index) => {
         method: 'POST',
         body: { image: e.target.result, filename: file.name, type: 'banner' }
       })
-      form.value.banners[index] = response.imageUrl
+      const list = [...allBanners.value]
+      list[index] = response.imageUrl
+      allBanners.value = list
       showAlert('Banner carregado com sucesso!', 'success')
     } catch (error) {
       showAlert(error.data?.message || 'Erro ao fazer upload', 'error')
     } finally {
-      uploadingBannerExtra.value[index] = false
+      uploadingCarousel.value[index] = false
     }
   }
   reader.readAsDataURL(file)
@@ -3579,23 +3562,50 @@ onUnmounted(() => {
   gap: 1rem;
 }
 
-.banner-extra-item {
+.carousel-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
   margin-bottom: 1rem;
-  padding: 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-bg-secondary, #f9fafb);
 }
 
-.banner-extra-preview-row {
+.carousel-banner-item {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-secondary, #f9fafb);
 }
 
-.banner-extra-actions {
+.carousel-banner-number {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.carousel-banner-thumb {
+  width: 120px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.carousel-banner-controls {
   display: flex;
   gap: 0.5rem;
+  align-items: center;
   flex-wrap: wrap;
 }
 
