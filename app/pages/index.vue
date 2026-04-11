@@ -91,7 +91,12 @@ const categories = ref([])
 const loadingCategories = ref(false)
 
 // Carrossel de banners
+// Carrossel infinito seamless
+// currentBanner aponta para o índice real (0-based na lista original)
+// A track tem: [clone-do-último, ...originais, clone-do-primeiro]
+// Índice no track = currentBanner + 1
 const currentBanner = ref(0)
+const carouselTransition = ref(true)
 let carouselInterval = null
 
 const carouselBanners = computed(() => {
@@ -103,13 +108,68 @@ const carouselBanners = computed(() => {
   return banners
 })
 
+// Track infinita: clone-último + originais + clone-primeiro
+const infiniteBanners = computed(() => {
+  const list = carouselBanners.value
+  if (list.length <= 1) return list
+  return [list[list.length - 1], ...list, list[0]]
+})
+
+// Posição real no track (offset +1 por causa do clone-do-último no início)
+const trackIndex = computed(() => {
+  const list = carouselBanners.value
+  if (list.length <= 1) return 0
+  return currentBanner.value + 1
+})
+
+let isJumping = false
+
 const nextBanner = () => {
-  currentBanner.value = (currentBanner.value + 1) % carouselBanners.value.length
+  if (isJumping) return
+  const len = carouselBanners.value.length
+  if (len <= 1) return
+  currentBanner.value++
+  // Chegou no clone do primeiro → pular silenciosamente para o real
+  if (currentBanner.value >= len) {
+    setTimeout(() => {
+      isJumping = true
+      carouselTransition.value = false
+      currentBanner.value = 0
+      nextTick(() => {
+        setTimeout(() => {
+          carouselTransition.value = true
+          isJumping = false
+        }, 20)
+      })
+    }, 400)
+  }
 }
+
 const prevBanner = () => {
-  currentBanner.value = (currentBanner.value - 1 + carouselBanners.value.length) % carouselBanners.value.length
+  if (isJumping) return
+  const len = carouselBanners.value.length
+  if (len <= 1) return
+  currentBanner.value--
+  // Chegou no clone do último → pular silenciosamente para o real
+  if (currentBanner.value < 0) {
+    setTimeout(() => {
+      isJumping = true
+      carouselTransition.value = false
+      currentBanner.value = len - 1
+      nextTick(() => {
+        setTimeout(() => {
+          carouselTransition.value = true
+          isJumping = false
+        }, 20)
+      })
+    }, 400)
+  }
 }
-const goToBanner = (i) => { currentBanner.value = i }
+
+const goToBanner = (i) => {
+  if (isJumping) return
+  currentBanner.value = i
+}
 
 const startCarousel = () => {
   stopCarousel()
@@ -457,7 +517,7 @@ const scrollToCategory = (categoryId) => {
   const element = document.getElementById(`category-${normalizedCategoryId}`);
 
   if (element) {
-    const offset = 80; // Ajustado para compensar a barra de categorias fixa
+    const offset = 80;
     const top = element.getBoundingClientRect().top + window.scrollY - offset;
     window.scrollTo({ top, behavior: "smooth" });
   }
@@ -1197,10 +1257,16 @@ useHead({
     <!-- Hero Section -->
     <div class="hero">
       <!-- Carrossel de banners -->
-      <div class="banner-carousel" v-if="carouselBanners.length > 0">
-        <div class="carousel-track" :style="{ transform: `translateX(-${currentBanner * 100}%)` }">
+      <div class="banner-carousel" v-if="carouselBanners.length > 0" @mouseenter="stopCarousel" @mouseleave="startCarousel">
+        <div
+          class="carousel-track"
+          :style="{
+            transform: `translateX(-${trackIndex * 100}%)`,
+            transition: carouselTransition ? 'transform 0.5s ease' : 'none'
+          }"
+        >
           <img
-            v-for="(src, i) in carouselBanners"
+            v-for="(src, i) in infiniteBanners"
             :key="i"
             :src="src"
             alt="Banner da loja"
@@ -2087,7 +2153,6 @@ body {
 .carousel-track {
   display: flex;
   height: 100%;
-  transition: transform 0.5s ease;
 }
 
 .carousel-slide {
