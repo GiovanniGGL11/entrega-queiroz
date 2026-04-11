@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   try { verifyUserToken(token) } catch { throw createError({ statusCode: 401, statusMessage: 'Token inválido' }) }
 
   const body = await readBody(event);
-  const { code, type, value, minOrder, maxUses, expiresAt } = body;
+  const { code, type, value, minOrder, maxUses, startsAt, expiresAt } = body;
 
   if (!code || !code.trim()) throw createError({ statusCode: 400, message: 'Código obrigatório' });
   if (!['percentage', 'fixed'].includes(type)) throw createError({ statusCode: 400, message: 'Tipo inválido' });
@@ -31,6 +31,7 @@ export default defineEventHandler(async (event) => {
     maxUses: maxUses ? parseInt(maxUses) : null,
     usedCount: 0,
     active: true,
+    startsAt: startsAt ? new Date(startsAt + 'T00:00:00-03:00') : null,
     expiresAt: expiresAt ? new Date(expiresAt + 'T23:59:59-03:00') : null,
     createdAt: new Date()
   };

@@ -16,6 +16,7 @@ const form = ref({
   value: '',
   minOrder: '',
   maxUses: '',
+  startsAt: '',
   expiresAt: ''
 })
 
@@ -37,6 +38,7 @@ const statusLabel = (c) => {
   if (!c.active) return { text: 'Inativo', cls: 'badge-inactive' }
   if (c.expiresAt && new Date(c.expiresAt) < new Date()) return { text: 'Expirado', cls: 'badge-expired' }
   if (c.maxUses !== null && c.usedCount >= c.maxUses) return { text: 'Esgotado', cls: 'badge-expired' }
+  if (c.startsAt && new Date(c.startsAt) > new Date()) return { text: 'Agendado', cls: 'badge-scheduled' }
   return { text: 'Ativo', cls: 'badge-active' }
 }
 
@@ -53,7 +55,7 @@ const loadCoupons = async () => {
 }
 
 const openModal = () => {
-  form.value = { code: '', type: 'percentage', value: '', minOrder: '', maxUses: '', expiresAt: '' }
+  form.value = { code: '', type: 'percentage', value: '', minOrder: '', maxUses: '', startsAt: '', expiresAt: '' }
   showModal.value = true
 }
 
@@ -74,6 +76,7 @@ const createCoupon = async () => {
         value: form.value.value,
         minOrder: form.value.minOrder || 0,
         maxUses: form.value.maxUses || null,
+        startsAt: form.value.startsAt || null,
         expiresAt: form.value.expiresAt || null
       }
     })
@@ -173,6 +176,7 @@ onMounted(loadCoupons)
             <span v-if="coupon.minOrder > 0">Mín: {{ formatPrice(coupon.minOrder) }}</span>
             <span v-if="coupon.maxUses !== null">Usos: {{ coupon.usedCount }}/{{ coupon.maxUses }}</span>
             <span v-else>Usos: {{ coupon.usedCount }}/∞</span>
+            <span v-if="coupon.startsAt">Início: {{ formatDate(coupon.startsAt) }}</span>
             <span v-if="coupon.expiresAt">Expira: {{ formatDate(coupon.expiresAt) }}</span>
           </div>
         </div>
@@ -234,10 +238,17 @@ onMounted(loadCoupons)
             </div>
           </div>
 
-          <div class="form-group">
-            <label>Data de expiração</label>
-            <input v-model="form.expiresAt" type="date" class="form-input" />
-            <small>Deixe em branco para não expirar</small>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Data de início</label>
+              <input v-model="form.startsAt" type="date" class="form-input" />
+              <small>Deixe em branco para ativar imediatamente</small>
+            </div>
+            <div class="form-group">
+              <label>Data de expiração</label>
+              <input v-model="form.expiresAt" type="date" class="form-input" />
+              <small>Deixe em branco para não expirar</small>
+            </div>
           </div>
         </div>
 
@@ -397,6 +408,7 @@ onMounted(loadCoupons)
 .badge-active { background: #dcfce7; color: #166534; }
 .badge-inactive { background: #f1f5f9; color: #64748b; }
 .badge-expired { background: #fee2e2; color: #991b1b; }
+.badge-scheduled { background: #dbeafe; color: #1e40af; }
 
 .coupon-value {
   font-size: 1.0625rem;

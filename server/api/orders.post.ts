@@ -319,7 +319,8 @@ export default defineEventHandler(async (event) => {
       const coupon = await coupons.findOne({ code: couponCode.trim().toUpperCase() });
       if (coupon && coupon.active) {
         const subtotalSemFrete = calculatedTotal - realDeliveryFee;
-        if (!coupon.expiresAt || new Date(coupon.expiresAt) >= new Date()) {
+        const couponStarted = !coupon.startsAt || new Date(coupon.startsAt) <= new Date();
+        if (couponStarted && (!coupon.expiresAt || new Date(coupon.expiresAt) >= new Date())) {
           if (coupon.maxUses === null || coupon.usedCount < coupon.maxUses) {
             if (subtotalSemFrete >= (coupon.minOrder || 0)) {
               if (coupon.type === 'percentage') {

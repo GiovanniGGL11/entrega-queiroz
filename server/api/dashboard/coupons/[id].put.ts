@@ -22,6 +22,7 @@ export default defineEventHandler(async (event) => {
   if (body.value !== undefined) updateFields.value = parseFloat(body.value);
   if (body.minOrder !== undefined) updateFields.minOrder = parseFloat(body.minOrder) || 0;
   if (body.maxUses !== undefined) updateFields.maxUses = body.maxUses ? parseInt(body.maxUses) : null;
+  if (body.startsAt !== undefined) updateFields.startsAt = body.startsAt ? new Date(body.startsAt + 'T00:00:00-03:00') : null;
   if (body.expiresAt !== undefined) updateFields.expiresAt = body.expiresAt ? new Date(body.expiresAt + 'T23:59:59-03:00') : null;
 
   await coupons.updateOne({ _id: new ObjectId(id) }, { $set: updateFields });

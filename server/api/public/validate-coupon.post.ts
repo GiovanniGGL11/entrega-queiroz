@@ -15,6 +15,9 @@ export default defineEventHandler(async (event) => {
 
   if (!coupon) throw createError({ statusCode: 404, message: 'Cupom não encontrado' });
   if (!coupon.active) throw createError({ statusCode: 400, message: 'Cupom inativo' });
+  if (coupon.startsAt && new Date(coupon.startsAt) > new Date()) {
+    throw createError({ statusCode: 400, message: 'Este cupom ainda não está disponível' });
+  }
   if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))) {
     throw createError({ statusCode: 400, message: 'Cupom expirado' });
   }
