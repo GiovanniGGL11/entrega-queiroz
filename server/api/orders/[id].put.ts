@@ -3,6 +3,7 @@ import { getDB } from "../../utils/db";
 import { ObjectId } from "mongodb";
 import { verifyUserToken } from "../../utils/auth";
 import { getRequestHeader, createError } from 'h3';
+import { notifyOrderStatus } from "../../utils/whatsapp";
 
 export default defineEventHandler(async (event) => {
   // Autenticação direta sem middleware
@@ -87,6 +88,11 @@ export default defineEventHandler(async (event) => {
 
     // Buscar o pedido atualizado
     const updatedOrder = await orders.findOne({ _id: new ObjectId(id) });
+
+    // Notificar cliente via WhatsApp (só executa se WHATSAPP_ENABLED=true)
+    notifyOrderStatus(updatedOrder, status).catch(err =>
+      console.error('[WhatsApp] Falha ao notificar status:', err)
+    )
 
     return {
       success: true,
