@@ -728,7 +728,7 @@ useHead({
                   </button>
                   <button
                     type="button"
-                    class="mode-btn"
+                    class="mode-btn mode-btn-retirada"
                     :class="{ active: deliveryMode === 'retirada' }"
                     @click="deliveryMode = 'retirada'"
                   >
@@ -2183,6 +2183,12 @@ useHead({
   border-color: var(--primary-color, #e53e3e);
   background: rgba(229, 62, 62, 0.06);
   color: var(--primary-color, #e53e3e);
+}
+
+.mode-btn-retirada.active {
+  border-color: #16a34a;
+  background: #f0fdf4;
+  color: #166534;
 }
 
 .badge-gratis {
