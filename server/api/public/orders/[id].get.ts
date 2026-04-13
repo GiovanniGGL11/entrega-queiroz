@@ -22,6 +22,7 @@ export default defineEventHandler(async (event) => {
     _id: order._id.toString(),
     orderNumber: order.orderNumber,
     status: order.status,
+    type: order.type || 'delivery',
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
     motoboyNome: order.motoboyNome || null,
