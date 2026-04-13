@@ -161,7 +161,7 @@
                 {{ order.type === 'balcao' ? 'Balcão' : order.type === 'retirada' ? 'Retirada' : 'Delivery' }}
               </span>
               <span class="status-badge" :class="order.status">
-                {{ getStatusText(order.status) }}
+                {{ getStatusText(order.status, order.type) }}
               </span>
             </div>
           </div>
@@ -441,18 +441,16 @@
         <div class="modal-body">
           <div class="form-group">
             <label>Status Atual:</label>
-            <span class="current-status">{{ getStatusText(orderToUpdate?.status) }}</span>
+            <span class="current-status">{{ getStatusText(orderToUpdate?.status, orderToUpdate?.type) }}</span>
           </div>
           <div class="form-group">
             <label for="newStatus">Novo Status:</label>
             <select id="newStatus" v-model="newStatus" class="status-select">
-              <option value="pending">Pendente</option>
-              <option value="confirmed">Confirmado</option>
-              <option value="preparing">Preparando</option>
-              <option value="ready">Pronto</option>
-              <option value="out_for_delivery">Saiu para entrega</option>
-              <option value="delivered">Entregue</option>
-              <option value="cancelled">Cancelado</option>
+              <option
+                v-for="opt in statusOptionsForOrder"
+                :key="opt.value"
+                :value="opt.value"
+              >{{ opt.label }}</option>
             </select>
           </div>
         </div>
@@ -864,18 +862,54 @@ const formatDate = (date) => {
   })
 }
 
-const getStatusText = (status) => {
+const getStatusText = (status, orderType = 'delivery') => {
+  const isBalcao = orderType === 'balcao'
+  const isRetirada = orderType === 'retirada'
+
   const statusMap = {
     pending: 'Pendente',
     confirmed: 'Confirmado',
-    preparing: 'Preparando',
-    ready: 'Pronto',
+    preparing: 'Em Preparo',
+    ready: isBalcao ? 'Pronto, retire no balcão' : isRetirada ? 'Pronto, retire no local' : 'Pronto',
     out_for_delivery: 'Saiu para entrega',
-    delivered: 'Entregue',
+    delivered: isBalcao || isRetirada ? 'Finalizado' : 'Entregue',
     cancelled: 'Cancelado'
   }
   return statusMap[status] || status
 }
+
+const statusOptionsForOrder = computed(() => {
+  const type = orderToUpdate.value?.type || 'delivery'
+  if (type === 'balcao') {
+    return [
+      { value: 'confirmed', label: 'Confirmado' },
+      { value: 'preparing', label: 'Em Preparo' },
+      { value: 'ready', label: 'Pronto, retire no balcão' },
+      { value: 'delivered', label: 'Finalizado' },
+      { value: 'cancelled', label: 'Cancelado' },
+    ]
+  }
+  if (type === 'retirada') {
+    return [
+      { value: 'pending', label: 'Pendente' },
+      { value: 'confirmed', label: 'Confirmado' },
+      { value: 'preparing', label: 'Em Preparo' },
+      { value: 'ready', label: 'Pronto, retire no local' },
+      { value: 'delivered', label: 'Finalizado' },
+      { value: 'cancelled', label: 'Cancelado' },
+    ]
+  }
+  // delivery
+  return [
+    { value: 'pending', label: 'Pendente' },
+    { value: 'confirmed', label: 'Confirmado' },
+    { value: 'preparing', label: 'Em Preparo' },
+    { value: 'ready', label: 'Pronto' },
+    { value: 'out_for_delivery', label: 'Saiu para entrega' },
+    { value: 'delivered', label: 'Entregue' },
+    { value: 'cancelled', label: 'Cancelado' },
+  ]
+})
 
 const getPaymentMethodText = (method) => {
   const methodMap = {
@@ -1453,8 +1487,8 @@ const saveStatusEdit = async () => {
   }
 
   const orderId = orderToUpdate.value.id
-  const currentStatusText = getStatusText(orderToUpdate.value.status)
-  const newStatusText = getStatusText(newStatus.value)
+  const currentStatusText = getStatusText(orderToUpdate.value.status, orderToUpdate.value.type)
+  const newStatusText = getStatusText(newStatus.value, orderToUpdate.value.type)
 
   const title = 'Confirmar Alteração de Status'
   const message = `Deseja realmente alterar o status do pedido #${orderId} de "${currentStatusText}" para "${newStatusText}"?`
