@@ -149,24 +149,47 @@
           </div>
         </div>
 
-        <!-- Info entrega -->
+        <!-- Info entrega / retirada -->
         <div class="detail-card">
           <h3>{{ isRetirada ? 'Retirada no Local' : 'Entrega' }}</h3>
           <div class="info-rows">
-            <div class="info-row">
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
-              </svg>
-              <span>{{ enderecoFormatado }}</span>
-            </div>
-            <div class="info-row" v-if="pedido.deliveryInfo.estimatedTime">
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-              <span>Estimativa: {{ pedido.deliveryInfo.estimatedTime }}</span>
-            </div>
+
+            <!-- Retirada: mostrar aviso do local -->
+            <template v-if="isRetirada">
+              <div class="info-row retirada-aviso">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                <span>Retire no estabelecimento quando receber o aviso de pronto</span>
+              </div>
+            </template>
+
+            <!-- Delivery: endereço e tempo estimado -->
+            <template v-else>
+              <div class="info-row">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                <span>{{ enderecoFormatado }}</span>
+              </div>
+              <div class="info-row" v-if="pedido.deliveryInfo.estimatedTime">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span>Estimativa: {{ pedido.deliveryInfo.estimatedTime }}</span>
+              </div>
+              <div class="info-row" v-if="pedido.motoboyNome">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="8" r="4"></circle>
+                  <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"></path>
+                </svg>
+                <span>Motoboy: <strong>{{ pedido.motoboyNome }}</strong></span>
+              </div>
+            </template>
+
+            <!-- Pagamento — aparece para todos -->
             <div class="info-row">
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
@@ -174,13 +197,8 @@
               </svg>
               <span>{{ pagamentoLabel }}</span>
             </div>
-            <div class="info-row" v-if="pedido.motoboyNome">
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="8" r="4"></circle>
-                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"></path>
-              </svg>
-              <span>Motoboy: <strong>{{ pedido.motoboyNome }}</strong></span>
-            </div>
+
+            <!-- Observações — aparece para todos -->
             <div class="info-row" v-if="pedido.notes">
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -423,6 +441,7 @@ onUnmounted(() => {
   color: white;
 }
 .hero-active { background: linear-gradient(135deg, #f97316, #fb923c); }
+.hero-ready { background: linear-gradient(135deg, #16a34a, #22c55e); }
 .hero-delivery { background: linear-gradient(135deg, #2563eb, #3b82f6); }
 .hero-delivered { background: linear-gradient(135deg, #16a34a, #22c55e); }
 .hero-cancelled { background: linear-gradient(135deg, #dc2626, #ef4444); }
@@ -647,6 +666,15 @@ onUnmounted(() => {
   line-height: 1.4;
 }
 .info-row svg { flex-shrink: 0; margin-top: 2px; color: #aaa; }
+.retirada-aviso {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  color: #c2410c;
+  font-weight: 500;
+}
+.retirada-aviso svg { color: #f97316; }
 
 /* Auto update */
 .auto-update {
