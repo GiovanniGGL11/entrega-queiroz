@@ -151,7 +151,7 @@
 
         <!-- Info entrega -->
         <div class="detail-card">
-          <h3>Entrega</h3>
+          <h3>{{ isRetirada ? 'Retirada no Local' : 'Entrega' }}</h3>
           <div class="info-rows">
             <div class="info-row">
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -216,34 +216,56 @@ const storeLogo = ref('')
 
 let pollingInterval = null
 
-const statusMap = {
-  pending: 'Aguardando confirmação',
-  confirmed: 'Pedido confirmado',
-  preparing: 'Em preparação',
-  ready: 'Pronto para entrega',
-  out_for_delivery: 'Saiu para entrega!',
-  delivered: 'Entregue!',
-  cancelled: 'Cancelado'
-}
+const isRetirada = computed(() => pedido.value?.type === 'retirada')
 
-const statusOrder = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered']
+const statusMap = computed(() => {
+  if (isRetirada.value) {
+    return {
+      pending: 'Aguardando confirmação',
+      confirmed: 'Pedido confirmado',
+      preparing: 'Em preparação',
+      ready: 'Pronto! Pode vir retirar',
+      delivered: 'Retirado!',
+      cancelled: 'Cancelado'
+    }
+  }
+  return {
+    pending: 'Aguardando confirmação',
+    confirmed: 'Pedido confirmado',
+    preparing: 'Em preparação',
+    ready: 'Pronto para entrega',
+    out_for_delivery: 'Saiu para entrega!',
+    delivered: 'Entregue!',
+    cancelled: 'Cancelado'
+  }
+})
 
-const statusLabel = computed(() => statusMap[pedido.value?.status] || pedido.value?.status)
+const statusOrder = computed(() => {
+  if (isRetirada.value) {
+    return ['pending', 'confirmed', 'preparing', 'ready', 'delivered']
+  }
+  return ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered']
+})
+
+const statusLabel = computed(() => statusMap.value[pedido.value?.status] || pedido.value?.status)
 
 const statusClass = computed(() => {
   const s = pedido.value?.status
   if (s === 'delivered') return 'hero-delivered'
   if (s === 'cancelled') return 'hero-cancelled'
   if (s === 'out_for_delivery') return 'hero-delivery'
+  if (s === 'ready') return 'hero-ready'
   return 'hero-active'
 })
 
 const timeline = computed(() => {
   if (!pedido.value) return []
-  const currentIdx = statusOrder.indexOf(pedido.value.status)
-  return statusOrder.map((s, idx) => ({
+  const order = statusOrder.value
+  const map = statusMap.value
+  const currentIdx = order.indexOf(pedido.value.status)
+  return order.map((s, idx) => ({
     status: s,
-    label: statusMap[s],
+    label: map[s],
     done: idx <= currentIdx,
     current: idx === currentIdx
   }))

@@ -114,13 +114,25 @@ function buildStatusMessage(order: any, newStatus: string): string | null {
  */
 export async function notifyOrderStatus(order: any, newStatus: string): Promise<void> {
   const config = getConfig()
-  if (!config.enabled) return
+
+  console.log(`[WhatsApp] Status: ${newStatus} | Enabled: ${config.enabled} | Phone: ${order.customerInfo?.phone || 'N/A'}`)
+
+  if (!config.enabled) {
+    console.log('[WhatsApp] Desativado — defina WHATSAPP_ENABLED=true no Vercel')
+    return
+  }
 
   const phone = order.customerInfo?.phone
-  if (!phone || phone.trim() === '') return
+  if (!phone || phone.trim() === '') {
+    console.log('[WhatsApp] Sem telefone no pedido, pulando notificação')
+    return
+  }
 
   const message = buildStatusMessage(order, newStatus)
-  if (!message) return
+  if (!message) {
+    console.log(`[WhatsApp] Sem mensagem para status "${newStatus}" (tipo: ${order.type})`)
+    return
+  }
 
   await sendMessage(phone, message)
 }
