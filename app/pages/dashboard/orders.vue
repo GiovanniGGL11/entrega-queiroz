@@ -153,9 +153,17 @@
                 {{ formatDate(order.createdAt) }}
               </span>
             </div>
-            <span class="status-badge" :class="order.status">
-              {{ getStatusText(order.status) }}
-            </span>
+            <div class="order-badges">
+              <span class="type-badge" :class="order.type || 'delivery'">
+                <svg v-if="order.type === 'balcao'" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                <svg v-else-if="order.type === 'retirada'" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                {{ order.type === 'balcao' ? 'Balcão' : order.type === 'retirada' ? 'Retirada' : 'Delivery' }}
+              </span>
+              <span class="status-badge" :class="order.status">
+                {{ getStatusText(order.status) }}
+              </span>
+            </div>
           </div>
           
           <!-- Informações do Cliente -->
@@ -809,6 +817,8 @@ const viewOrderFromNotification = (order) => {
     zipCode: order.deliveryInfo?.zipCode,
     complement: order.deliveryInfo?.complement,
     status: order.status,
+    type: order.type || 'delivery',
+    attendant: order.attendant || '',
     total: order.totalAmount,
     subtotal: (order.items || []).reduce((s, i) => s + (i.subtotal ?? i.price * i.quantity ?? 0), 0),
     discount: order.discount ?? 0,
@@ -1176,6 +1186,8 @@ const loadOrders = async (showLoading = true, forceRefresh = false) => {
         estimatedTime: deliveryInfo.estimatedTime || '',
         motoboyNome: order.motoboyNome || '',
         motoboyId: order.motoboyId || '',
+        type: order.type || 'delivery', // 'delivery' | 'retirada' | 'balcao'
+        attendant: order.attendant || '',
         items: items.map(item => ({
           id: item.productId || item._id?.toString() || '',
           name: item.name || 'Produto sem nome',
@@ -1933,6 +1945,40 @@ onUnmounted(() => {
 
 .order-date svg {
   flex-shrink: 0;
+}
+
+.order-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.type-badge.delivery {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.type-badge.retirada {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.type-badge.balcao {
+  background: #fef3c7;
+  color: #b45309;
 }
 
 .status-badge {
