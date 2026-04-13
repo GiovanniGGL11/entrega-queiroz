@@ -25,10 +25,13 @@ export default defineEventHandler(async (event) => {
     customerInfo,
     items,
     deliveryInfo,
+    deliveryMode,
     paymentMethod,
     notes,
     couponCode
   } = body;
+
+  const isRetirada = deliveryMode === 'retirada'
 
   // Validações básicas
   if (!customerInfo || !customerInfo.name || !customerInfo.phone) {
@@ -50,7 +53,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  if (!deliveryInfo || !deliveryInfo.address) {
+  if (!isRetirada && (!deliveryInfo || !deliveryInfo.address)) {
     throw createError({
       statusCode: 400,
       message: "Informações de entrega são obrigatórias",
@@ -196,13 +199,16 @@ export default defineEventHandler(async (event) => {
     // CALCULAR taxa de entrega baseado no endereço (não confiar no frontend)
     let realDeliveryFee = 0;
     let deliveryZone = '';
-    let estimatedTime = '30-45 min';
-    
+    let estimatedTime = isRetirada ? 'Retirada no local' : '30-45 min';
+
     // Usar storeConfig que já foi obtido anteriormente
     const storeSettings = storeConfig;
-    
-    
-    if (deliveryInfo.latitude && deliveryInfo.longitude) {
+
+    // Retirada: sem frete, sem validação de CEP
+    if (isRetirada) {
+      realDeliveryFee = 0;
+      deliveryZone = 'Retirada';
+    } else if (deliveryInfo.latitude && deliveryInfo.longitude) {
       // Calcular usando coordenadas (mais preciso)
       if (storeSettings && storeSettings.deliveryZones) {
         const storeLat = storeSettings.location?.latitude || -23.5505;
@@ -380,6 +386,7 @@ export default defineEventHandler(async (event) => {
 
     const order = {
       orderNumber,
+      type: isRetirada ? 'retirada' : 'delivery',
       customerInfo: {
         name: customerInfo.name.trim(),
         phone: customerInfo.phone.trim(),

@@ -33,6 +33,7 @@ const deliveryInfo = ref({
 
 const paymentMethod = ref('pix')
 const notes = ref('')
+const deliveryMode = ref('delivery') // 'delivery' | 'retirada'
 
 // Cupom de desconto
 const couponCode = ref('')
@@ -269,8 +270,11 @@ const hasEnabledPaymentMethods = computed(() => {
   return Object.values(methods).some(enabled => enabled === true)
 })
 
+const isRetirada = computed(() => deliveryMode.value === 'retirada')
+
 const totalAmount = computed(() => {
-  return Math.max(0, cartSubtotal.value + deliveryInfo.value.deliveryFee - discountAmount.value)
+  const fee = isRetirada.value ? 0 : deliveryInfo.value.deliveryFee
+  return Math.max(0, cartSubtotal.value + fee - discountAmount.value)
 })
 
 const formatPrice = (value) => `R$ ${value.toFixed(2).replace(".", ",")}`
@@ -309,12 +313,27 @@ const isFormValid = computed(() => {
     return value && value.trim() !== ''
   })
   
-  return allRequiredFieldsFilled &&
-         deliveryInfo.value.canDeliver &&
-         !addressValidationError.value &&
-         deliveryInfo.value.deliveryFee >= 0 &&
+  const addressOk = isRetirada.value
+    ? true
+    : (deliveryInfo.value.canDeliver && !addressValidationError.value && deliveryInfo.value.deliveryFee >= 0)
+
+  // Para retirada, não exigir campos de endereço
+  const fieldsOk = isRetirada.value
+    ? requiredFields.every(({ enabled, required, value, field }) => {
+        if (!enabled || !required) return true
+        if (['deliveryAddress', 'deliveryNumber', 'deliveryComplement', 'deliveryNeighborhood', 'deliveryCity', 'deliveryZipCode'].includes(field)) return true
+        if (field === 'paymentMethod') {
+          const enabledMethods = storeSettings.value.enabledPaymentMethods || {}
+          return enabledMethods[value] === true && value && value.trim() !== ''
+        }
+        return value && value.trim() !== ''
+      })
+    : allRequiredFieldsFilled
+
+  return fieldsOk &&
+         addressOk &&
          cart.value.length > 0 &&
-         storeSettings.value.isOpen // Verificar se a loja está aberta
+         storeSettings.value.isOpen
 })
 
 // Submeter pedido
@@ -336,16 +355,19 @@ const submitOrder = async () => {
         phone: customerInfo.value.phone.trim(),
         email: customerInfo.value.email.trim()
       },
-      deliveryInfo: {
-        address: deliveryInfo.value.address.trim(),
-        number: deliveryInfo.value.number.trim(),
-        complement: deliveryInfo.value.complement.trim(),
-        neighborhood: deliveryInfo.value.neighborhood.trim(),
-        city: deliveryInfo.value.city.trim(),
-        zipCode: deliveryInfo.value.zipCode.trim(),
-        latitude: deliveryInfo.value.latitude,
-        longitude: deliveryInfo.value.longitude
-      },
+      deliveryMode: deliveryMode.value, // 'delivery' ou 'retirada'
+      deliveryInfo: isRetirada.value
+        ? { address: 'Retirada no estabelecimento', number: '', complement: '', neighborhood: '', city: '', zipCode: '', latitude: null, longitude: null }
+        : {
+            address: deliveryInfo.value.address.trim(),
+            number: deliveryInfo.value.number.trim(),
+            complement: deliveryInfo.value.complement.trim(),
+            neighborhood: deliveryInfo.value.neighborhood.trim(),
+            city: deliveryInfo.value.city.trim(),
+            zipCode: deliveryInfo.value.zipCode.trim(),
+            latitude: deliveryInfo.value.latitude,
+            longitude: deliveryInfo.value.longitude
+          },
       items: cart.value.map(item => ({
         productId: item.productId,
         name: item.name,
@@ -522,8 +544,13 @@ useHead({
           <h2>Pedido Confirmado!</h2>
           <p class="order-number">Número do pedido: <strong>{{ orderNumber }}</strong></p>
           <p class="success-message">
-            Seu pedido foi recebido e está sendo preparado. 
-            Tempo estimado de entrega: {{ storeSettings.deliveryMinTime }}-{{ storeSettings.deliveryMaxTime }} minutos.
+            <template v-if="deliveryMode === 'retirada'">
+              Seu pedido foi recebido! Dirija-se ao estabelecimento para retirar quando estiver pronto.
+            </template>
+            <template v-else>
+              Seu pedido foi recebido e está sendo preparado.
+              Tempo estimado de entrega: {{ storeSettings.deliveryMinTime }}-{{ storeSettings.deliveryMaxTime }} minutos.
+            </template>
           </p>
           <button v-if="orderId" @click="navigateTo(`/pedido/${orderId}`)" class="continue-shopping-btn">
             Acompanhar pedido
@@ -679,8 +706,49 @@ useHead({
                 </div>
               </div>
 
+              <!-- Modo de Entrega -->
+              <div class="form-section">
+                <h3>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+                  </svg>
+                  Modo de Entrega
+                </h3>
+                <div class="delivery-mode-toggle">
+                  <button
+                    type="button"
+                    class="mode-btn"
+                    :class="{ active: deliveryMode === 'delivery' }"
+                    @click="deliveryMode = 'delivery'"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+                    </svg>
+                    Entrega em casa
+                  </button>
+                  <button
+                    type="button"
+                    class="mode-btn"
+                    :class="{ active: deliveryMode === 'retirada' }"
+                    @click="deliveryMode = 'retirada'"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
+                    Retirar no local
+                    <span class="badge-gratis">Grátis</span>
+                  </button>
+                </div>
+                <div v-if="deliveryMode === 'retirada' && storeSettings.storeAddress" class="retirada-info">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  {{ storeSettings.storeAddress }}
+                </div>
+              </div>
+
               <!-- Endereço de Entrega -->
-              <div v-if="storeSettings.checkoutFields.deliveryZipCode.enabled || storeSettings.checkoutFields.deliveryAddress.enabled || storeSettings.checkoutFields.deliveryComplement.enabled || storeSettings.checkoutFields.deliveryNeighborhood.enabled || storeSettings.checkoutFields.deliveryCity.enabled" class="form-section">
+              <div v-if="!isRetirada && (storeSettings.checkoutFields.deliveryZipCode.enabled || storeSettings.checkoutFields.deliveryAddress.enabled || storeSettings.checkoutFields.deliveryComplement.enabled || storeSettings.checkoutFields.deliveryNeighborhood.enabled || storeSettings.checkoutFields.deliveryCity.enabled)" class="form-section">
                 <h3>
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -2083,5 +2151,60 @@ useHead({
 .modal-enter-from .alert-modal,
 .modal-leave-to .alert-modal {
   transform: scale(0.9);
+}
+
+/* Modo de entrega */
+.delivery-mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 12px;
+  border: 2px solid var(--color-border, #e5e7eb);
+  border-radius: 10px;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--color-text-secondary, #666);
+  transition: all 0.2s;
+  position: relative;
+  flex-wrap: wrap;
+}
+
+.mode-btn.active {
+  border-color: var(--primary-color, #e53e3e);
+  background: rgba(229, 62, 62, 0.06);
+  color: var(--primary-color, #e53e3e);
+}
+
+.badge-gratis {
+  background: #16a34a;
+  color: #fff;
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.retirada-info {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  color: #16a34a;
+  font-weight: 500;
 }
 </style>
