@@ -159,7 +159,7 @@ export default defineEventHandler(async (event) => {
   // Notificar dashboard via SSE
   try {
     const orderWithId = { ...order, _id: result.insertedId };
-    const { notifyNewOrder } = await import("../utils/sse-notifications.js");
+    const { notifyNewOrder } = await import("../../utils/sse-notifications.js");
     if (notifyNewOrder && typeof notifyNewOrder === "function") {
       await notifyNewOrder(orderWithId);
     }
