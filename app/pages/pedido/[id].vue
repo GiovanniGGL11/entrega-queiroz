@@ -667,14 +667,14 @@ onUnmounted(() => {
 }
 .info-row svg { flex-shrink: 0; margin-top: 2px; color: #aaa; }
 .retirada-aviso {
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
   border-radius: 10px;
   padding: 0.75rem 1rem;
-  color: #c2410c;
+  color: #166534;
   font-weight: 500;
 }
-.retirada-aviso svg { color: #f97316; }
+.retirada-aviso svg { color: #16a34a; }
 
 /* Auto update */
 .auto-update {
