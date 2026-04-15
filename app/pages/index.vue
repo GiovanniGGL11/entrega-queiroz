@@ -529,7 +529,7 @@ const selectItem = (item) => {
   quantity.value = 1;
   observation.value = "";
   complementsQty.value = Object.fromEntries(
-    item.complements.map((comp) => [comp.name, 0])
+    (item.complements || []).map((comp) => [comp.name, 0])
   );
 };
 
@@ -1778,7 +1778,7 @@ useHead({
                 <p>{{ selectedItem.description }}</p>
               </div>
 
-              <div class="complements-section">
+              <div class="complements-section" v-if="selectedItem.complements && selectedItem.complements.length > 0">
                 <h5>Complementos (Opcional)</h5>
                 <div
                   v-for="comp in selectedItem.complements"
