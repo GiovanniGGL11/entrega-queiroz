@@ -72,61 +72,178 @@
         </div>
       </div>
 
-      <!-- Estatísticas -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon" title="Receita total gerada">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="1" x2="12" y2="23"></line>
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+      <!-- Estatísticas — linha 1: hoje -->
+      <div class="stats-section-label">Hoje</div>
+      <div class="stats-grid stats-grid-today">
+        <div class="stat-card stat-green">
+          <div class="stat-icon stat-icon-green">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
             </svg>
           </div>
           <div class="stat-content">
-            <h3>{{ formatCurrency(stats.basic.totalRevenue) }}</h3>
-            <p>Receita Total</p>
-            <small>{{ stats.basic.totalOrders }} pedidos</small>
+            <h3>{{ formatCurrency(stats.periods?.today?.revenue || 0) }}</h3>
+            <p>Receita Hoje</p>
+            <small>{{ stats.periods?.today?.orders || 0 }} pedido{{ (stats.periods?.today?.orders || 0) !== 1 ? 's' : '' }}</small>
           </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-icon" title="Pedidos aguardando processamento">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12,6 12,12 16,14"></polyline>
+        <div class="stat-card stat-orange">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle><polyline points="12,6 12,12 16,14"></polyline>
             </svg>
           </div>
           <div class="stat-content">
-            <h3>{{ stats.basic.pendingOrders }}</h3>
-            <p>Pedidos Pendentes</p>
-            <small>{{ ((stats.basic.pendingOrders / stats.basic.totalOrders) * 100).toFixed(1) }}% do total</small>
+            <h3>{{ stats.activeOrders || 0 }}</h3>
+            <p>Em Andamento</p>
+            <small>{{ stats.basic?.pendingOrders || 0 }} pendente{{ (stats.basic?.pendingOrders || 0) !== 1 ? 's' : '' }}</small>
           </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-icon" title="Valor médio por pedido">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 19c-5 0-9-4-9-9s4-9 9-9 9 4 9 9-4 9-9 9z"></path>
-              <path d="M9 9l3 3 3-3"></path>
+        <div class="stat-card stat-blue">
+          <div class="stat-icon stat-icon-blue">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8L2 7h20l-6-4z"/>
             </svg>
           </div>
           <div class="stat-content">
-            <h3>{{ formatCurrency(stats.basic.averageTicket) }}</h3>
-            <p>Ticket Médio</p>
+            <h3>{{ formatCurrency(stats.periods?.today?.averageTicket || 0) }}</h3>
+            <p>Ticket Médio Hoje</p>
             <small>por pedido</small>
           </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-icon" title="Produtos cadastrados no sistema">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 3h18l-2 14H5L3 3z"></path>
-              <path d="M8 21h8"></path>
+        <div class="stat-card stat-red">
+          <div class="stat-icon stat-icon-red">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
             </svg>
           </div>
           <div class="stat-content">
-            <h3>{{ stats.basic.totalProducts }}</h3>
+            <h3>{{ stats.statusCounts?.cancelled || 0 }}</h3>
+            <p>Cancelados (total)</p>
+            <small>de {{ stats.basic?.totalOrders || 0 }} pedidos</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estatísticas — linha 2: geral -->
+      <div class="stats-section-label" style="margin-top:8px">Geral</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <h3>{{ formatCurrency(stats.basic?.totalRevenue || 0) }}</h3>
+            <p>Receita Total</p>
+            <small>{{ stats.basic?.totalOrders || 0 }} pedidos</small>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <h3>{{ formatCurrency(stats.periods?.month?.revenue || 0) }}</h3>
+            <p>Receita do Mês</p>
+            <small>{{ stats.periods?.month?.orders || 0 }} pedidos</small>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 19c-5 0-9-4-9-9s4-9 9-9 9 4 9 9-4 9-9 9z"></path><path d="M9 9l3 3 3-3"></path>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <h3>{{ formatCurrency(stats.basic?.averageTicket || 0) }}</h3>
+            <p>Ticket Médio</p>
+            <small>por pedido (geral)</small>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3h18l-2 14H5L3 3z"></path><path d="M8 21h8"></path>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <h3>{{ stats.basic?.totalProducts || 0 }}</h3>
             <p>Produtos Ativos</p>
-            <small>{{ stats.basic.totalCategories }} categorias</small>
+            <small>{{ stats.basic?.totalCategories || 0 }} categorias</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pipeline de status -->
+      <div class="status-pipeline">
+        <div class="pipeline-title">Pedidos por Status</div>
+        <div class="pipeline-items">
+          <div class="pipeline-item pipeline-pending">
+            <span class="pipeline-count">{{ stats.statusCounts?.pending || 0 }}</span>
+            <span class="pipeline-label">Pendentes</span>
+          </div>
+          <div class="pipeline-arrow">›</div>
+          <div class="pipeline-item pipeline-confirmed">
+            <span class="pipeline-count">{{ stats.statusCounts?.confirmed || 0 }}</span>
+            <span class="pipeline-label">Confirmados</span>
+          </div>
+          <div class="pipeline-arrow">›</div>
+          <div class="pipeline-item pipeline-preparing">
+            <span class="pipeline-count">{{ stats.statusCounts?.preparing || 0 }}</span>
+            <span class="pipeline-label">Preparando</span>
+          </div>
+          <div class="pipeline-arrow">›</div>
+          <div class="pipeline-item pipeline-ready">
+            <span class="pipeline-count">{{ stats.statusCounts?.ready || 0 }}</span>
+            <span class="pipeline-label">Prontos</span>
+          </div>
+          <div class="pipeline-arrow">›</div>
+          <div class="pipeline-item pipeline-delivery">
+            <span class="pipeline-count">{{ stats.statusCounts?.out_for_delivery || 0 }}</span>
+            <span class="pipeline-label">Na rua</span>
+          </div>
+          <div class="pipeline-arrow">›</div>
+          <div class="pipeline-item pipeline-delivered">
+            <span class="pipeline-count">{{ stats.statusCounts?.delivered || 0 }}</span>
+            <span class="pipeline-label">Entregues</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pedidos por Tipo (este mês) -->
+      <div class="type-cards">
+        <div class="type-card type-delivery">
+          <div class="type-icon">🛵</div>
+          <div class="type-info">
+            <span class="type-count">{{ stats.ordersByType?.delivery?.count || 0 }}</span>
+            <span class="type-label">Delivery</span>
+            <span class="type-revenue">{{ formatCurrency(stats.ordersByType?.delivery?.revenue || 0) }}</span>
+          </div>
+        </div>
+        <div class="type-card type-retirada">
+          <div class="type-icon">🏠</div>
+          <div class="type-info">
+            <span class="type-count">{{ stats.ordersByType?.retirada?.count || 0 }}</span>
+            <span class="type-label">Retirada</span>
+            <span class="type-revenue">{{ formatCurrency(stats.ordersByType?.retirada?.revenue || 0) }}</span>
+          </div>
+        </div>
+        <div class="type-card type-balcao">
+          <div class="type-icon">🖥️</div>
+          <div class="type-info">
+            <span class="type-count">{{ stats.ordersByType?.balcao?.count || 0 }}</span>
+            <span class="type-label">Balcão</span>
+            <span class="type-revenue">{{ formatCurrency(stats.ordersByType?.balcao?.revenue || 0) }}</span>
           </div>
         </div>
       </div>
@@ -611,6 +728,13 @@ const stats = ref({
     totalRevenue: 0,
     totalProducts: 0,
     averageTicket: 0
+  },
+  activeOrders: 0,
+  statusCounts: {},
+  ordersByType: {
+    delivery: { count: 0, revenue: 0 },
+    retirada: { count: 0, revenue: 0 },
+    balcao: { count: 0, revenue: 0 }
   },
   periods: {
     today: { orders: 0, revenue: 0, averageTicket: 0 },
@@ -1104,6 +1228,147 @@ onUnmounted(() => {
   color: #94a3b8;
   font-size: 0.75rem;
 }
+
+/* Labels de seção */
+.stats-section-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  margin-bottom: 10px;
+  margin-top: 4px;
+}
+
+/* Grid de hoje (4 col) */
+.stats-grid-today {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Variantes de cor dos cards */
+.stat-green .stat-icon,
+.stat-icon-green { background: linear-gradient(135deg, #16a34a, #22c55e) !important; box-shadow: 0 4px 12px rgba(22,163,74,0.3) !important; }
+.stat-blue .stat-icon,
+.stat-icon-blue { background: linear-gradient(135deg, #2563eb, #3b82f6) !important; box-shadow: 0 4px 12px rgba(37,99,235,0.3) !important; }
+.stat-red .stat-icon,
+.stat-icon-red { background: linear-gradient(135deg, #dc2626, #ef4444) !important; box-shadow: 0 4px 12px rgba(220,38,38,0.3) !important; }
+
+/* Pipeline de status */
+.status-pipeline {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.pipeline-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+
+.pipeline-items {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pipeline-arrow {
+  color: #cbd5e1;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.pipeline-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 10px;
+  min-width: 64px;
+  flex: 1;
+}
+
+.pipeline-count {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.pipeline-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+.pipeline-pending   { background: #fef3c7; color: #92400e; }
+.pipeline-confirmed { background: #dbeafe; color: #1e40af; }
+.pipeline-preparing { background: #fde68a; color: #b45309; }
+.pipeline-ready     { background: #d1fae5; color: #065f46; }
+.pipeline-delivery  { background: #e0e7ff; color: #3730a3; }
+.pipeline-delivered { background: #dcfce7; color: #14532d; }
+
+/* Pedidos por tipo */
+.type-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.type-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: transform 0.2s;
+}
+
+.type-card:hover { transform: translateY(-2px); }
+
+.type-icon { font-size: 1.8rem; flex-shrink: 0; }
+
+.type-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.type-count {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1;
+}
+
+.type-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.type-revenue {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ff8e24;
+}
+
+.type-delivery  { border-left: 4px solid #3b82f6; }
+.type-retirada  { border-left: 4px solid #16a34a; }
+.type-balcao    { border-left: 4px solid #f97316; }
+
+/* Subtítulo no cabeçalho */
+.stats-section-label + .stats-grid { margin-bottom: 1.25rem; }
 
 .positive {
   color: #059669;
@@ -2060,11 +2325,31 @@ onUnmounted(() => {
   .dashboard-home {
     padding: 1rem;
   }
-  
+
+  .stats-grid-today {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .type-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .pipeline-items {
+    gap: 4px;
+  }
+
+  .pipeline-item {
+    min-width: 48px;
+    padding: 6px 8px;
+  }
+
+  .pipeline-count { font-size: 1.1rem; }
+  .pipeline-label { font-size: 0.65rem; }
+
   .dashboard-content {
     grid-template-columns: 1fr;
   }
-  
+
   .charts-grid {
     grid-template-columns: 1fr;
   }

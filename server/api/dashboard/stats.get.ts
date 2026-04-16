@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
     const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const thisYear = new Date(now.getFullYear(), 0, 1);
     
-    const [periodStats, itemSalesStats, weekStats, monthStats, yearStats, paymentMethodStats] = await Promise.all([
+    const [periodStats, itemSalesStats, weekStats, monthStats, yearStats, paymentMethodStats, activeStatusStats, orderTypeStats] = await Promise.all([
       // Estatísticas por período
       db.collection("orders").aggregate([
         {
@@ -221,6 +221,28 @@ export default defineEventHandler(async (event) => {
             totalOrders: { $sum: 1 }
           }
         }
+      ]).toArray(),
+
+      // Pedidos por status (ativos)
+      db.collection("orders").aggregate([
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 }
+          }
+        }
+      ]).toArray(),
+
+      // Pedidos por tipo (delivery/retirada/balcao) - mês atual
+      db.collection("orders").aggregate([
+        { $match: { createdAt: { $gte: new Date(now.getFullYear(), now.getMonth(), 1) } } },
+        {
+          $group: {
+            _id: { $ifNull: ["$type", "delivery"] },
+            count: { $sum: 1 },
+            revenue: { $sum: "$totalAmount" }
+          }
+        }
       ]).toArray()
     ]);
     
@@ -277,6 +299,21 @@ export default defineEventHandler(async (event) => {
     ]);
     
     const periodData = periodStats[0] || { revenueToday: 0, revenueThisWeek: 0, revenueThisMonth: 0, revenueThisYear: 0 };
+
+    // Processar status ativos
+    const statusCounts: Record<string, number> = {}
+    activeStatusStats.forEach((s: any) => { statusCounts[s._id || 'unknown'] = s.count })
+
+    // Contar pedidos em andamento (não entregues/cancelados)
+    const activeOrders = (statusCounts['pending'] || 0) + (statusCounts['confirmed'] || 0) +
+      (statusCounts['preparing'] || 0) + (statusCounts['ready'] || 0) + (statusCounts['out_for_delivery'] || 0)
+
+    // Processar pedidos por tipo
+    const typeMap: Record<string, { count: number, revenue: number }> = { delivery: { count: 0, revenue: 0 }, retirada: { count: 0, revenue: 0 }, balcao: { count: 0, revenue: 0 } }
+    orderTypeStats.forEach((t: any) => {
+      const key = t._id || 'delivery'
+      if (typeMap[key]) { typeMap[key].count = t.count; typeMap[key].revenue = t.revenue }
+    })
     const weekData = weekStats[0] || { orders: 0, revenue: 0 };
     const monthData = monthStats[0] || { orders: 0, revenue: 0 };
     const yearData = yearStats[0] || { orders: 0, revenue: 0 };
@@ -368,7 +405,10 @@ export default defineEventHandler(async (event) => {
           }))
       },
       paymentMethods: paymentMethods,
-      paymentMethodsByPeriod: paymentMethodsByPeriod
+      paymentMethodsByPeriod: paymentMethodsByPeriod,
+      activeOrders,
+      statusCounts,
+      ordersByType: typeMap
     };
     
   } catch (error) {
