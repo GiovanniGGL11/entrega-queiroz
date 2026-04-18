@@ -3,6 +3,7 @@ let globalNotificationsInstance = null
 let globalPollInterval = null
 let globalSSEConnection = null
 let globalOnNewOrderCallback = null // Callback global para manter mesmo com singleton
+let globalOnStatusChangeCallback = null // Callback para mudanças de status
 let globalReconnectTimeout = null // Timeout global para reconexão
 let globalReconnectAttempts = 0 // Contador de tentativas de reconexão
 const MAX_RECONNECT_ATTEMPTS = 10
@@ -26,11 +27,18 @@ export const useOrderNotifications = () => {
   const { getAuthHeaders } = useAuthenticatedFetch()
   
   // Função para registrar callback quando novo pedido chegar
+  const onStatusChangeCallback = ref(null)
+
   const setOnNewOrderCallback = (callback) => {
     console.log('[Notificações] Registrando callback:', typeof callback)
     onNewOrderCallback.value = callback
     globalOnNewOrderCallback = callback // Também guardar globalmente
     console.log('[Notificações] Callback registrado:', !!onNewOrderCallback.value)
+  }
+
+  const setOnStatusChangeCallback = (callback) => {
+    onStatusChangeCallback.value = callback
+    globalOnStatusChangeCallback = callback
   }
 
   // Inicializar áudio de forma mais robusta
@@ -188,6 +196,14 @@ export const useOrderNotifications = () => {
             return
           }
           
+          if (data.type === 'status_change') {
+            const cb = onStatusChangeCallback.value || globalOnStatusChangeCallback
+            if (cb && typeof cb === 'function') {
+              try { cb(data) } catch (e) { console.error('[SSE] Erro no callback status_change:', e) }
+            }
+            return
+          }
+
           if (data.type === 'new_order') {
             const order = data.order
             const paymentMethod = order?.paymentMethod || 'N/A'
@@ -431,7 +447,8 @@ export const useOrderNotifications = () => {
     playNotificationSound,
     isRunning,
     isConnected,
-    setOnNewOrderCallback
+    setOnNewOrderCallback,
+    setOnStatusChangeCallback
   }
 
   // Guardar como instância global

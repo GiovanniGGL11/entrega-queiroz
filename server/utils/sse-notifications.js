@@ -48,6 +48,25 @@ export const notifyNewOrder = async (order) => {
   console.log(`[SSE] Notificação enviada com sucesso para ${clients.length - failedClients.length} cliente(s)`)
 }
 
+// Função para notificar mudança de status de pedido
+export const notifyStatusChange = async (orderId, orderNumber, newStatus) => {
+  const clients = global?.orderNotifications || globalThis.orderNotifications
+  if (!clients || clients.length === 0) return
+
+  const notification = {
+    type: 'status_change',
+    orderId,
+    orderNumber,
+    status: newStatus
+  }
+
+  const failedClients = []
+  clients.forEach((client, index) => {
+    try { client.send(notification) } catch { failedClients.push(index) }
+  })
+  failedClients.reverse().forEach(idx => clients.splice(idx, 1))
+}
+
 // Função para obter lista de clientes (para debug)
 export const getConnectedClients = () => {
   const clients = global?.orderNotifications || globalThis.orderNotifications

@@ -94,6 +94,14 @@ export default defineEventHandler(async (event) => {
       console.error('[WhatsApp] Falha ao notificar status:', err)
     )
 
+    // Notificar dashboard via SSE para atualizar stats em tempo real
+    try {
+      const { notifyStatusChange } = await import('../../utils/sse-notifications.js')
+      await notifyStatusChange(id, updatedOrder?.orderNumber, status)
+    } catch (err) {
+      console.error('[SSE] Falha ao notificar status change:', err)
+    }
+
     return {
       success: true,
       message: "Pedido atualizado com sucesso",

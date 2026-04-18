@@ -1061,7 +1061,8 @@ const {
   startNotifications,
   stopNotifications,
   markAsRead,
-  clearAll: clearNotifications
+  clearAll: clearNotifications,
+  setOnStatusChangeCallback
 } = useOrderNotifications()
 
 // Função para mapear pedido da notificação
@@ -1105,6 +1106,11 @@ onMounted(async () => {
       carregarRank(),
       carregarRegioes()
     ])
+
+    // Registrar callback para mudanças de status (atualiza stats em tempo real)
+    setOnStatusChangeCallback(async () => {
+      await Promise.all([loadStats(), loadOrders()])
+    })
 
     // Iniciar notificações em tempo real automaticamente (com delay para evitar múltiplas inicializações)
     setTimeout(() => {
