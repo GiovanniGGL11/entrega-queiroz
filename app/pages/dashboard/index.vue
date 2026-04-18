@@ -1117,14 +1117,25 @@ onMounted(async () => {
       console.log('[Dashboard] Iniciando notificações...')
       startNotifications()
     }, 500)
+
+    // Polling das stats a cada 15s (Vercel serverless não mantém estado entre funções)
+    statsPollingInterval = setInterval(async () => {
+      await loadStats()
+    }, 15000)
   } catch (error) {
     console.error('Erro ao carregar dados do dashboard:', error)
   }
 })
 
+// Polling automático das stats a cada 15 segundos (necessário no Vercel serverless)
+let statsPollingInterval = null
+
 onUnmounted(() => {
-  // Parar notificações quando componente for desmontado
   stopNotifications()
+  if (statsPollingInterval) {
+    clearInterval(statsPollingInterval)
+    statsPollingInterval = null
+  }
 })
 </script>
 
