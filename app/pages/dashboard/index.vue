@@ -730,7 +730,15 @@ const stats = ref({
     averageTicket: 0
   },
   activeOrders: 0,
-  statusCounts: {},
+  statusCounts: {
+    pending: 0,
+    confirmed: 0,
+    preparing: 0,
+    ready: 0,
+    out_for_delivery: 0,
+    delivered: 0,
+    cancelled: 0
+  },
   ordersByType: {
     delivery: { count: 0, revenue: 0 },
     retirada: { count: 0, revenue: 0 },
@@ -967,7 +975,14 @@ const loadStats = async () => {
   try {
     // Carregar estatísticas reais da API
     const response = await authenticatedFetch('/api/dashboard/stats')
-    stats.value = response
+    // Mesclar para garantir reatividade de todas as chaves
+    Object.assign(stats.value, response)
+    if (response.statusCounts) {
+      Object.assign(stats.value.statusCounts, response.statusCounts)
+    }
+    if (response.ordersByType) {
+      Object.assign(stats.value.ordersByType, response.ordersByType)
+    }
   } catch (error) {
     console.error('Erro ao carregar estatísticas:', error)
     // Fallback para dados vazios em caso de erro
@@ -1118,10 +1133,15 @@ onMounted(async () => {
       startNotifications()
     }, 500)
 
-    // Polling das stats a cada 15s (Vercel serverless não mantém estado entre funções)
+    // Polling das stats a cada 8s (Vercel serverless não mantém estado entre funções)
     statsPollingInterval = setInterval(async () => {
-      await loadStats()
-    }, 15000)
+      await Promise.all([loadStats(), loadOrders()])
+    }, 8000)
+
+    // Atualizar imediatamente ao voltar para a aba
+    document.addEventListener('visibilitychange', async () => {
+      if (!document.hidden) await Promise.all([loadStats(), loadOrders()])
+    })
   } catch (error) {
     console.error('Erro ao carregar dados do dashboard:', error)
   }
