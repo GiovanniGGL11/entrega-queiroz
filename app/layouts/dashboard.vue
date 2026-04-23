@@ -45,8 +45,8 @@
 
       <nav class="sidebar-nav">
         <ul>
-          <!-- Pedidos — todos veem -->
-          <li>
+          <!-- Pedidos -->
+          <li v-if="isOwner || hasPermission('orders')">
             <NuxtLink to="/dashboard/orders" class="nav-link" :class="{ active: $route.path === '/dashboard/orders' }" :title="sidebarCollapsed ? 'Pedidos' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
@@ -56,8 +56,8 @@
             </NuxtLink>
           </li>
 
-          <!-- PDV / Balcão — todos veem -->
-          <li>
+          <!-- PDV / Balcão -->
+          <li v-if="isOwner || hasPermission('pdv')">
             <NuxtLink to="/dashboard/pdv" class="nav-link" :class="{ active: $route.path === '/dashboard/pdv' }" :title="sidebarCollapsed ? 'PDV / Balcão' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
@@ -68,8 +68,8 @@
             </NuxtLink>
           </li>
 
-          <!-- Motoboys — todos veem -->
-          <li>
+          <!-- Motoboys -->
+          <li v-if="isOwner || hasPermission('motoboys')">
             <NuxtLink to="/dashboard/motoboys" class="nav-link" :class="{ active: $route.path === '/dashboard/motoboys' }" :title="sidebarCollapsed ? 'Motoboys' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="8" r="4"></circle>
@@ -80,8 +80,8 @@
             </NuxtLink>
           </li>
 
-          <!-- Estoque — todos veem (entrada de mercadoria é tarefa do funcionário) -->
-          <li>
+          <!-- Estoque -->
+          <li v-if="isOwner || hasPermission('inventory')">
             <NuxtLink to="/dashboard/inventory" class="nav-link" :class="{ active: $route.path === '/dashboard/inventory' }" :title="sidebarCollapsed ? 'Estoque' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 3h18l-2 14H5L3 3z"></path>
@@ -93,8 +93,8 @@
             </NuxtLink>
           </li>
 
-          <!-- Separador — apenas dono vê o restante -->
-          <li v-if="isOwner" class="nav-separator">
+          <!-- Separador — aparece se tiver ao menos um item de gerenciamento visível -->
+          <li v-if="isOwner || hasPermission('customers') || hasPermission('coupons') || hasPermission('products') || hasPermission('categories')" class="nav-separator">
             <span v-if="!sidebarCollapsed" class="separator-label">Gerenciamento</span>
           </li>
 
@@ -111,8 +111,8 @@
             </NuxtLink>
           </li>
 
-          <!-- Categorias — só dono -->
-          <li v-if="isOwner">
+          <!-- Categorias -->
+          <li v-if="isOwner || hasPermission('categories')">
             <NuxtLink to="/dashboard/categories" class="nav-link" :class="{ active: $route.path === '/dashboard/categories' }" :title="sidebarCollapsed ? 'Categorias' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 3h18l-2 14H5L3 3z"></path>
@@ -122,8 +122,8 @@
             </NuxtLink>
           </li>
 
-          <!-- Produtos — só dono -->
-          <li v-if="isOwner">
+          <!-- Produtos -->
+          <li v-if="isOwner || hasPermission('products')">
             <NuxtLink to="/dashboard/products" class="nav-link" :class="{ active: $route.path === '/dashboard/products' }" :title="sidebarCollapsed ? 'Produtos' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
@@ -134,8 +134,8 @@
             </NuxtLink>
           </li>
 
-          <!-- Clientes — só dono -->
-          <li v-if="isOwner">
+          <!-- Clientes -->
+          <li v-if="isOwner || hasPermission('customers')">
             <NuxtLink to="/dashboard/customers" class="nav-link" :class="{ active: $route.path === '/dashboard/customers' }" :title="sidebarCollapsed ? 'Clientes' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -147,8 +147,8 @@
             </NuxtLink>
           </li>
 
-          <!-- Cupons — só dono -->
-          <li v-if="isOwner">
+          <!-- Cupons -->
+          <li v-if="isOwner || hasPermission('coupons')">
             <NuxtLink to="/dashboard/coupons" class="nav-link" :class="{ active: $route.path === '/dashboard/coupons' }" :title="sidebarCollapsed ? 'Cupons' : ''" @click="closeSidebarOnMobile">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
@@ -362,7 +362,7 @@ import { useUserRole } from '~/composables/useUserRole'
 const router = useRouter()
 
 // Role do usuário
-const { userRole, userName, userEmail, loadUserRole } = useUserRole()
+const { userRole, userName, userEmail, loadUserRole, hasPermission } = useUserRole()
 const isOwner = computed(() => userRole.value !== 'employee')
 
 // Carregar cor primária

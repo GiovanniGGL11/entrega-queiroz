@@ -23,8 +23,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'Somente o dono pode cadastrar funcionários' })
   }
 
+  const ALLOWED_PERMISSIONS = ['orders', 'pdv', 'motoboys', 'inventory', 'customers', 'coupons', 'products', 'categories']
+
   const body = await readBody(event)
-  const { name, email, password } = body
+  const { name, email, password, permissions, photo } = body
 
   if (!name || !email || !password) {
     throw createError({ statusCode: 400, message: 'Nome, email e senha são obrigatórios' })
@@ -33,6 +35,10 @@ export default defineEventHandler(async (event) => {
   if (password.length < 6) {
     throw createError({ statusCode: 400, message: 'Senha deve ter no mínimo 6 caracteres' })
   }
+
+  const validatedPerms = Array.isArray(permissions)
+    ? permissions.filter((p: string) => ALLOWED_PERMISSIONS.includes(p))
+    : ALLOWED_PERMISSIONS
 
   try {
     const db = await getDB()
@@ -50,6 +56,8 @@ export default defineEventHandler(async (event) => {
       email: email.trim().toLowerCase(),
       password: hashedPassword,
       role: 'employee',
+      permissions: validatedPerms,
+      photo: photo || null,
       createdAt: new Date()
     })
 

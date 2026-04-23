@@ -30,12 +30,15 @@ export default defineEventHandler(async (event) => {
       { projection: { password: 0 } }
     ).toArray()
 
+    const defaultPermissions = ['orders', 'pdv', 'motoboys', 'inventory']
     return employees.map(e => ({
       _id: e._id.toString(),
       name: e.name || '',
       email: e.email,
       role: e.role,
-      createdAt: e.createdAt
+      createdAt: e.createdAt,
+      permissions: e.permissions ?? defaultPermissions,
+      photo: e.photo || null
     }))
   } catch (err) {
     throw createError({ statusCode: 500, message: 'Erro ao buscar funcionários' })

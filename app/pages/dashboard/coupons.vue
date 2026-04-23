@@ -1,4 +1,5 @@
 <script setup>
+definePageMeta({ layout: 'dashboard' })
 import { ref, computed, onMounted } from 'vue'
 import { useAuthenticatedFetch } from '~/composables/useAuthenticatedFetch'
 

@@ -175,6 +175,7 @@
 </template>
 
 <script setup>
+definePageMeta({ layout: 'dashboard' })
 import axios from "axios";
 import { ref, onMounted } from "vue";
 

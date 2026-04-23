@@ -979,7 +979,14 @@ const printComanda = (order) => {
   <title>Comanda #${order.id}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Courier New', monospace; font-size: 13px; width: 80mm; padding: 8px; color: #000; }
+    body { font-family: 'Courier New', monospace; font-size: 13px; color: #000; background: #f0f0f0; }
+    .toolbar { display: flex; gap: 8px; padding: 12px 16px; background: #1e293b; position: sticky; top: 0; z-index: 10; }
+    .toolbar button { padding: 8px 18px; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; }
+    .btn-print { background: #16a34a; color: white; }
+    .btn-close { background: #64748b; color: white; }
+    .btn-print:hover { background: #15803d; }
+    .btn-close:hover { background: #475569; }
+    .comanda { width: 80mm; margin: 16px auto; background: white; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
     .center { text-align: center; }
     .bold { font-weight: bold; }
     .big { font-size: 18px; font-weight: bold; }
@@ -995,12 +1002,19 @@ const printComanda = (order) => {
     .notes-box { border: 1px dashed #000; padding: 4px 6px; margin-top: 4px; font-size: 12px; }
     .payment-tag { display: inline-block; border: 1px solid #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; margin-top: 2px; }
     @media print {
-      body { width: 80mm; }
+      .toolbar { display: none; }
+      body { background: white; }
+      .comanda { margin: 0; padding: 8px; box-shadow: none; width: 80mm; }
       @page { margin: 0; size: 80mm auto; }
     }
   </style>
 </head>
 <body>
+  <div class="toolbar">
+    <button class="btn-print" onclick="window.print()">Imprimir</button>
+    <button class="btn-close" onclick="window.close()">Fechar</button>
+  </div>
+  <div class="comanda">
   <div class="center">
     <div class="big">${name}</div>
     <div style="font-size:11px; margin-top:2px;">${now}</div>
@@ -1037,14 +1051,14 @@ const printComanda = (order) => {
 
   <div class="divider"></div>
   <div class="center" style="font-size:11px;">Obrigado pela preferência!</div>
+  </div>
 </body>
 </html>`
 
-  const win = window.open('', '_blank', 'width=400,height=600')
+  const win = window.open('', '_blank', 'width=460,height=700')
   win.document.write(html)
   win.document.close()
   win.focus()
-  setTimeout(() => { win.print(); win.close() }, 300)
 }
 
 const lateOrders = computed(() => orders.value.filter(o => isOrderLate(o)))

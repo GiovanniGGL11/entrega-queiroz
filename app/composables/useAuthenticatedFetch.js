@@ -16,13 +16,19 @@ export const useAuthenticatedFetch = () => {
   }
 
   const authenticatedFetch = async (url, options = {}) => {
-    // Verificar cache apenas para GET requests
+    // Verificar cache apenas para GET requests e quando não forçar atualização
     if (!options.method || options.method === 'GET') {
-      const cacheKey = getCacheKey(url, options.query || {})
-      const cachedData = get(cacheKey)
-      
-      if (cachedData) {
-        return cachedData
+      if (!options.noCache) {
+        const cacheKey = getCacheKey(url, options.query || {})
+        const cachedData = get(cacheKey)
+
+        if (cachedData) {
+          return cachedData
+        }
+      } else {
+        // Limpar cache desta URL antes de buscar
+        const cacheKey = getCacheKey(url, options.query || {})
+        clear(cacheKey)
       }
     }
 
@@ -30,7 +36,7 @@ export const useAuthenticatedFetch = () => {
       ...getAuthHeaders(),
       ...options.headers
     }
-    
+
     const response = await $fetch(url, {
       ...options,
       headers

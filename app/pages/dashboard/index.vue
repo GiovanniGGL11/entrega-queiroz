@@ -54,6 +54,7 @@
       <div class="page-header">
         <div class="header-left">
           <h1>Dashboard</h1>
+          <small v-if="lastUpdated" class="last-updated">Atualizado às {{ lastUpdated }}</small>
         </div>
         <div class="header-actions">
           <button 
@@ -970,11 +971,12 @@ const getStatusText = (status) => {
 }
 
 const { authenticatedFetch } = useAuthenticatedFetch()
+const lastUpdated = ref('')
 
 const loadStats = async () => {
   try {
-    // Carregar estatísticas reais da API
-    const response = await authenticatedFetch('/api/dashboard/stats')
+    // Carregar estatísticas reais da API (sem cache para sempre ter dados frescos)
+    const response = await authenticatedFetch('/api/dashboard/stats', { noCache: true })
     // Mesclar para garantir reatividade de todas as chaves
     Object.assign(stats.value, response)
     if (response.statusCounts) {
@@ -985,37 +987,7 @@ const loadStats = async () => {
     }
   } catch (error) {
     console.error('Erro ao carregar estatísticas:', error)
-    // Fallback para dados vazios em caso de erro
-    stats.value = {
-      basic: {
-        totalOrders: 0,
-        pendingOrders: 0,
-        totalRevenue: 0,
-        totalProducts: 0,
-        averageTicket: 0
-      },
-      periods: {
-        today: { orders: 0, revenue: 0, averageTicket: 0 },
-        week: { orders: 0, revenue: 0, averageTicket: 0, growth: 0 },
-        month: { orders: 0, revenue: 0, averageTicket: 0, growth: 0 },
-        year: { orders: 0, revenue: 0, averageTicket: 0 }
-      },
-      insights: {
-        mostSoldItem: { name: 'Nenhum', quantity: 0 },
-        topSellingItems: []
-      },
-      paymentMethods: {
-        pix: { revenue: 0, orders: 0 },
-        dinheiro: { revenue: 0, orders: 0 },
-        cartao: { revenue: 0, orders: 0 }
-      },
-      paymentMethodsByPeriod: {
-        today: { pix: { revenue: 0, orders: 0 }, dinheiro: { revenue: 0, orders: 0 }, cartao: { revenue: 0, orders: 0 } },
-        week: { pix: { revenue: 0, orders: 0 }, dinheiro: { revenue: 0, orders: 0 }, cartao: { revenue: 0, orders: 0 } },
-        month: { pix: { revenue: 0, orders: 0 }, dinheiro: { revenue: 0, orders: 0 }, cartao: { revenue: 0, orders: 0 } },
-        year: { pix: { revenue: 0, orders: 0 }, dinheiro: { revenue: 0, orders: 0 }, cartao: { revenue: 0, orders: 0 } }
-      }
-    }
+    // Não resetar stats em erro de polling para não perder dados anteriores
   } finally {
     loading.value = false
   }
@@ -1025,7 +997,7 @@ const loadOrders = async () => {
   try {
     loadingOrders.value = true
     
-    const response = await authenticatedFetch('/api/orders?page=1&limit=5')
+    const response = await authenticatedFetch('/api/orders?page=1&limit=5', { noCache: true })
     
     // Adaptar para nova estrutura de resposta com paginação
     const ordersData = response.orders || response
@@ -1134,8 +1106,10 @@ onMounted(async () => {
     }, 500)
 
     // Polling a cada 5s (Vercel serverless não mantém estado SSE entre funções)
+    lastUpdated.value = new Date().toLocaleTimeString('pt-BR')
     statsPollingInterval = setInterval(async () => {
       await Promise.all([loadStats(), loadOrders()])
+      lastUpdated.value = new Date().toLocaleTimeString('pt-BR')
     }, 5000)
 
     // Atualizar imediatamente ao voltar para a aba
@@ -1184,6 +1158,13 @@ onUnmounted(() => {
   font-size: 1.875rem;
   font-weight: 700;
   color: #1e293b;
+}
+
+.last-updated {
+  display: block;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 2px;
 }
 
 .page-description {

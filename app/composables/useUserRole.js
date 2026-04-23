@@ -4,6 +4,7 @@ import { ref } from 'vue'
 const userRole = ref(null)
 const userName = ref('')
 const userEmail = ref('')
+const userPermissions = ref(['orders', 'pdv', 'motoboys', 'inventory'])
 
 export const useUserRole = () => {
   const loadUserRole = () => {
@@ -16,9 +17,36 @@ export const useUserRole = () => {
       userRole.value = payload.role || 'owner'
       userName.value = payload.name || payload.email || ''
       userEmail.value = payload.email || ''
+
+      // Para funcionários, carregar permissões da API
+      if (payload.role === 'employee') {
+        loadPermissionsFromAPI(token)
+      } else {
+        // Dono tem acesso a tudo
+        userPermissions.value = ['orders', 'pdv', 'motoboys', 'inventory']
+      }
     } catch {
       userRole.value = null
     }
+  }
+
+  const loadPermissionsFromAPI = async (token) => {
+    try {
+      const data = await $fetch('/api/dashboard/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (data?.permissions) {
+        userPermissions.value = data.permissions
+      }
+    } catch {
+      // fallback: nenhuma permissão se a API falhar
+      userPermissions.value = []
+    }
+  }
+
+  const hasPermission = (key) => {
+    if (userRole.value !== 'employee') return true
+    return userPermissions.value.includes(key)
   }
 
   const isOwner = () => userRole.value === 'owner' || userRole.value === null
@@ -28,7 +56,9 @@ export const useUserRole = () => {
     userRole,
     userName,
     userEmail,
+    userPermissions,
     loadUserRole,
+    hasPermission,
     isOwner,
     isEmployee
   }

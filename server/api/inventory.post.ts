@@ -1,115 +1,66 @@
 // server/api/inventory.post.ts
 import { getDB } from "../utils/db";
-import { ObjectId } from "mongodb";
 import { verifyUserToken } from "../utils/auth";
 import { getRequestHeader, createError } from 'h3';
 
+const VALID_UNITS = ['un', 'kg', 'g', 'L', 'ml', 'cx', 'pct', 'fd']
+const VALID_TYPES = ['produto', 'ingrediente']
+
 export default defineEventHandler(async (event) => {
-  // Autenticação direta sem middleware
   const authHeader = getRequestHeader(event, 'authorization')
   let token = null
-  
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.substring(7)
-  }
-  
-  if (!token) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'Token de autenticação necessário'
-    })
-  }
-  
-  // Verificar token
-  try {
-    const decoded = verifyUserToken(token)
-    // Token válido, continuar
-  } catch (jwtError) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'Token inválido ou expirado'
-    })
-  }
-  
-  const body = await readBody(event);
-  const { productId, initialStock, minStock, maxStock, costPrice } = body;
+  if (authHeader && authHeader.startsWith('Bearer ')) token = authHeader.substring(7)
+  if (!token) throw createError({ statusCode: 401, statusMessage: 'Token necessário' })
+  try { verifyUserToken(token) } catch { throw createError({ statusCode: 401, statusMessage: 'Token inválido' }) }
 
-  if (!productId) {
-    throw createError({
-      statusCode: 400,
-      message: "ID do produto é obrigatório",
-    });
-  }
+  const body = await readBody(event)
+  const { name, type, category, unit, productId, initialStock, minStock, costPrice } = body
 
-  if (initialStock === undefined || initialStock < 0) {
-    throw createError({
-      statusCode: 400,
-      message: "Estoque inicial deve ser maior ou igual a zero",
-    });
-  }
+  if (!name?.trim()) throw createError({ statusCode: 400, message: 'Nome é obrigatório' })
+  if (!VALID_TYPES.includes(type)) throw createError({ statusCode: 400, message: 'Tipo inválido' })
+  if (!category?.trim()) throw createError({ statusCode: 400, message: 'Categoria é obrigatória' })
+  if (!VALID_UNITS.includes(unit)) throw createError({ statusCode: 400, message: 'Unidade inválida' })
 
   try {
-    const db = await getDB();
-    const inventory = db.collection("inventory");
-    const products = db.collection("products");
-    
-    // Verificar se o produto existe
-    const product = await products.findOne({ _id: new ObjectId(productId) });
-    if (!product) {
-      throw createError({
-        statusCode: 404,
-        message: "Produto não encontrado",
-      });
-    }
-    
-    // Verificar se já existe entrada de estoque para este produto
-    const existingInventory = await inventory.findOne({ productId: productId });
-    if (existingInventory) {
-      throw createError({
-        statusCode: 409,
-        message: "Já existe controle de estoque para este produto",
-      });
-    }
+    const db = await getDB()
 
-    const result = await inventory.insertOne({
-      productId: productId,
-      productName: product.name,
-      currentStock: parseInt(initialStock) || 0,
-      minStock: parseInt(minStock) || 5,
-      maxStock: parseInt(maxStock) || 100,
-      costPrice: parseFloat(costPrice) || 0,
-      totalSold: 0,
-      totalPurchased: parseInt(initialStock) || 0,
-      lastUpdated: new Date(),
+    // Verificar duplicata pelo nome na mesma categoria
+    const existing = await db.collection('inventory').findOne({ name: name.trim(), category: category.trim() })
+    if (existing) throw createError({ statusCode: 409, message: 'Já existe um item com esse nome nesta categoria' })
+
+    const doc: any = {
+      name: name.trim(),
+      type,
+      category: category.trim(),
+      unit,
+      productId: productId || null,
+      currentStock: Math.max(0, Number(initialStock) || 0),
+      minStock: Math.max(0, Number(minStock) || 0),
+      costPrice: Math.max(0, Number(costPrice) || 0),
       createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-    
-    return { 
-      id: result.insertedId, 
-      message: "Controle de estoque criado com sucesso",
-      inventory: {
-        _id: result.insertedId,
-        productId: productId,
-        productName: product.name,
-        currentStock: parseInt(initialStock) || 0,
-        minStock: parseInt(minStock) || 5,
-        maxStock: parseInt(maxStock) || 100,
-        costPrice: parseFloat(costPrice) || 0,
-        totalSold: 0,
-        totalPurchased: parseInt(initialStock) || 0,
-        lastUpdated: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    };
-  } catch (err) {
-    if (err.statusCode) {
-      throw err;
+      updatedAt: new Date()
     }
-    throw createError({ 
-      statusCode: 500, 
-      message: "Erro ao criar controle de estoque" 
-    });
+
+    const result = await db.collection('inventory').insertOne(doc)
+
+    // Registrar movimentação inicial se houver estoque
+    if (doc.currentStock > 0) {
+      await db.collection('inventory_movements').insertOne({
+        inventoryId: result.insertedId,
+        itemName: doc.name,
+        category: doc.category,
+        type: 'entrada',
+        quantity: doc.currentStock,
+        previousStock: 0,
+        newStock: doc.currentStock,
+        reason: 'Estoque inicial',
+        createdAt: new Date()
+      })
+    }
+
+    return { success: true, _id: result.insertedId.toString(), ...doc, _id: result.insertedId.toString() }
+  } catch (err: any) {
+    if (err.statusCode) throw err
+    throw createError({ statusCode: 500, message: 'Erro ao criar item de estoque' })
   }
-});
+})
