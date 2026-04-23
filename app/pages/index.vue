@@ -523,11 +523,21 @@ const scrollToCategory = (categoryId) => {
   }
 };
 
+// Ingredientes removidos pelo cliente
+const removedIngredients = ref([])
+
+const toggleIngredient = (inventoryId) => {
+  const idx = removedIngredients.value.indexOf(inventoryId)
+  if (idx === -1) removedIngredients.value.push(inventoryId)
+  else removedIngredients.value.splice(idx, 1)
+}
+
 // Modal
 const selectItem = (item) => {
   selectedItem.value = item;
   quantity.value = 1;
   observation.value = "";
+  removedIngredients.value = [];
   complementsQty.value = Object.fromEntries(
     item.complements.map((comp) => [comp.name, 0])
   );
@@ -599,7 +609,7 @@ const doAddToCart = () => {
   const itemComPreco = promoAtiva
     ? { ...selectedItem.value, price: Number(promoAtiva.price) }
     : selectedItem.value
-  addToCartComposable(itemComPreco, quantity.value, complements, observation.value);
+  addToCartComposable(itemComPreco, quantity.value, complements, observation.value, [...removedIngredients.value]);
   closeModal();
 };
 
@@ -1776,6 +1786,25 @@ useHead({
               <div class="modal-content">
                 <h4>{{ selectedItem.name }}</h4>
                 <p>{{ selectedItem.description }}</p>
+              </div>
+
+              <!-- Ingredientes removíveis -->
+              <div v-if="selectedItem.recipe && selectedItem.recipe.length > 0" class="ingredients-section">
+                <h5>Ingredientes</h5>
+                <p class="ingredients-hint">Toque para remover um ingrediente</p>
+                <div class="ingredients-list">
+                  <button
+                    v-for="ing in selectedItem.recipe"
+                    :key="ing.inventoryId"
+                    type="button"
+                    :class="['ing-tag', removedIngredients.includes(ing.inventoryId) && 'ing-removed']"
+                    @click="toggleIngredient(ing.inventoryId)"
+                  >
+                    <svg v-if="!removedIngredients.includes(ing.inventoryId)" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    <span :class="{ 'ing-striked': removedIngredients.includes(ing.inventoryId) }">{{ ing.name }}</span>
+                  </button>
+                </div>
               </div>
 
               <div class="complements-section">
@@ -3638,6 +3667,53 @@ body {
   overflow-wrap: break-word; /* Quebra palavras longas no modal */
   /* word-break: break-word; */
   /* hyphens: auto; */
+}
+
+/* Ingredientes */
+.ingredients-section {
+  border-top: 1px solid #efefef;
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+.ingredients-section h5 {
+  font-size: 1.125rem;
+  color: #323232;
+  margin: 0 0 0.25rem;
+}
+.ingredients-hint {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin: 0 0 0.75rem;
+}
+.ingredients-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.ing-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 99px;
+  border: 1.5px solid #d1fae5;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ing-tag:hover { filter: brightness(0.95); }
+.ing-removed {
+  border-color: #fee2e2;
+  background: #fff5f5;
+  color: #b91c1c;
+  text-decoration: none;
+}
+.ing-striked {
+  text-decoration: line-through;
+  opacity: 0.7;
 }
 
 .complements-section {

@@ -392,6 +392,40 @@
             </div>
           </div>
           
+          <!-- Ingredientes da Receita -->
+          <div class="form-group">
+            <label>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:6px"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3z"/></svg>
+              Ingredientes da Receita
+            </label>
+            <p style="font-size:.875rem;color:#6b7280;margin:.25rem 0 .75rem">
+              Defina quais ingredientes do estoque são usados neste produto e a quantidade por unidade vendida.
+              O estoque será debitado automaticamente ao confirmar um pedido.
+            </p>
+
+            <div v-if="loadingInventory" style="font-size:.875rem;color:#6b7280;padding:.5rem 0">Carregando estoque...</div>
+            <template v-else>
+              <div v-for="(rec, idx) in productForm.recipe" :key="idx" class="recipe-item">
+                <select v-model="rec.inventoryId" @change="onRecipeIngSelect(rec)" class="recipe-select">
+                  <option value="">— Selecione ingrediente —</option>
+                  <option v-for="ing in inventoryIngredients" :key="ing._id" :value="ing._id">
+                    {{ ing.name }} ({{ ing.unit }})
+                  </option>
+                </select>
+                <input v-model.number="rec.quantity" type="number" min="0.01" step="0.01" placeholder="Qtd" class="recipe-qty" />
+                <span class="recipe-unit">{{ rec.unit || '' }}</span>
+                <button type="button" @click="removeRecipeItem(idx)" class="btn-remove-recipe">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+
+              <button type="button" @click="addRecipeItem" class="btn-add-complement" :disabled="submitting">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Adicionar Ingrediente
+              </button>
+            </template>
+          </div>
+
           <!-- Complementos -->
           <div class="form-group">
             <label>
@@ -660,7 +694,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import ImageOverlay from '~/components/ImageOverlay.vue'
 import { useImageOverlay } from '~/composables/useImageOverlay'
 
@@ -690,6 +724,22 @@ const uploadingImage = ref(false)
 const editingProduct = ref(null)
 const productToDelete = ref(null)
 
+// Inventário de ingredientes para receita
+const inventoryIngredients = ref([])
+const loadingInventory = ref(false)
+
+const loadInventoryIngredients = async () => {
+  if (inventoryIngredients.value.length > 0) return
+  loadingInventory.value = true
+  try {
+    inventoryIngredients.value = await authenticatedFetch('/api/inventory')
+  } catch {
+    inventoryIngredients.value = []
+  } finally {
+    loadingInventory.value = false
+  }
+}
+
 // Formulário
 const productForm = ref({
   name: '',
@@ -699,6 +749,7 @@ const productForm = ref({
   categoryId: '',
   order: 0,
   complements: [],
+  recipe: [],
   isVisible: true,
   ageRestricted: false,
   promotion: { active: false, price: '', dias: [] }
@@ -893,6 +944,7 @@ const editProduct = (product) => {
     categoryId: product.categoryId,
     order: product.order || 0,
     complements: complements,
+    recipe: Array.isArray(product.recipe) ? product.recipe.map(r => ({ ...r })) : [],
     isVisible: product.isVisible !== false,
     ageRestricted: product.ageRestricted === true,
     promotion: product.promotion
@@ -978,6 +1030,7 @@ const closeModal = () => {
     categoryId: '',
     order: 0,
     complements: [],
+    recipe: [],
     isVisible: true,
     promotion: { active: false, price: '', dias: [] }
   }
@@ -986,14 +1039,25 @@ const closeModal = () => {
 
 // Gerenciar complementos
 const addComplement = () => {
-  productForm.value.complements.push({
-    name: '',
-    price: ''
-  })
+  productForm.value.complements.push({ name: '', price: '' })
 }
-
 const removeComplement = (index) => {
   productForm.value.complements.splice(index, 1)
+}
+
+// Gerenciar receita
+const addRecipeItem = () => {
+  productForm.value.recipe.push({ inventoryId: '', name: '', quantity: 1, unit: '' })
+}
+const removeRecipeItem = (index) => {
+  productForm.value.recipe.splice(index, 1)
+}
+const onRecipeIngSelect = (rec) => {
+  const ing = inventoryIngredients.value.find(i => i._id === rec.inventoryId)
+  if (ing) {
+    rec.name = ing.name
+    rec.unit = ing.unit
+  }
 }
 
 // Handle image upload
@@ -1098,6 +1162,7 @@ const handleEscKey = (event) => {
 onMounted(() => {
   loadCategories()
   loadProducts()
+  loadInventoryIngredients()
   window.addEventListener('keydown', handleEscKey)
 })
 
@@ -2226,6 +2291,48 @@ onUnmounted(() => {
     gap: 0.75rem;
   }
 }
+
+/* Receita / ingredientes */
+.recipe-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.625rem;
+}
+.recipe-select {
+  flex: 1;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+}
+.recipe-qty {
+  width: 80px;
+  padding: 0.625rem 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  text-align: center;
+}
+.recipe-unit {
+  font-size: 0.8rem;
+  color: #6b7280;
+  min-width: 28px;
+  text-align: left;
+}
+.btn-remove-recipe {
+  padding: 0.5rem;
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.btn-remove-recipe:hover { background: #fecaca; }
 
 /* Estilos para complementos */
 .complement-item {

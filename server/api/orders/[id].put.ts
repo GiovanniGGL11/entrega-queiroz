@@ -94,6 +94,75 @@ export default defineEventHandler(async (event) => {
       console.error('[WhatsApp] Falha ao notificar status:', err)
     )
 
+    // Débito automático de estoque quando pedido é confirmado
+    // Restaura estoque quando cancelado (apenas se veio de um status ativo)
+    if (status === 'confirmed' || status === 'cancelled') {
+      try {
+        const inventory = db.collection('inventory')
+        const movements = db.collection('inventory_movements')
+        const products = db.collection('products')
+        const orderItems = updatedOrder?.items || []
+        const prevStatus = updatedOrder?.status
+        const activeStatuses = ['confirmed', 'preparing', 'ready', 'out_for_delivery']
+
+        // Helper para debitar/restaurar um item de inventário
+        const adjustStock = async (invItem: any, qty: number, isDebit: boolean, reason: string) => {
+          const previousStock = invItem.currentStock ?? 0
+          const newStock = isDebit ? Math.max(0, previousStock - qty) : previousStock + qty
+          await inventory.updateOne({ _id: invItem._id }, { $set: { currentStock: newStock, updatedAt: new Date() } })
+          await movements.insertOne({
+            inventoryId: invItem._id,
+            itemName: invItem.name,
+            category: invItem.category,
+            type: isDebit ? 'saida' : 'entrada',
+            quantity: qty,
+            previousStock,
+            newStock,
+            reason,
+            createdAt: new Date()
+          })
+        }
+
+        for (const item of orderItems) {
+          if (!item.productId) continue
+          const orderQty = item.quantity || 1
+          const removedIngredients: string[] = item.removedIngredients || []
+
+          // 1. Débito do produto em si (tipo 'produto' vinculado ao cardápio)
+          const invItem = await inventory.findOne({ productId: item.productId, type: 'produto' })
+          if (invItem) {
+            if (status === 'confirmed') {
+              await adjustStock(invItem, orderQty, true, `Venda — Pedido #${updatedOrder?.orderNumber}`)
+            } else if (status === 'cancelled' && activeStatuses.includes(prevStatus)) {
+              await adjustStock(invItem, orderQty, false, `Cancelamento — Pedido #${updatedOrder?.orderNumber}`)
+            }
+          }
+
+          // 2. Débito dos ingredientes da receita do produto
+          const product = await products.findOne({ _id: new (await import('mongodb')).ObjectId(item.productId) })
+          const recipe: any[] = product?.recipe || []
+
+          for (const ingredient of recipe) {
+            // Pular ingrediente removido pelo cliente
+            if (removedIngredients.includes(ingredient.inventoryId)) continue
+
+            const ingItem = await inventory.findOne({ _id: new (await import('mongodb')).ObjectId(ingredient.inventoryId) })
+            if (!ingItem) continue
+
+            const ingQty = (ingredient.quantity || 1) * orderQty
+
+            if (status === 'confirmed') {
+              await adjustStock(ingItem, ingQty, true, `Ingrediente — Pedido #${updatedOrder?.orderNumber} (${item.name})`)
+            } else if (status === 'cancelled' && activeStatuses.includes(prevStatus)) {
+              await adjustStock(ingItem, ingQty, false, `Cancelamento ingrediente — Pedido #${updatedOrder?.orderNumber}`)
+            }
+          }
+        }
+      } catch (invErr) {
+        console.error('[Inventory] Falha ao atualizar estoque:', invErr)
+      }
+    }
+
     // Notificar dashboard via SSE para atualizar stats em tempo real
     try {
       const { notifyStatusChange } = await import('../../utils/sse-notifications.js')

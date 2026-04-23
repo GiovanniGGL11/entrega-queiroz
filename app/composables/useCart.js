@@ -29,24 +29,25 @@ const saveCart = () => {
 }
 
 // Adicionar item ao carrinho
-const addToCart = (item, quantity = 1, complements = [], observation = '') => {
+const addToCart = (item, quantity = 1, complements = [], observation = '', removedIngredients = []) => {
   const complementsStr = complements
     .map(c => `${c.name}:${c.quantity}`)
     .sort()
     .join(',')
-  
-  const variantKey = `${item._id}|${observation}|${complementsStr}`
-  
+
+  const removedStr = [...removedIngredients].sort().join(',')
+  const variantKey = `${item._id}|${observation}|${complementsStr}|${removedStr}`
+
   // Calcular preço total do item
   let totalPrice = item.price * quantity
-  
+
   // Adicionar preço dos complementos
   complements.forEach(comp => {
     if (comp.quantity > 0) {
       totalPrice += comp.price * comp.quantity * quantity
     }
   })
-  
+
   const cartItem = {
     id: `${item._id}_${Date.now()}`,
     productId: item._id,
@@ -58,6 +59,7 @@ const addToCart = (item, quantity = 1, complements = [], observation = '') => {
     quantity,
     complements,
     observation,
+    removedIngredients,
     totalPrice
   }
   

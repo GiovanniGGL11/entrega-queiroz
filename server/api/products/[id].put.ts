@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
   
   const id = getRouterParam(event, 'id');
   const body = await readBody(event);
-  const { name, description, price, image, categoryId, complements, order, isVisible, ageRestricted, promotion } = body;
+  const { name, description, price, image, categoryId, complements, order, isVisible, ageRestricted, promotion, recipe } = body;
 
   if (!id || !ObjectId.isValid(id)) {
     throw createError({
@@ -100,6 +100,12 @@ export default defineEventHandler(async (event) => {
           image: image?.trim() || '/not_found.jpg',
           categoryId: categoryId,
           complements: complements || [],
+          recipe: Array.isArray(recipe) ? recipe.map(r => ({
+            inventoryId: r.inventoryId,
+            name: r.name,
+            quantity: Number(r.quantity) || 1,
+            unit: r.unit || 'un'
+          })) : (existingProduct.recipe || []),
           order: order !== undefined ? parseInt(order) : existingProduct.order,
           isVisible: isVisible !== undefined ? Boolean(isVisible) : existingProduct.isVisible,
           ageRestricted: ageRestricted !== undefined ? Boolean(ageRestricted) : (existingProduct.ageRestricted || false),

@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
   }
   
   const body = await readBody(event);
-  const { image, categoryId, complements, order = 0, isVisible = true, promotion = null } = body;
+  const { image, categoryId, complements, order = 0, isVisible = true, promotion = null, recipe = [] } = body;
 
   const name = sanitizeName(body?.name, 'Nome do produto', 150)
   const description = sanitizeString(body?.description || '').slice(0, 500)
@@ -69,6 +69,12 @@ export default defineEventHandler(async (event) => {
       image: image?.trim() || '/not_found.jpg',
       categoryId: categoryId,
       complements: complements || [],
+      recipe: Array.isArray(recipe) ? recipe.map(r => ({
+        inventoryId: r.inventoryId,
+        name: r.name,
+        quantity: Number(r.quantity) || 1,
+        unit: r.unit || 'un'
+      })) : [],
       order: parseInt(order) || 0,
       isVisible: Boolean(isVisible),
       promotion: promotion

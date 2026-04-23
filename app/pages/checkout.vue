@@ -372,7 +372,8 @@ const submitOrder = async () => {
         productId: item.productId,
         name: item.name,
         quantity: item.quantity,
-        complements: item.complements || []
+        complements: item.complements || [],
+        removedIngredients: item.removedIngredients || []
       })),
       paymentMethod: paymentMethod.value,
       notes: notes.value.trim(),
