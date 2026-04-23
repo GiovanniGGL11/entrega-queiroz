@@ -20,8 +20,8 @@
           </svg>
           {{ loading ? 'Carregando...' : 'Atualizar' }}
         </button>
-        <button 
-          @click="showCreateModal = true" 
+        <button
+          @click="() => { showCreateModal = true; loadInventoryIngredients() }"
           class="btn-primary"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -393,36 +393,98 @@
           </div>
           
           <!-- Ingredientes da Receita -->
-          <div class="form-group">
-            <label>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:6px"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3z"/></svg>
-              Ingredientes da Receita
-            </label>
-            <p style="font-size:.875rem;color:#6b7280;margin:.25rem 0 .75rem">
-              Defina quais ingredientes do estoque são usados neste produto e a quantidade por unidade vendida.
-              O estoque será debitado automaticamente ao confirmar um pedido.
-            </p>
+          <div class="recipe-section">
+            <div class="recipe-section-header">
+              <div class="recipe-section-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3z"/></svg>
+                <span>Ingredientes <span class="recipe-required">*</span></span>
+              </div>
+              <span class="recipe-count" v-if="productForm.recipe.length">{{ productForm.recipe.length }} ingrediente{{ productForm.recipe.length > 1 ? 's' : '' }}</span>
+            </div>
+            <p class="recipe-desc">Para cada ingrediente informe: quantidade usada por unidade vendida e o estoque atual. O estoque é debitado automaticamente ao confirmar pedidos.</p>
 
-            <div v-if="loadingInventory" style="font-size:.875rem;color:#6b7280;padding:.5rem 0">Carregando estoque...</div>
+            <div v-if="loadingInventory" class="recipe-loading">
+              <div class="recipe-spinner"></div> Carregando itens do estoque...
+            </div>
+
             <template v-else>
-              <div v-for="(rec, idx) in productForm.recipe" :key="idx" class="recipe-item">
-                <select v-model="rec.inventoryId" @change="onRecipeIngSelect(rec)" class="recipe-select">
-                  <option value="">— Selecione ingrediente —</option>
-                  <option v-for="ing in inventoryIngredients" :key="ing._id" :value="ing._id">
-                    {{ ing.name }} ({{ ing.unit }})
-                  </option>
-                </select>
-                <input v-model.number="rec.quantity" type="number" min="0.01" step="0.01" placeholder="Qtd" class="recipe-qty" />
-                <span class="recipe-unit">{{ rec.unit || '' }}</span>
-                <button type="button" @click="removeRecipeItem(idx)" class="btn-remove-recipe">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
+              <!-- Cards de ingredientes -->
+              <div v-for="(rec, idx) in productForm.recipe" :key="idx" class="ing-card">
+                <div class="ing-card-header">
+                  <span class="ing-num">{{ idx + 1 }}</span>
+                  <span class="ing-card-name">{{ rec.name || 'Novo ingrediente' }}</span>
+                  <button type="button" @click="removeRecipeItem(idx)" class="ing-remove-btn" title="Remover">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+
+                <div class="ing-card-body">
+                  <!-- Nome do ingrediente -->
+                  <div class="ing-field">
+                    <label>Nome do ingrediente *</label>
+                    <input
+                      v-model="rec.name"
+                      type="text"
+                      placeholder="Ex: Hambúrguer, Alface, Molho"
+                      list="ing-names-list"
+                      @change="onIngNameChange(rec)"
+                      class="ing-input"
+                    />
+                    <datalist id="ing-names-list">
+                      <option v-for="ing in inventoryIngredients" :key="ing._id" :value="ing.name" />
+                    </datalist>
+                  </div>
+
+                  <div class="ing-row">
+                    <!-- Unidade -->
+                    <div class="ing-field">
+                      <label>Unidade *</label>
+                      <select v-model="rec.unit" class="ing-input">
+                        <option value="un">un — unidade</option>
+                        <option value="kg">kg — quilograma</option>
+                        <option value="g">g — grama</option>
+                        <option value="L">L — litro</option>
+                        <option value="ml">ml — mililitro</option>
+                        <option value="cx">cx — caixa</option>
+                        <option value="pct">pct — pacote</option>
+                      </select>
+                    </div>
+                    <!-- Qty por unidade vendida -->
+                    <div class="ing-field">
+                      <label>Qty por produto *</label>
+                      <input v-model.number="rec.quantity" type="number" min="0.01" step="0.01" placeholder="Ex: 150" class="ing-input" />
+                      <small class="ing-hint">{{ rec.quantity || 0 }} {{ rec.unit || 'un' }} por unidade vendida</small>
+                    </div>
+                  </div>
+
+                  <!-- Estoque atual (só mostra se for novo ingrediente) -->
+                  <div v-if="!rec.inventoryId" class="ing-stock-box">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                    <div>
+                      <strong>Quantos {{ rec.name || 'deste item' }} você tem agora?</strong>
+                      <p>Informe o estoque inicial. Será registrado no controle de estoque automaticamente.</p>
+                      <div class="ing-stock-input-row">
+                        <input v-model.number="rec.currentStock" type="number" min="0" step="0.01" placeholder="0" class="ing-stock-input" />
+                        <span class="ing-stock-unit">{{ rec.unit || 'un' }}</span>
+                        <input v-model.number="rec.minStock" type="number" min="0" placeholder="Mín (alerta)" class="ing-min-input" />
+                        <small>mín</small>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-else class="ing-linked-box">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+                    Vinculado ao estoque — estoque atual: <strong>{{ getInventoryStock(rec.inventoryId) }}</strong>
+                  </div>
+                </div>
               </div>
 
-              <button type="button" @click="addRecipeItem" class="btn-add-complement" :disabled="submitting">
+              <!-- Botão adicionar -->
+              <button type="button" @click="addRecipeItem" class="btn-add-ing" :disabled="submitting">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Adicionar Ingrediente
               </button>
+
+              <p v-if="recipeError" class="form-error" style="margin-top:.75rem">{{ recipeError }}</p>
             </template>
           </div>
 
@@ -727,9 +789,9 @@ const productToDelete = ref(null)
 // Inventário de ingredientes para receita
 const inventoryIngredients = ref([])
 const loadingInventory = ref(false)
+const recipeError = ref('')
 
 const loadInventoryIngredients = async () => {
-  if (inventoryIngredients.value.length > 0) return
   loadingInventory.value = true
   try {
     inventoryIngredients.value = await authenticatedFetch('/api/inventory')
@@ -738,6 +800,12 @@ const loadInventoryIngredients = async () => {
   } finally {
     loadingInventory.value = false
   }
+}
+
+const getInventoryStock = (inventoryId) => {
+  const item = inventoryIngredients.value.find(i => i._id === inventoryId)
+  if (!item) return '—'
+  return `${item.currentStock} ${item.unit}`
 }
 
 // Formulário
@@ -906,8 +974,16 @@ const refreshProducts = async () => {
 
 // Criar produto
 const createProduct = async () => {
+  // Validar e salvar ingredientes no estoque primeiro
+  if (productForm.value.recipe.length === 0) {
+    showAlert('Adicione pelo menos um ingrediente ao produto', 'error')
+    return
+  }
   try {
     submitting.value = true
+    const ok = await saveRecipeToInventory()
+    if (!ok) { submitting.value = false; return }
+
     const response = await authenticatedFetch('/api/products', {
       method: 'POST',
       body: productForm.value
@@ -952,13 +1028,18 @@ const editProduct = (product) => {
       : { active: false, price: '', dias: [] }
   }
   showPromoConfig.value = !!product.promotion?.active
+  recipeError.value = ''
   showEditModal.value = true
+  loadInventoryIngredients()
 }
 
 // Atualizar produto
 const updateProduct = async () => {
   try {
     submitting.value = true
+    const ok = await saveRecipeToInventory()
+    if (!ok) { submitting.value = false; return }
+
     const response = await authenticatedFetch(`/api/products/${editingProduct.value._id}`, {
       method: 'PUT',
       body: productForm.value
@@ -1035,6 +1116,7 @@ const closeModal = () => {
     promotion: { active: false, price: '', dias: [] }
   }
   showPromoConfig.value = false
+  recipeError.value = ''
 }
 
 // Gerenciar complementos
@@ -1047,10 +1129,20 @@ const removeComplement = (index) => {
 
 // Gerenciar receita
 const addRecipeItem = () => {
-  productForm.value.recipe.push({ inventoryId: '', name: '', quantity: 1, unit: '' })
+  productForm.value.recipe.push({ inventoryId: '', name: '', quantity: 1, unit: 'un', currentStock: 0, minStock: 0 })
 }
 const removeRecipeItem = (index) => {
   productForm.value.recipe.splice(index, 1)
+}
+const onIngNameChange = (rec) => {
+  // Se o nome digitado bate com algum item do estoque, vincula automaticamente
+  const match = inventoryIngredients.value.find(i => i.name.toLowerCase() === rec.name.toLowerCase())
+  if (match) {
+    rec.inventoryId = match._id
+    rec.unit = match.unit
+  } else {
+    rec.inventoryId = ''
+  }
 }
 const onRecipeIngSelect = (rec) => {
   const ing = inventoryIngredients.value.find(i => i._id === rec.inventoryId)
@@ -1058,6 +1150,58 @@ const onRecipeIngSelect = (rec) => {
     rec.name = ing.name
     rec.unit = ing.unit
   }
+}
+
+// Salvar ingredientes no estoque antes de salvar o produto
+const saveRecipeToInventory = async () => {
+  const recipe = productForm.value.recipe
+  recipeError.value = ''
+
+  for (const rec of recipe) {
+    if (!rec.name?.trim()) {
+      recipeError.value = 'Preencha o nome de todos os ingredientes'
+      return false
+    }
+    if (!rec.quantity || rec.quantity <= 0) {
+      recipeError.value = `Informe a quantidade por produto para "${rec.name}"`
+      return false
+    }
+
+    // Se já está vinculado ao estoque, não precisa criar
+    if (rec.inventoryId) continue
+
+    // Criar novo item no estoque
+    try {
+      const res = await authenticatedFetch('/api/inventory', {
+        method: 'POST',
+        body: {
+          name: rec.name.trim(),
+          type: 'ingrediente',
+          category: 'Ingredientes',
+          unit: rec.unit || 'un',
+          initialStock: rec.currentStock || 0,
+          minStock: rec.minStock || 0,
+          costPrice: 0
+        }
+      })
+      rec.inventoryId = res._id
+      // Adiciona à lista local para exibição
+      inventoryIngredients.value.push(res)
+    } catch (err) {
+      // Se já existe (409), busca o existente
+      if (err?.data?.message?.includes('Já existe')) {
+        const existing = inventoryIngredients.value.find(i => i.name.toLowerCase() === rec.name.toLowerCase())
+        if (existing) {
+          rec.inventoryId = existing._id
+          rec.unit = existing.unit
+        }
+      } else {
+        recipeError.value = `Erro ao salvar ingrediente "${rec.name}": ${err?.data?.message || 'erro desconhecido'}`
+        return false
+      }
+    }
+  }
+  return true
 }
 
 // Handle image upload
@@ -2292,47 +2436,209 @@ onUnmounted(() => {
   }
 }
 
-/* Receita / ingredientes */
-.recipe-item {
+/* ── Seção de ingredientes / receita ── */
+.recipe-section {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+.recipe-section-header {
   display: flex;
-  gap: 0.5rem;
   align-items: center;
-  margin-bottom: 0.625rem;
+  justify-content: space-between;
+  margin-bottom: 0.375rem;
 }
-.recipe-select {
-  flex: 1;
-  padding: 0.625rem 0.75rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 0.9375rem;
+.recipe-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #1e293b;
 }
-.recipe-qty {
-  width: 80px;
-  padding: 0.625rem 0.5rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 0.9375rem;
-  text-align: center;
-}
-.recipe-unit {
+.recipe-required { color: #ef4444; }
+.recipe-count {
   font-size: 0.8rem;
-  color: #6b7280;
-  min-width: 28px;
-  text-align: left;
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  font-weight: 600;
 }
-.btn-remove-recipe {
-  padding: 0.5rem;
+.recipe-desc {
+  font-size: 0.8375rem;
+  color: #64748b;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+}
+.recipe-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  padding: 0.5rem 0;
+}
+.recipe-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #ff8e24;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+/* Card de ingrediente */
+.ing-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+.ing-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.75rem 1rem;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+}
+.ing-num {
+  width: 22px;
+  height: 22px;
+  background: #ff8e24;
+  color: white;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ing-card-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ing-remove-btn {
+  padding: 0.35rem;
   background: #fee2e2;
   color: #dc2626;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.btn-remove-recipe:hover { background: #fecaca; }
+.ing-remove-btn:hover { background: #fecaca; }
+
+.ing-card-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.ing-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+.ing-field label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #374151;
+}
+.ing-input {
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+}
+.ing-input:focus { outline: none; border-color: #ff8e24; box-shadow: 0 0 0 3px rgba(255,142,36,.1); }
+.ing-hint { font-size: 0.75rem; color: #94a3b8; margin-top: 0.1rem; }
+.ing-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+/* Caixa de estoque inicial */
+.ing-stock-box {
+  display: flex;
+  gap: 0.625rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  color: #92400e;
+}
+.ing-stock-box > svg { flex-shrink: 0; margin-top: 1px; }
+.ing-stock-box strong { display: block; margin-bottom: 0.25rem; }
+.ing-stock-box p { margin: 0 0 0.625rem; color: #b45309; font-size: 0.8125rem; }
+.ing-stock-input-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.ing-stock-input {
+  width: 90px;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid #fde68a;
+  border-radius: 7px;
+  font-size: 0.9375rem;
+  background: white;
+}
+.ing-stock-input:focus { outline: none; border-color: #f59e0b; }
+.ing-stock-unit { font-size: 0.8rem; color: #92400e; font-weight: 600; }
+.ing-min-input {
+  width: 80px;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  font-size: 0.9375rem;
+  background: white;
+}
+.ing-min-input:focus { outline: none; border-color: #ff8e24; }
+.ing-stock-input-row small { font-size: 0.75rem; color: #6b7280; }
+
+/* Caixa "vinculado ao estoque" */
+.ing-linked-box {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.85rem;
+  color: #374151;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+.ing-linked-box strong { color: #15803d; }
+
+/* Botão adicionar ingrediente */
+.btn-add-ing {
+  width: 100%;
+  padding: 0.75rem;
+  background: white;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.15s;
+  margin-top: 0.25rem;
+}
+.btn-add-ing:hover { border-color: #ff8e24; color: #ff8e24; background: #fff7ed; }
+.btn-add-ing:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Estilos para complementos */
 .complement-item {
