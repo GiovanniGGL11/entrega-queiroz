@@ -45,6 +45,7 @@ export default defineEventHandler(async () => {
                 price: 1,
                 image: 1,
                 complements: 1,
+                recipe: 1,
                 isVisible: 1,
                 promotion: 1,
                 ageRestricted: 1
