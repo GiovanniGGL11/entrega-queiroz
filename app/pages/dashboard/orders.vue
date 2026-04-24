@@ -982,7 +982,7 @@ const printComanda = (order) => {
   const name = storeName.value || 'Queiroz Hamburgueria'
 
   const itemsHtml = order.items.map(item => {
-    const removedIds = (item.removedIngredients || []).map((r: any) => r.inventoryId || r)
+    const removedIds = (item.removedIngredients || []).map(r => r.inventoryId || r)
     const complementsHtml = item.complements && item.complements.length
       ? item.complements.map(c => `<div class="complement">+ ${c.quantity}x ${c.name}</div>`).join('')
       : ''
