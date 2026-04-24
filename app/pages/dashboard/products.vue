@@ -424,10 +424,16 @@
                 </div>
 
                 <div class="ing-card-body">
+                  <!-- Aviso: ingrediente sem vínculo com estoque -->
+                  <div v-if="!rec.inventoryId" class="ing-broken-warn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span>Ingrediente "<strong>{{ rec.name || 'sem nome' }}</strong>" não está vinculado ao estoque. Selecione abaixo para corrigir.</span>
+                  </div>
+
                   <!-- Select do estoque -->
                   <div class="ing-field">
                     <label>Item do estoque *</label>
-                    <select v-model="rec.inventoryId" @change="onRecipeIngSelect(rec)" class="ing-input">
+                    <select v-model="rec.inventoryId" @change="onRecipeIngSelect(rec)" :class="['ing-input', !rec.inventoryId && 'ing-select-error']">
                       <option value="">— Selecione um item —</option>
                       <option v-for="ing in inventoryIngredients" :key="ing._id" :value="ing._id">
                         {{ ing.name }} · {{ ing.currentStock }} {{ ing.unit }} disponíveis
