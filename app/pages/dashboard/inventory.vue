@@ -501,18 +501,25 @@ const openAdjust = (item, type) => {
 
 const saveAdjust = async () => {
   adjustError.value = ''
-  if (!adjustForm.value.quantity || adjustForm.value.quantity <= 0) {
+  const qty = Number(adjustForm.value.quantity)
+  if (!qty || qty <= 0) {
     adjustError.value = 'Informe uma quantidade válida'
+    return
+  }
+  if (!adjustItem.value?._id) {
+    adjustError.value = 'Item inválido'
     return
   }
   adjusting.value = true
   try {
-    const res = await authenticatedFetch(`/api/inventory/${adjustItem.value._id}`, {
+    const token = process.client ? localStorage.getItem('auth_token') : null
+    const res = await $fetch(`/api/inventory/${adjustItem.value._id}`, {
       method: 'PUT',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: {
         adjustType: adjustForm.value.type,
-        quantity: adjustForm.value.quantity,
-        reason: adjustForm.value.reason
+        quantity: qty,
+        reason: adjustForm.value.reason || ''
       }
     })
     const idx = items.value.findIndex(i => i._id === adjustItem.value._id)
@@ -520,7 +527,9 @@ const saveAdjust = async () => {
     showAdjustModal.value = false
     showToast(adjustForm.value.type === 'entrada' ? 'Entrada registrada!' : 'Saída registrada!')
   } catch (err) {
-    adjustError.value = err?.data?.message || 'Erro ao ajustar estoque'
+    const msg = err?.data?.message || err?.data?.statusMessage || err?.message || 'Erro ao ajustar estoque'
+    adjustError.value = msg
+    showToast(msg, 'error')
   } finally {
     adjusting.value = false
   }
@@ -542,16 +551,26 @@ const openEdit = (item) => {
 const saveEdit = async () => {
   editing.value = true
   try {
-    await authenticatedFetch(`/api/inventory/${editItem.value._id}`, {
+    const token = process.client ? localStorage.getItem('auth_token') : null
+    await $fetch(`/api/inventory/${editItem.value._id}`, {
       method: 'PUT',
-      body: editForm.value
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: {
+        name: editForm.value.name,
+        category: editForm.value.category,
+        unit: editForm.value.unit,
+        currentStock: editForm.value.currentStock,
+        minStock: editForm.value.minStock,
+        costPrice: editForm.value.costPrice
+      }
     })
     const idx = items.value.findIndex(i => i._id === editItem.value._id)
     if (idx !== -1) Object.assign(items.value[idx], editForm.value)
     showEditModal.value = false
     showToast('Item atualizado!')
   } catch (err) {
-    showToast(err?.data?.message || 'Erro ao atualizar', 'error')
+    const msg = err?.data?.message || err?.message || 'Erro ao atualizar'
+    showToast(msg, 'error')
   } finally {
     editing.value = false
   }
@@ -565,12 +584,16 @@ const confirmRemove = (item) => {
 const removeItem = async () => {
   removing.value = true
   try {
-    await authenticatedFetch(`/api/inventory/${removeTarget.value._id}`, { method: 'DELETE' })
+    const token = process.client ? localStorage.getItem('auth_token') : null
+    await $fetch(`/api/inventory/${removeTarget.value._id}`, {
+      method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
     items.value = items.value.filter(i => i._id !== removeTarget.value._id)
     showRemoveModal.value = false
     showToast('Item removido')
-  } catch {
-    showToast('Erro ao remover item', 'error')
+  } catch (err) {
+    showToast(err?.data?.message || 'Erro ao remover item', 'error')
   } finally {
     removing.value = false
   }
