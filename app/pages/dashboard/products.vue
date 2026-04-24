@@ -974,26 +974,36 @@ const refreshProducts = async () => {
 
 // Criar produto
 const createProduct = async () => {
-  // Validar e salvar ingredientes no estoque primeiro
   if (productForm.value.recipe.length === 0) {
     showAlert('Adicione pelo menos um ingrediente ao produto', 'error')
     return
   }
+  submitting.value = true
   try {
-    submitting.value = true
-    const ok = await saveRecipeToInventory()
-    if (!ok) { submitting.value = false; return }
+    const resolvedRecipe = await saveRecipeToInventory()
+    if (!resolvedRecipe) { submitting.value = false; return }
 
-    const response = await authenticatedFetch('/api/products', {
-      method: 'POST',
-      body: productForm.value
-    })
-    
+    // Corpo limpo — sem Proxies do Vue
+    const body = {
+      name: productForm.value.name,
+      description: productForm.value.description,
+      price: productForm.value.price,
+      image: productForm.value.image,
+      categoryId: productForm.value.categoryId,
+      order: productForm.value.order,
+      complements: JSON.parse(JSON.stringify(productForm.value.complements || [])),
+      recipe: resolvedRecipe,
+      isVisible: productForm.value.isVisible,
+      ageRestricted: productForm.value.ageRestricted,
+      promotion: productForm.value.promotion ? JSON.parse(JSON.stringify(productForm.value.promotion)) : null
+    }
+
+    const response = await authenticatedFetch('/api/products', { method: 'POST', body })
     products.value.unshift(response.product)
     showAlert('Produto criado com sucesso!', 'success')
     closeModal()
   } catch (error) {
-    showAlert(error.data?.message || 'Erro ao criar produto', 'error')
+    showAlert(error?.data?.message || 'Erro ao criar produto', 'error')
   } finally {
     submitting.value = false
   }
@@ -1035,14 +1045,28 @@ const editProduct = (product) => {
 
 // Atualizar produto
 const updateProduct = async () => {
+  submitting.value = true
   try {
-    submitting.value = true
-    const ok = await saveRecipeToInventory()
-    if (!ok) { submitting.value = false; return }
+    const resolvedRecipe = await saveRecipeToInventory()
+    if (!resolvedRecipe) { submitting.value = false; return }
+
+    const body = {
+      name: productForm.value.name,
+      description: productForm.value.description,
+      price: productForm.value.price,
+      image: productForm.value.image,
+      categoryId: productForm.value.categoryId,
+      order: productForm.value.order,
+      complements: JSON.parse(JSON.stringify(productForm.value.complements || [])),
+      recipe: resolvedRecipe,
+      isVisible: productForm.value.isVisible,
+      ageRestricted: productForm.value.ageRestricted,
+      promotion: productForm.value.promotion ? JSON.parse(JSON.stringify(productForm.value.promotion)) : null
+    }
 
     const response = await authenticatedFetch(`/api/products/${editingProduct.value._id}`, {
       method: 'PUT',
-      body: productForm.value
+      body
     })
     
     const index = products.value.findIndex(p => p._id === editingProduct.value._id)
@@ -1153,55 +1177,78 @@ const onRecipeIngSelect = (rec) => {
 }
 
 // Salvar ingredientes no estoque antes de salvar o produto
+// Retorna a lista de ingredientes resolvidos com inventoryId, ou null em caso de erro
 const saveRecipeToInventory = async () => {
   const recipe = productForm.value.recipe
   recipeError.value = ''
 
-  for (const rec of recipe) {
+  for (let i = 0; i < recipe.length; i++) {
+    const rec = recipe[i]
+
     if (!rec.name?.trim()) {
-      recipeError.value = 'Preencha o nome de todos os ingredientes'
-      return false
+      recipeError.value = `Ingrediente ${i + 1}: preencha o nome`
+      return null
     }
-    if (!rec.quantity || rec.quantity <= 0) {
-      recipeError.value = `Informe a quantidade por produto para "${rec.name}"`
-      return false
+    if (!rec.quantity || Number(rec.quantity) <= 0) {
+      recipeError.value = `Ingrediente "${rec.name}": informe a quantidade por produto`
+      return null
     }
 
-    // Se já está vinculado ao estoque, não precisa criar
+    // Se já está vinculado ao estoque, apenas valida
     if (rec.inventoryId) continue
 
     // Criar novo item no estoque
     try {
-      const res = await authenticatedFetch('/api/inventory', {
+      const res = await $fetch('/api/inventory', {
         method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
         body: {
           name: rec.name.trim(),
           type: 'ingrediente',
           category: 'Ingredientes',
           unit: rec.unit || 'un',
-          initialStock: rec.currentStock || 0,
-          minStock: rec.minStock || 0,
+          initialStock: Number(rec.currentStock) || 0,
+          minStock: Number(rec.minStock) || 0,
           costPrice: 0
         }
       })
-      rec.inventoryId = res._id
-      // Adiciona à lista local para exibição
+      // Atualiza o item da receita com o ID criado
+      recipe[i] = { ...rec, inventoryId: res._id, name: rec.name.trim(), unit: rec.unit || 'un' }
       inventoryIngredients.value.push(res)
     } catch (err) {
-      // Se já existe (409), busca o existente
-      if (err?.data?.message?.includes('Já existe')) {
-        const existing = inventoryIngredients.value.find(i => i.name.toLowerCase() === rec.name.toLowerCase())
+      // Se já existe (409), vincula ao existente
+      const msg = err?.data?.message || err?.message || ''
+      if (msg.includes('Já existe') || err?.status === 409) {
+        const existing = inventoryIngredients.value.find(
+          i => i.name.toLowerCase() === rec.name.trim().toLowerCase()
+        )
         if (existing) {
-          rec.inventoryId = existing._id
-          rec.unit = existing.unit
+          recipe[i] = { ...rec, inventoryId: existing._id, unit: existing.unit }
+          continue
         }
-      } else {
-        recipeError.value = `Erro ao salvar ingrediente "${rec.name}": ${err?.data?.message || 'erro desconhecido'}`
-        return false
+        // Existente não está na lista local — recarrega e tenta de novo
+        await loadInventoryIngredients()
+        const reloaded = inventoryIngredients.value.find(
+          i => i.name.toLowerCase() === rec.name.trim().toLowerCase()
+        )
+        if (reloaded) {
+          recipe[i] = { ...rec, inventoryId: reloaded._id, unit: reloaded.unit }
+          continue
+        }
       }
+      recipeError.value = `Erro ao salvar "${rec.name}": ${msg || 'tente novamente'}`
+      showAlert(recipeError.value, 'error')
+      return null
     }
   }
-  return true
+
+  // Retorna cópia plana da receita com inventoryIds resolvidos
+  return recipe.map(r => ({
+    inventoryId: r.inventoryId || '',
+    name: r.name?.trim() || '',
+    quantity: Number(r.quantity) || 1,
+    unit: r.unit || 'un'
+  }))
 }
 
 // Handle image upload
