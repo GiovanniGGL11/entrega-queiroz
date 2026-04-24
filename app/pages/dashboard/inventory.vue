@@ -522,8 +522,11 @@ const saveAdjust = async () => {
         reason: adjustForm.value.reason || ''
       }
     })
+    // Substituir o item na lista com o novo estoque (garante reatividade no Vue)
     const idx = items.value.findIndex(i => i._id === adjustItem.value._id)
-    if (idx !== -1) items.value[idx].currentStock = res.currentStock
+    if (idx !== -1) {
+      items.value[idx] = { ...items.value[idx], currentStock: res.currentStock }
+    }
     showAdjustModal.value = false
     showToast(adjustForm.value.type === 'entrada' ? 'Entrada registrada!' : 'Saída registrada!')
   } catch (err) {
