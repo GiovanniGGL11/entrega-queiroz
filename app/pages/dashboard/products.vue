@@ -408,78 +408,54 @@
             </div>
 
             <template v-else>
+              <div v-if="inventoryIngredients.length === 0" class="ing-empty-warn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                Nenhum item no estoque ainda. <a href="/dashboard/inventory" target="_blank">Cadastre itens no estoque</a> e volte aqui.
+              </div>
+
               <!-- Cards de ingredientes -->
               <div v-for="(rec, idx) in productForm.recipe" :key="idx" class="ing-card">
                 <div class="ing-card-header">
                   <span class="ing-num">{{ idx + 1 }}</span>
-                  <span class="ing-card-name">{{ rec.name || 'Novo ingrediente' }}</span>
+                  <span class="ing-card-name">{{ rec.name || 'Selecione um ingrediente' }}</span>
                   <button type="button" @click="removeRecipeItem(idx)" class="ing-remove-btn" title="Remover">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </button>
                 </div>
 
                 <div class="ing-card-body">
-                  <!-- Nome do ingrediente -->
+                  <!-- Select do estoque -->
                   <div class="ing-field">
-                    <label>Nome do ingrediente *</label>
-                    <input
-                      v-model="rec.name"
-                      type="text"
-                      placeholder="Ex: Hambúrguer, Alface, Molho"
-                      list="ing-names-list"
-                      @change="onIngNameChange(rec)"
-                      class="ing-input"
-                    />
-                    <datalist id="ing-names-list">
-                      <option v-for="ing in inventoryIngredients" :key="ing._id" :value="ing.name" />
-                    </datalist>
+                    <label>Item do estoque *</label>
+                    <select v-model="rec.inventoryId" @change="onRecipeIngSelect(rec)" class="ing-input">
+                      <option value="">— Selecione um item —</option>
+                      <option v-for="ing in inventoryIngredients" :key="ing._id" :value="ing._id">
+                        {{ ing.name }} · {{ ing.currentStock }} {{ ing.unit }} disponíveis
+                      </option>
+                    </select>
                   </div>
 
-                  <div class="ing-row">
-                    <!-- Unidade -->
-                    <div class="ing-field">
-                      <label>Unidade *</label>
-                      <select v-model="rec.unit" class="ing-input">
-                        <option value="un">un — unidade</option>
-                        <option value="kg">kg — quilograma</option>
-                        <option value="g">g — grama</option>
-                        <option value="L">L — litro</option>
-                        <option value="ml">ml — mililitro</option>
-                        <option value="cx">cx — caixa</option>
-                        <option value="pct">pct — pacote</option>
-                      </select>
-                    </div>
-                    <!-- Qty por unidade vendida -->
-                    <div class="ing-field">
-                      <label>Qty por produto *</label>
-                      <input v-model.number="rec.quantity" type="number" min="0.01" step="0.01" placeholder="Ex: 150" class="ing-input" />
-                      <small class="ing-hint">{{ rec.quantity || 0 }} {{ rec.unit || 'un' }} por unidade vendida</small>
-                    </div>
-                  </div>
-
-                  <!-- Estoque atual (só mostra se for novo ingrediente) -->
-                  <div v-if="!rec.inventoryId" class="ing-stock-box">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-                    <div>
-                      <strong>Quantos {{ rec.name || 'deste item' }} você tem agora?</strong>
-                      <p>Informe o estoque inicial. Será registrado no controle de estoque automaticamente.</p>
-                      <div class="ing-stock-input-row">
-                        <input v-model.number="rec.currentStock" type="number" min="0" step="0.01" placeholder="0" class="ing-stock-input" />
-                        <span class="ing-stock-unit">{{ rec.unit || 'un' }}</span>
-                        <input v-model.number="rec.minStock" type="number" min="0" placeholder="Mín (alerta)" class="ing-min-input" />
-                        <small>mín</small>
+                  <!-- Quantidade por produto -->
+                  <div v-if="rec.inventoryId" class="ing-row">
+                    <div class="ing-field" style="flex:1">
+                      <label>Quantidade usada por unidade vendida *</label>
+                      <div class="ing-qty-wrap">
+                        <input v-model.number="rec.quantity" type="number" min="0.01" step="0.01" placeholder="Ex: 150" class="ing-input ing-qty" />
+                        <span class="ing-unit-label">{{ rec.unit }}</span>
                       </div>
                     </div>
                   </div>
-                  <div v-else class="ing-linked-box">
+
+                  <!-- Indicador vinculado -->
+                  <div v-if="rec.inventoryId" class="ing-linked-box">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
-                    Vinculado ao estoque — estoque atual: <strong>{{ getInventoryStock(rec.inventoryId) }}</strong>
+                    Vinculado ao estoque · estoque atual: <strong>{{ getInventoryStock(rec.inventoryId) }} {{ rec.unit }}</strong>
                   </div>
                 </div>
               </div>
 
               <!-- Botão adicionar -->
-              <button type="button" @click="addRecipeItem" class="btn-add-ing" :disabled="submitting">
+              <button type="button" @click="addRecipeItem" class="btn-add-ing" :disabled="submitting || inventoryIngredients.length === 0">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Adicionar Ingrediente
               </button>
@@ -1158,93 +1134,34 @@ const addRecipeItem = () => {
 const removeRecipeItem = (index) => {
   productForm.value.recipe.splice(index, 1)
 }
-const onIngNameChange = (rec) => {
-  // Se o nome digitado bate com algum item do estoque, vincula automaticamente
-  const match = inventoryIngredients.value.find(i => i.name.toLowerCase() === rec.name.toLowerCase())
-  if (match) {
-    rec.inventoryId = match._id
-    rec.unit = match.unit
-  } else {
-    rec.inventoryId = ''
-  }
-}
 const onRecipeIngSelect = (rec) => {
   const ing = inventoryIngredients.value.find(i => i._id === rec.inventoryId)
   if (ing) {
     rec.name = ing.name
     rec.unit = ing.unit
+    if (!rec.quantity || rec.quantity <= 0) rec.quantity = 1
   }
 }
 
-// Salvar ingredientes no estoque antes de salvar o produto
-// Retorna a lista de ingredientes resolvidos com inventoryId, ou null em caso de erro
+// Valida e retorna a receita pronta para salvar (todos os itens já vêm do estoque)
 const saveRecipeToInventory = async () => {
   const recipe = productForm.value.recipe
   recipeError.value = ''
 
   for (let i = 0; i < recipe.length; i++) {
     const rec = recipe[i]
-
-    if (!rec.name?.trim()) {
-      recipeError.value = `Ingrediente ${i + 1}: preencha o nome`
+    if (!rec.inventoryId) {
+      recipeError.value = `Ingrediente ${i + 1}: selecione um item do estoque`
       return null
     }
     if (!rec.quantity || Number(rec.quantity) <= 0) {
       recipeError.value = `Ingrediente "${rec.name}": informe a quantidade por produto`
       return null
     }
-
-    // Se já está vinculado ao estoque, apenas valida
-    if (rec.inventoryId) continue
-
-    // Criar novo item no estoque
-    try {
-      const res = await $fetch('/api/inventory', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
-        body: {
-          name: rec.name.trim(),
-          type: 'ingrediente',
-          category: 'Ingredientes',
-          unit: rec.unit || 'un',
-          initialStock: Number(rec.currentStock) || 0,
-          minStock: Number(rec.minStock) || 0,
-          costPrice: 0
-        }
-      })
-      // Atualiza o item da receita com o ID criado
-      recipe[i] = { ...rec, inventoryId: res._id, name: rec.name.trim(), unit: rec.unit || 'un' }
-      inventoryIngredients.value.push(res)
-    } catch (err) {
-      // Se já existe (409), vincula ao existente
-      const msg = err?.data?.message || err?.message || ''
-      if (msg.includes('Já existe') || err?.status === 409) {
-        const existing = inventoryIngredients.value.find(
-          i => i.name.toLowerCase() === rec.name.trim().toLowerCase()
-        )
-        if (existing) {
-          recipe[i] = { ...rec, inventoryId: existing._id, unit: existing.unit }
-          continue
-        }
-        // Existente não está na lista local — recarrega e tenta de novo
-        await loadInventoryIngredients()
-        const reloaded = inventoryIngredients.value.find(
-          i => i.name.toLowerCase() === rec.name.trim().toLowerCase()
-        )
-        if (reloaded) {
-          recipe[i] = { ...rec, inventoryId: reloaded._id, unit: reloaded.unit }
-          continue
-        }
-      }
-      recipeError.value = `Erro ao salvar "${rec.name}": ${msg || 'tente novamente'}`
-      showAlert(recipeError.value, 'error')
-      return null
-    }
   }
 
-  // Retorna cópia plana da receita com inventoryIds resolvidos
   return recipe.map(r => ({
-    inventoryId: r.inventoryId || '',
+    inventoryId: r.inventoryId,
     name: r.name?.trim() || '',
     quantity: Number(r.quantity) || 1,
     unit: r.unit || 'un'
@@ -2617,40 +2534,15 @@ onUnmounted(() => {
 .ing-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
 
 /* Caixa de estoque inicial */
-.ing-stock-box {
-  display: flex;
-  gap: 0.625rem;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  border-radius: 8px;
-  padding: 0.75rem;
-  font-size: 0.875rem;
-  color: #92400e;
+.ing-empty-warn {
+  display: flex; align-items: center; gap: .5rem;
+  background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+  padding: .75rem 1rem; font-size: .875rem; color: #92400e;
 }
-.ing-stock-box > svg { flex-shrink: 0; margin-top: 1px; }
-.ing-stock-box strong { display: block; margin-bottom: 0.25rem; }
-.ing-stock-box p { margin: 0 0 0.625rem; color: #b45309; font-size: 0.8125rem; }
-.ing-stock-input-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-.ing-stock-input {
-  width: 90px;
-  padding: 0.5rem 0.625rem;
-  border: 1px solid #fde68a;
-  border-radius: 7px;
-  font-size: 0.9375rem;
-  background: white;
-}
-.ing-stock-input:focus { outline: none; border-color: #f59e0b; }
-.ing-stock-unit { font-size: 0.8rem; color: #92400e; font-weight: 600; }
-.ing-min-input {
-  width: 80px;
-  padding: 0.5rem 0.625rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 7px;
-  font-size: 0.9375rem;
-  background: white;
-}
-.ing-min-input:focus { outline: none; border-color: #ff8e24; }
-.ing-stock-input-row small { font-size: 0.75rem; color: #6b7280; }
+.ing-empty-warn a { color: #b45309; font-weight: 600; }
+.ing-qty-wrap { display: flex; align-items: center; gap: .5rem; }
+.ing-qty { flex: 1; }
+.ing-unit-label { font-size: .9rem; font-weight: 600; color: #374151; white-space: nowrap; min-width: 2rem; }
 
 /* Caixa "vinculado ao estoque" */
 .ing-linked-box {
