@@ -1790,8 +1790,14 @@ useHead({
 
               <!-- Ingredientes removíveis -->
               <div v-if="selectedItem.recipe && selectedItem.recipe.length > 0" class="ingredients-section">
-                <h5>Ingredientes</h5>
-                <p class="ingredients-hint">Toque para remover um ingrediente</p>
+                <div class="ingredients-header">
+                  <div class="ingredients-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3z"/></svg>
+                    <span>Ingredientes</span>
+                    <span v-if="removedIngredients.length > 0" class="ing-removed-count">{{ removedIngredients.length }} removido{{ removedIngredients.length > 1 ? 's' : '' }}</span>
+                  </div>
+                  <p class="ingredients-hint">Toque para remover o que não quer</p>
+                </div>
                 <div class="ingredients-list">
                   <button
                     v-for="ing in selectedItem.recipe"
@@ -3671,19 +3677,35 @@ body {
 
 /* Ingredientes */
 .ingredients-section {
-  border-top: 1px solid #efefef;
-  padding-top: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.875rem 1rem;
   margin-top: 1rem;
 }
-.ingredients-section h5 {
-  font-size: 1.125rem;
-  color: #323232;
-  margin: 0 0 0.25rem;
+.ingredients-header { margin-bottom: 0.625rem; }
+.ingredients-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.975rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.2rem;
+}
+.ing-removed-count {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 0.1rem 0.5rem;
+  border-radius: 99px;
 }
 .ingredients-hint {
-  font-size: 0.8rem;
-  color: #9ca3af;
-  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin: 0;
 }
 .ingredients-list {
   display: flex;
@@ -3694,26 +3716,26 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.35rem 0.75rem;
+  padding: 0.4rem 0.875rem;
   border-radius: 99px;
   border: 1.5px solid #d1fae5;
-  background: #f0fdf4;
+  background: white;
   color: #15803d;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
 }
-.ing-tag:hover { filter: brightness(0.95); }
+.ing-tag:active { transform: scale(0.96); }
 .ing-removed {
-  border-color: #fee2e2;
-  background: #fff5f5;
+  border-color: #fca5a5;
+  background: #fef2f2;
   color: #b91c1c;
-  text-decoration: none;
 }
 .ing-striked {
   text-decoration: line-through;
-  opacity: 0.7;
+  opacity: 0.65;
 }
 
 .complements-section {
