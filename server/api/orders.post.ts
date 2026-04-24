@@ -183,6 +183,11 @@ export default defineEventHandler(async (event) => {
         }
       }
       
+      // Normalizar removedIngredients vindos do frontend: aceita string[] ou {inventoryId}[]
+      const removedIngredients: string[] = (item.removedIngredients || []).map((r: any) =>
+        typeof r === 'string' ? r : (r.inventoryId || '')
+      ).filter(Boolean)
+
       // Usar dados reais do banco de dados
       validatedItems.push({
         productId: realProduct._id,
@@ -191,6 +196,7 @@ export default defineEventHandler(async (event) => {
         price: realPrice,
         subtotal: realSubtotal,
         complements: validatedComplements,
+        removedIngredients,
         recipe: Array.isArray(realProduct.recipe) ? realProduct.recipe : []
       });
       
@@ -368,6 +374,7 @@ export default defineEventHandler(async (event) => {
     for (const item of validatedItems) {
       for (const ingredient of (item.recipe || [])) {
         if (!ingredient.inventoryId) continue;
+        if ((item.removedIngredients || []).includes(ingredient.inventoryId)) continue;
         let invId: ObjectId;
         try { invId = new ObjectId(ingredient.inventoryId) } catch { continue }
         const invItem = await inventory.findOne({ _id: invId });
@@ -394,7 +401,7 @@ export default defineEventHandler(async (event) => {
         phone: customerInfo.phone.trim(),
         email: customerInfo.email?.trim() || '',
       },
-      items: validatedItems.map(({ recipe, ...rest }) => rest),
+      items: validatedItems.map(({ recipe, ...rest }) => rest), // recipe só usado internamente para baixa de estoque
       deliveryInfo: {
         address: deliveryInfo.address.trim(),
         number: deliveryInfo.number?.trim() || '',
@@ -455,6 +462,8 @@ export default defineEventHandler(async (event) => {
     for (const item of validatedItems) {
       for (const ingredient of (item.recipe || [])) {
         if (!ingredient.inventoryId) continue;
+        // Não debitar ingredientes que o cliente removeu do pedido
+        if ((item.removedIngredients || []).includes(ingredient.inventoryId)) continue;
         try {
           let invId: ObjectId;
           try { invId = new ObjectId(ingredient.inventoryId) } catch { continue }
