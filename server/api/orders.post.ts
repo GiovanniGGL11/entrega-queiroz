@@ -401,7 +401,11 @@ export default defineEventHandler(async (event) => {
         phone: customerInfo.phone.trim(),
         email: customerInfo.email?.trim() || '',
       },
-      items: validatedItems.map(({ recipe, ...rest }) => rest), // recipe só usado internamente para baixa de estoque
+      items: validatedItems.map(({ recipe, ...rest }) => ({
+        ...rest,
+        // Salvar snapshot da receita no pedido (histórico + exibição na comanda)
+        recipe: (recipe || []).map((r: any) => ({ name: r.name, inventoryId: r.inventoryId, quantity: r.quantity, unit: r.unit }))
+      })),
       deliveryInfo: {
         address: deliveryInfo.address.trim(),
         number: deliveryInfo.number?.trim() || '',

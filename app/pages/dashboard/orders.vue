@@ -203,6 +203,13 @@
                   <span class="item-name">{{ item.name }}</span>
                   <span class="item-price">{{ formatCurrency(item.price) }}</span>
                 </div>
+                <div v-if="item.recipe && item.recipe.length > 0" class="order-item-ingredients">
+                  <span
+                    v-for="ing in item.recipe"
+                    :key="ing.inventoryId"
+                    :class="['card-ing-tag', isIngRemoved(item, ing) && 'card-ing-removed']"
+                  >{{ ing.name }}</span>
+                </div>
                 <div v-if="item.removedIngredients && item.removedIngredients.length > 0" class="order-item-removed">
                   ✕ Sem: {{ item.removedIngredients.map(r => r.name || r).join(', ') }}
                 </div>
@@ -379,6 +386,15 @@
                   <div v-for="complement in item.complements" :key="complement.name" class="complement">
                     + {{ complement.name }} ({{ complement.quantity }}x)
                   </div>
+                </div>
+                <div v-if="item.recipe && item.recipe.length > 0" class="item-recipe-detail">
+                  <span class="recipe-label">Ingredientes:</span>
+                  <span
+                    v-for="ing in item.recipe"
+                    :key="ing.inventoryId"
+                    :class="['detail-ing-tag', isIngRemoved(item, ing) && 'detail-ing-removed']"
+                    :title="isIngRemoved(item, ing) ? 'Removido pelo cliente' : ''"
+                  >{{ ing.name }}</span>
                 </div>
                 <div v-if="item.removedIngredients && item.removedIngredients.length > 0" class="removed-ings-comanda">
                   <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -854,6 +870,10 @@ const testSound = () => {
 }
 
 // Funções
+const isIngRemoved = (item, ing) => {
+  return (item.removedIngredients || []).some(r => (r.inventoryId || r) === ing.inventoryId)
+}
+
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -962,8 +982,17 @@ const printComanda = (order) => {
   const name = storeName.value || 'Queiroz Hamburgueria'
 
   const itemsHtml = order.items.map(item => {
+    const removedIds = (item.removedIngredients || []).map((r: any) => r.inventoryId || r)
     const complementsHtml = item.complements && item.complements.length
       ? item.complements.map(c => `<div class="complement">+ ${c.quantity}x ${c.name}</div>`).join('')
+      : ''
+    const ingredientsHtml = item.recipe && item.recipe.length
+      ? `<div class="ings-line">${item.recipe.map(r => {
+          const removed = removedIds.includes(r.inventoryId)
+          return removed
+            ? `<span class="ing-rem">✕${r.name}</span>`
+            : `<span>${r.name}</span>`
+        }).join('<span class="sep"> · </span>')}</div>`
       : ''
     const removedHtml = item.removedIngredients && item.removedIngredients.length
       ? `<div class="removed-ings">⚠ SEM: ${item.removedIngredients.map(r => r.name || r).join(', ')}</div>`
@@ -974,6 +1003,7 @@ const printComanda = (order) => {
         <div class="item-info">
           <span class="item-name">${item.name}</span>
           ${complementsHtml}
+          ${ingredientsHtml}
           ${removedHtml}
         </div>
       </div>`
@@ -1012,6 +1042,8 @@ const printComanda = (order) => {
     .item-name { font-weight: bold; }
     .complement { color: #333; font-size: 12px; padding-left: 8px; }
     .removed-ings { color: #000; font-size: 12px; font-weight: bold; padding-left: 8px; border-left: 2px solid #000; margin-top: 2px; }
+    .ings-line { font-size: 11px; color: #444; padding-left: 8px; margin-top: 1px; }
+    .ing-rem { text-decoration: line-through; font-weight: bold; color: #000; }
     .total { font-size: 16px; font-weight: bold; }
     .notes-box { border: 1px dashed #000; padding: 4px 6px; margin-top: 4px; font-size: 12px; }
     .payment-tag { display: inline-block; border: 1px solid #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; margin-top: 2px; }
@@ -2174,6 +2206,25 @@ onUnmounted(() => {
   font-weight: 600;
   padding-left: 0.25rem;
 }
+.order-item-ingredients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  padding-left: 0.25rem;
+  margin-top: 0.15rem;
+}
+.card-ing-tag {
+  font-size: 0.68rem;
+  color: #555;
+  background: #f3f4f6;
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+}
+.card-ing-removed {
+  color: #b91c1c;
+  background: #fef2f2;
+  text-decoration: line-through;
+}
 
 .item-quantity {
   display: inline-flex;
@@ -2572,6 +2623,32 @@ onUnmounted(() => {
   background: #fef2f2;
   border-radius: 4px;
   border-left: 2px solid #fca5a5;
+}
+.item-recipe-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+}
+.recipe-label {
+  font-size: 0.72rem;
+  color: #6b7280;
+  font-weight: 600;
+  margin-right: 0.1rem;
+}
+.detail-ing-tag {
+  font-size: 0.72rem;
+  background: #f3f4f6;
+  color: #374151;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+}
+.detail-ing-removed {
+  background: #fef2f2;
+  color: #b91c1c;
+  text-decoration: line-through;
+  font-weight: 600;
 }
 
 /* Modal de Confirmação e Edição de Status */
