@@ -69,7 +69,26 @@
             </div>
 
             <div class="item-meta">
-              <span class="meta-item">Mín: {{ item.minStock }} {{ item.unit }}</span>
+              <span
+                v-if="editingMinStockId !== item._id"
+                class="meta-item meta-min-editable"
+                title="Clique para editar o mínimo"
+                @click="startEditMinStock(item)"
+              >Mín: {{ item.minStock }} {{ item.unit }} <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+              <span v-else class="meta-item meta-min-input-wrap">
+                <span style="font-size:.8rem;color:#64748b">Mín:</span>
+                <input
+                  v-model.number="editingMinStockValue"
+                  type="number" min="0"
+                  class="min-stock-input"
+                  @keydown.enter="saveMinStock(item)"
+                  @keydown.esc="editingMinStockId = null"
+                  @blur="saveMinStock(item)"
+                  ref="minStockInputRef"
+                  autofocus
+                />
+                <span style="font-size:.8rem;color:#64748b">{{ item.unit }}</span>
+              </span>
               <span v-if="item.costPrice > 0" class="meta-item">Custo: {{ formatCurrency(item.costPrice) }}</span>
               <span v-if="item.type === 'produto' && item.productId" class="meta-item meta-link">
                 <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
@@ -379,6 +398,10 @@ const adjustItem = ref(null)
 const editItem = ref(null)
 const removeTarget = ref(null)
 
+// Edição inline de estoque mínimo
+const editingMinStockId = ref(null)
+const editingMinStockValue = ref(0)
+
 const toast = ref({ show: false, type: 'success', message: '' })
 
 // Formulários
@@ -602,6 +625,31 @@ const removeItem = async () => {
   }
 }
 
+const startEditMinStock = (item) => {
+  editingMinStockId.value = item._id
+  editingMinStockValue.value = item.minStock
+}
+
+const saveMinStock = async (item) => {
+  if (editingMinStockId.value !== item._id) return
+  editingMinStockId.value = null
+  const newMin = Math.max(0, Number(editingMinStockValue.value) || 0)
+  if (newMin === item.minStock) return
+  try {
+    const token = process.client ? localStorage.getItem('auth_token') : null
+    await $fetch(`/api/inventory/${item._id}`, {
+      method: 'PUT',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: { minStock: newMin }
+    })
+    const idx = items.value.findIndex(i => i._id === item._id)
+    if (idx !== -1) items.value[idx] = { ...items.value[idx], minStock: newMin }
+    showToast('Estoque mínimo atualizado!')
+  } catch {
+    showToast('Erro ao atualizar mínimo', 'error')
+  }
+}
+
 // Ao trocar tipo no modal, limpa o produto selecionado
 watch(() => createForm.value.type, (newType) => {
   createForm.value.productId = ''
@@ -666,6 +714,10 @@ onMounted(loadItems)
 .meta-link { color: #6366f1; }
 .meta-warn { color: #d97706; font-weight: 600; }
 .meta-danger { color: #ef4444; font-weight: 600; }
+.meta-min-editable { cursor: pointer; display: inline-flex; align-items: center; gap: .2rem; border-radius: .25rem; padding: .05rem .25rem; transition: background .15s; }
+.meta-min-editable:hover { background: #f1f5f9; color: #374151; }
+.meta-min-input-wrap { display: inline-flex; align-items: center; gap: .3rem; }
+.min-stock-input { width: 4rem; padding: .1rem .35rem; border: 1.5px solid #ff8e24; border-radius: .375rem; font-size: .8rem; font-weight: 600; color: #1e293b; text-align: center; outline: none; }
 
 .item-actions { display: flex; gap: .375rem; flex-shrink: 0; }
 .btn-adj { display: flex; align-items: center; gap: .25rem; padding: .4rem .7rem; border-radius: .5rem; font-size: .8rem; font-weight: 600; cursor: pointer; border: 1px solid; transition: all .15s; background: white; }
