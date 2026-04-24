@@ -373,8 +373,8 @@ const submitOrder = async () => {
         name: item.name,
         quantity: item.quantity,
         complements: item.complements || [],
-        // Envia apenas os IDs para o servidor (para débito de estoque)
-        removedIngredients: (item.removedIngredients || []).map(r => r.inventoryId || r)
+        // Envia objetos {inventoryId, name} — servidor usa inventoryId p/ débito, name p/ exibição
+        removedIngredients: item.removedIngredients || []
       })),
       paymentMethod: paymentMethod.value,
       notes: notes.value.trim(),
