@@ -1659,6 +1659,10 @@ useHead({
               <b>{{ comp.quantity }}x</b> {{ comp.name }}
             </span>
           </div>
+          <div v-if="item.removedIngredients && item.removedIngredients.length > 0" class="cart-removed-ings">
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Sem: {{ item.removedIngredients.map(r => r.name || r).join(', ') }}
+          </div>
         </div>
         <div class="cart-item-right">
           <button
@@ -3417,6 +3421,16 @@ body {
   max-width: 100%; /* Evita quebra dos spans de complementos */
 }
 
+.cart-removed-ings {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  color: #b91c1c;
+  font-weight: 500;
+  margin-top: 0.2rem;
+}
+
 .cart-item-right {
   display: flex;
   flex-direction: column;
@@ -3729,6 +3743,7 @@ body {
   transition: all 0.15s;
   box-shadow: 0 1px 2px rgba(0,0,0,.04);
 }
+.ing-tag:focus { outline: none; }
 .ing-tag:active { transform: scale(0.96); }
 .ing-removed {
   border-color: #fca5a5;

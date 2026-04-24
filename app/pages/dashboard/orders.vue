@@ -198,9 +198,14 @@
             </div>
             <div class="order-items">
               <div v-for="(item, index) in order.items.slice(0, 3)" :key="item.id || index" class="order-item">
-                <span class="item-quantity">{{ item.quantity }}x</span>
-                <span class="item-name">{{ item.name }}</span>
-                <span class="item-price">{{ formatCurrency(item.price) }}</span>
+                <div class="order-item-main">
+                  <span class="item-quantity">{{ item.quantity }}x</span>
+                  <span class="item-name">{{ item.name }}</span>
+                  <span class="item-price">{{ formatCurrency(item.price) }}</span>
+                </div>
+                <div v-if="item.removedIngredients && item.removedIngredients.length > 0" class="order-item-removed">
+                  ✕ Sem: {{ item.removedIngredients.map(r => r.name || r).join(', ') }}
+                </div>
               </div>
               <div v-if="order.items.length > 3" class="more-items">
                 +{{ order.items.length - 3 }} item{{ order.items.length - 3 > 1 ? 's' : '' }}
@@ -2151,12 +2156,23 @@ onUnmounted(() => {
 
 .order-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.15rem;
   padding: 0.5rem;
   background: #f8fafc;
   border-radius: 0.375rem;
   font-size: 0.8125rem;
+}
+.order-item-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.order-item-removed {
+  font-size: 0.72rem;
+  color: #b91c1c;
+  font-weight: 600;
+  padding-left: 0.25rem;
 }
 
 .item-quantity {
