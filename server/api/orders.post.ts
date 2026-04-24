@@ -190,7 +190,8 @@ export default defineEventHandler(async (event) => {
         quantity: quantity,
         price: realPrice,
         subtotal: realSubtotal,
-        complements: validatedComplements
+        complements: validatedComplements,
+        recipe: Array.isArray(realProduct.recipe) ? realProduct.recipe : []
       });
       
       calculatedTotal += realSubtotal;
@@ -363,20 +364,21 @@ export default defineEventHandler(async (event) => {
     const orders = db.collection("orders");
     const inventory = db.collection("inventory");
     
-    // Verificar estoque dos produtos usando dados validados
+    // Verificar estoque dos ingredientes da receita de cada produto
     for (const item of validatedItems) {
-      if (item.productId) {
-        // O productId no inventário é armazenado como string, então converter ObjectId para string
-        const productIdString = item.productId instanceof ObjectId 
-          ? item.productId.toString() 
-          : String(item.productId);
-        
-        const inventoryItem = await inventory.findOne({ productId: productIdString });
-        if (inventoryItem && inventoryItem.currentStock < item.quantity) {
-          throw createError({
-            statusCode: 400,
-            message: `Estoque insuficiente para ${item.name}. Disponível: ${inventoryItem.currentStock}`,
-          });
+      for (const ingredient of (item.recipe || [])) {
+        if (!ingredient.inventoryId) continue;
+        let invId: ObjectId;
+        try { invId = new ObjectId(ingredient.inventoryId) } catch { continue }
+        const invItem = await inventory.findOne({ _id: invId });
+        if (invItem) {
+          const needed = (ingredient.quantity || 1) * item.quantity;
+          if (invItem.currentStock < needed) {
+            throw createError({
+              statusCode: 400,
+              message: `Estoque insuficiente de "${ingredient.name}" para ${item.name}. Disponível: ${invItem.currentStock}`,
+            });
+          }
         }
       }
     }
@@ -392,7 +394,7 @@ export default defineEventHandler(async (event) => {
         phone: customerInfo.phone.trim(),
         email: customerInfo.email?.trim() || '',
       },
-      items: validatedItems,
+      items: validatedItems.map(({ recipe, ...rest }) => rest),
       deliveryInfo: {
         address: deliveryInfo.address.trim(),
         number: deliveryInfo.number?.trim() || '',
@@ -448,59 +450,51 @@ export default defineEventHandler(async (event) => {
       // Não falhar a criação do pedido se a notificação falhar
     }
 
-    // Atualizar estoque dos produtos usando dados validados
+    // Baixar estoque dos ingredientes da receita de cada produto vendido
     const movements = db.collection("inventory_movements");
     for (const item of validatedItems) {
-      if (item.productId) {
+      for (const ingredient of (item.recipe || [])) {
+        if (!ingredient.inventoryId) continue;
         try {
-          // O productId no inventário é armazenado como string, então converter ObjectId para string
-          const productIdString = item.productId instanceof ObjectId
-            ? item.productId.toString()
-            : String(item.productId);
+          let invId: ObjectId;
+          try { invId = new ObjectId(ingredient.inventoryId) } catch { continue }
 
-          const inventoryItem = await inventory.findOne({ productId: productIdString });
+          const deductQty = (ingredient.quantity || 1) * item.quantity;
+          const invItem = await inventory.findOne({ _id: invId });
 
           const updateResult = await inventory.updateOne(
-            { productId: productIdString },
+            { _id: invId },
             {
-              $inc: {
-                currentStock: -item.quantity,
-                totalSold: item.quantity
-              },
-              $set: {
-                lastUpdated: new Date(),
-                updatedAt: new Date()
-              }
+              $inc: { currentStock: -deductQty },
+              $set: { lastUpdated: new Date(), updatedAt: new Date() }
             }
           );
 
           if (updateResult.matchedCount === 0) {
-            console.warn(`[Orders POST] Produto ${productIdString} não encontrado no inventário para atualização de estoque`);
+            console.warn(`[Orders POST] Ingrediente ${ingredient.inventoryId} (${ingredient.name}) não encontrado no inventário`);
           } else {
-            console.log(`[Orders POST] Estoque atualizado para produto ${productIdString}: -${item.quantity} unidades`);
-            // Registrar movimentação de saída por venda
-            if (inventoryItem) {
+            console.log(`[Orders POST] Estoque de "${ingredient.name}" atualizado: -${deductQty}`);
+            if (invItem) {
               await movements.insertOne({
-                inventoryId: inventoryItem._id,
-                productId: productIdString,
+                inventoryId: invId,
+                ingredientName: ingredient.name,
                 productName: item.name,
                 type: 'saida',
-                quantity: item.quantity,
-                previousStock: inventoryItem.currentStock,
-                newStock: inventoryItem.currentStock - item.quantity,
+                quantity: deductQty,
+                previousStock: invItem.currentStock,
+                newStock: invItem.currentStock - deductQty,
                 reason: `Venda - Pedido ${orderNumber}`,
-                costPrice: inventoryItem.costPrice || 0,
+                costPrice: invItem.costPrice || 0,
                 notes: '',
                 orderId: result.insertedId,
-                orderNumber: orderNumber,
+                orderNumber,
                 createdAt: new Date(),
                 createdBy: 'system'
               });
             }
           }
         } catch (stockError) {
-          // Log do erro mas não falhar o pedido
-          console.error(`[Orders POST] Erro ao atualizar estoque do produto ${item.productId}:`, stockError);
+          console.error(`[Orders POST] Erro ao atualizar estoque do ingrediente ${ingredient.inventoryId}:`, stockError);
         }
       }
     }
