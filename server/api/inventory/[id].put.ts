@@ -62,6 +62,18 @@ export default defineEventHandler(async (event) => {
     if (body.currentStock !== undefined) update.currentStock = Math.max(0, Number(body.currentStock) || 0)
 
     await db.collection('inventory').updateOne({ _id: new ObjectId(id) }, { $set: update })
+
+    // Se o nome foi alterado, propagar para a recipe de todos os produtos que usam este item
+    if (body.name !== undefined) {
+      const newName = body.name.trim()
+      const idStr = id.toString()
+      await db.collection('products').updateMany(
+        { 'recipe.inventoryId': idStr },
+        { $set: { 'recipe.$[elem].name': newName } },
+        { arrayFilters: [{ 'elem.inventoryId': idStr }] }
+      )
+    }
+
     return { success: true }
   } catch (err: any) {
     if (err.statusCode) throw err

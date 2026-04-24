@@ -594,6 +594,8 @@ const saveEdit = async () => {
     if (idx !== -1) Object.assign(items.value[idx], editForm.value)
     showEditModal.value = false
     showToast('Item atualizado!')
+    // Propagar nome atualizado para todos os produtos que usam este ingrediente
+    syncRecipeNames()
   } catch (err) {
     const msg = err?.data?.message || err?.message || 'Erro ao atualizar'
     showToast(msg, 'error')
@@ -660,7 +662,20 @@ watch(() => createForm.value.type, (newType) => {
   }
 })
 
-onMounted(loadItems)
+const syncRecipeNames = async () => {
+  try {
+    const token = process.client ? localStorage.getItem('auth_token') : null
+    await $fetch('/api/inventory/sync-recipe-names', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+  } catch { /* silencioso — não interrompe o fluxo */ }
+}
+
+onMounted(async () => {
+  await loadItems()
+  syncRecipeNames() // Sincroniza nomes na abertura da página (corrige nomes antigos)
+})
 </script>
 
 <style scoped>
