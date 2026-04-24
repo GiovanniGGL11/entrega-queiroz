@@ -35,7 +35,7 @@ const addToCart = (item, quantity = 1, complements = [], observation = '', remov
     .sort()
     .join(',')
 
-  const removedStr = [...removedIngredients].sort().join(',')
+  const removedStr = [...removedIngredients].map(r => r.inventoryId || r).sort().join(',')
   const variantKey = `${item._id}|${observation}|${complementsStr}|${removedStr}`
 
   // Calcular preço total do item

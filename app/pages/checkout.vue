@@ -373,7 +373,8 @@ const submitOrder = async () => {
         name: item.name,
         quantity: item.quantity,
         complements: item.complements || [],
-        removedIngredients: item.removedIngredients || []
+        // Envia apenas os IDs para o servidor (para débito de estoque)
+        removedIngredients: (item.removedIngredients || []).map(r => r.inventoryId || r)
       })),
       paymentMethod: paymentMethod.value,
       notes: notes.value.trim(),
@@ -597,6 +598,10 @@ useHead({
                       <span v-for="comp in item.complements" :key="comp.name" class="complement">
                         + {{ comp.quantity }}x {{ comp.name }}
                       </span>
+                    </div>
+                    <div v-if="item.removedIngredients && item.removedIngredients.length > 0" class="item-removed-ings">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      Sem: {{ item.removedIngredients.map(r => r.name || r).join(', ') }}
                     </div>
                     <div v-if="item.observation" class="item-observation">
                       <small>{{ item.observation }}</small>
@@ -1779,6 +1784,16 @@ useHead({
   font-size: 0.75rem;
   margin-right: 0.25rem;
   margin-bottom: 0.125rem;
+}
+
+.item-removed-ings {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: #b91c1c;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
 }
 
 .item-observation {

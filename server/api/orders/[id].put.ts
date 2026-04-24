@@ -126,7 +126,10 @@ export default defineEventHandler(async (event) => {
         for (const item of orderItems) {
           if (!item.productId) continue
           const orderQty = item.quantity || 1
-          const removedIngredients: string[] = item.removedIngredients || []
+          // Suporta tanto string[] quanto {inventoryId, name}[] para compatibilidade
+          const removedIngredients: string[] = (item.removedIngredients || []).map((r: any) =>
+            typeof r === 'string' ? r : r.inventoryId
+          )
 
           // 1. Débito do produto em si (tipo 'produto' vinculado ao cardápio)
           const invItem = await inventory.findOne({ productId: item.productId, type: 'produto' })

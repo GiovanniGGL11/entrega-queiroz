@@ -523,12 +523,14 @@ const scrollToCategory = (categoryId) => {
   }
 };
 
-// Ingredientes removidos pelo cliente
+// Ingredientes removidos pelo cliente — armazena {inventoryId, name}
 const removedIngredients = ref([])
 
-const toggleIngredient = (inventoryId) => {
-  const idx = removedIngredients.value.indexOf(inventoryId)
-  if (idx === -1) removedIngredients.value.push(inventoryId)
+const isIngRemoved = (inventoryId) => removedIngredients.value.some(r => r.inventoryId === inventoryId)
+
+const toggleIngredient = (ing) => {
+  const idx = removedIngredients.value.findIndex(r => r.inventoryId === ing.inventoryId)
+  if (idx === -1) removedIngredients.value.push({ inventoryId: ing.inventoryId, name: ing.name })
   else removedIngredients.value.splice(idx, 1)
 }
 
@@ -1803,12 +1805,12 @@ useHead({
                     v-for="ing in selectedItem.recipe"
                     :key="ing.inventoryId"
                     type="button"
-                    :class="['ing-tag', removedIngredients.includes(ing.inventoryId) && 'ing-removed']"
-                    @click="toggleIngredient(ing.inventoryId)"
+                    :class="['ing-tag', isIngRemoved(ing.inventoryId) && 'ing-removed']"
+                    @click="toggleIngredient(ing)"
                   >
-                    <svg v-if="!removedIngredients.includes(ing.inventoryId)" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                    <svg v-if="!isIngRemoved(ing.inventoryId)" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
                     <svg v-else xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    <span :class="{ 'ing-striked': removedIngredients.includes(ing.inventoryId) }">{{ ing.name }}</span>
+                    <span :class="{ 'ing-striked': isIngRemoved(ing.inventoryId) }">{{ ing.name }}</span>
                   </button>
                 </div>
               </div>

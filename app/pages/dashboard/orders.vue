@@ -375,9 +375,13 @@
                     + {{ complement.name }} ({{ complement.quantity }}x)
                   </div>
                 </div>
+                <div v-if="item.removedIngredients && item.removedIngredients.length > 0" class="removed-ings-comanda">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  SEM: {{ item.removedIngredients.map(r => r.name || r).join(', ') }}
+                </div>
               </div>
             </div>
-            
+
             <div class="detail-section">
               <h4>Resumo</h4>
               <div class="detail-row">
@@ -956,12 +960,16 @@ const printComanda = (order) => {
     const complementsHtml = item.complements && item.complements.length
       ? item.complements.map(c => `<div class="complement">+ ${c.quantity}x ${c.name}</div>`).join('')
       : ''
+    const removedHtml = item.removedIngredients && item.removedIngredients.length
+      ? `<div class="removed-ings">⚠ SEM: ${item.removedIngredients.map(r => r.name || r).join(', ')}</div>`
+      : ''
     return `
       <div class="item-row">
         <span class="item-qty">${item.quantity}x</span>
         <div class="item-info">
           <span class="item-name">${item.name}</span>
           ${complementsHtml}
+          ${removedHtml}
         </div>
       </div>`
   }).join('')
@@ -998,6 +1006,7 @@ const printComanda = (order) => {
     .item-qty { font-weight: bold; min-width: 24px; }
     .item-name { font-weight: bold; }
     .complement { color: #333; font-size: 12px; padding-left: 8px; }
+    .removed-ings { color: #000; font-size: 12px; font-weight: bold; padding-left: 8px; border-left: 2px solid #000; margin-top: 2px; }
     .total { font-size: 16px; font-weight: bold; }
     .notes-box { border: 1px dashed #000; padding: 4px 6px; margin-top: 4px; font-size: 12px; }
     .payment-tag { display: inline-block; border: 1px solid #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; margin-top: 2px; }
@@ -2533,6 +2542,20 @@ onUnmounted(() => {
   font-size: 0.75rem;
   color: #64748b;
   margin-bottom: 0.25rem;
+}
+
+.removed-ings-comanda {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #b91c1c;
+  margin-top: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  background: #fef2f2;
+  border-radius: 4px;
+  border-left: 2px solid #fca5a5;
 }
 
 /* Modal de Confirmação e Edição de Status */
