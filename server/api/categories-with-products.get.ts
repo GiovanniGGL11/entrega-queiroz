@@ -74,6 +74,21 @@ export default defineEventHandler(async () => {
       maxTimeMS: 10000 // Timeout de 10 segundos
     }).toArray();
     
+    // Buscar nomes atuais do estoque para substituir nomes desatualizados na recipe
+    const inventoryItems = await db.collection('inventory').find({}, { projection: { _id: 1, name: 1 } }).toArray()
+    const inventoryNameMap = new Map(inventoryItems.map(i => [i._id.toString(), i.name]))
+
+    // Corrigir nomes dos ingredientes em todos os produtos
+    for (const cat of categoriesWithProducts) {
+      for (const product of cat.items || []) {
+        if (!Array.isArray(product.recipe)) continue
+        product.recipe = product.recipe.map((r: any) => {
+          const currentName = inventoryNameMap.get(r.inventoryId)
+          return currentName ? { ...r, name: currentName } : r
+        })
+      }
+    }
+
     return categoriesWithProducts;
   } catch (error: any) {
     console.error("[categories-with-products] ERRO DETALHADO:", {
