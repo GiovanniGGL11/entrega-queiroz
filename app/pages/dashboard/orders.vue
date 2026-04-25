@@ -124,7 +124,7 @@
         <p>Os pedidos aparecerão aqui quando forem feitos</p>
       </div>
 
-      <div v-else :class="['orders-grid', { 'no-animate': silentRefreshing }]">
+      <div v-else class="orders-grid">
         <div v-for="order in sortedOrders" :key="order.id" :class="['order-card', { 'order-card--late': isOrderLate(order) }]">
           <!-- Banner de atraso -->
           <div v-if="isOrderLate(order)" class="late-banner">
@@ -764,7 +764,6 @@ const storeName = ref('Queiroz Hamburgueria')
 
 // Estado da página
 const loading = ref(false)
-const silentRefreshing = ref(false) // true durante atualizações silenciosas (desativa animações)
 const orders = ref([])
 const statusFilter = ref('')
 const periodFilter = ref('all')
@@ -1349,8 +1348,7 @@ const loadOrders = async (showLoading = true, forceRefresh = false) => {
       // Carga inicial: substitui tudo normalmente (com animações)
       orders.value = ordersData.map(mapOrder)
     } else {
-      // Atualização silenciosa: desativa animações antes de mexer no DOM
-      silentRefreshing.value = true
+      // Atualização silenciosa: cirúrgica para não mover o scroll
       const incoming = ordersData.map(mapOrder)
       const incomingIds = new Set(incoming.map(o => String(o._id)))
 
@@ -1375,11 +1373,6 @@ const loadOrders = async (showLoading = true, forceRefresh = false) => {
     }
 
     console.log('[Orders] Lista atualizada:', orders.value.length, 'pedidos')
-
-    // Reativar animações após o render silencioso estar completo
-    if (!showLoading) {
-      nextTick(() => { silentRefreshing.value = false })
-    }
 
   } catch (error) {
     console.error('Erro ao carregar pedidos:', error)
@@ -2041,14 +2034,6 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
-}
-
-/* Durante atualização silenciosa: zera todas as animações para evitar layout shift */
-.no-animate *,
-.no-animate *::before,
-.no-animate *::after {
-  animation: none !important;
-  transition: none !important;
 }
 
 .order-card--late {
