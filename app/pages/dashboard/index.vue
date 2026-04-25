@@ -1176,7 +1176,7 @@ const loadOrders = async () => {
     const ordersData = response.orders || response
     
     // Pegar apenas os últimos 5 pedidos
-    recentOrders.value = ordersData
+    const incoming = ordersData
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, 5)
       .map(order => ({
@@ -1192,6 +1192,20 @@ const loadOrders = async () => {
           price: item.price
         }))
       }))
+
+    // Atualização cirúrgica para não substituir o array (evita salto de scroll)
+    const incomingIds = new Set(incoming.map(o => o.id))
+    for (let i = recentOrders.value.length - 1; i >= 0; i--) {
+      if (!incomingIds.has(recentOrders.value[i].id)) recentOrders.value.splice(i, 1)
+    }
+    const existingMap = new Map(recentOrders.value.map((o, i) => [o.id, i]))
+    for (const newOrder of incoming) {
+      if (existingMap.has(newOrder.id)) {
+        Object.assign(recentOrders.value[existingMap.get(newOrder.id)], newOrder)
+      } else {
+        recentOrders.value.unshift(newOrder)
+      }
+    }
   } catch (error) {
     console.error('Erro ao carregar pedidos recentes:', error)
     recentOrders.value = []

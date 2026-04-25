@@ -1364,6 +1364,7 @@ onMounted(() => {
   flex: 1;
   padding: 1rem;
   overflow-y: auto;
+  overflow-anchor: none;
 }
 
 /* Responsividade */

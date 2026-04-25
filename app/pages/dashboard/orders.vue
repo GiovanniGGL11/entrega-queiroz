@@ -828,17 +828,6 @@ setOnNewOrderCallback((order) => {
   })
 })
 
-// Watcher adicional como fallback
-watch(notifications, (newNotifs, oldNotifs) => {
-  const unreadCount = newNotifs.filter(n => !n.read).length
-  const hasNewNotifications = newNotifs.length > (oldNotifs?.length || 0)
-  
-  // Se há notificações não lidas OU há novas notificações, atualizar
-  if (hasNewNotifications && unreadCount > 0) {
-    console.log('[Orders] Watcher detectou nova notificação, recarregando lista...')
-    loadOrders(false, true)
-  }
-}, { deep: true, immediate: false })
 
 // Função para ver pedido da notificação
 const viewOrderFromNotification = (order) => {
