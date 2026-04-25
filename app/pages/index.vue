@@ -1835,14 +1835,6 @@ useHead({
                 </div>
               </div>
 
-              <div class="observation">
-                <label for="obs">Observação</label>
-                <textarea
-                  id="obs"
-                  v-model="observation"
-                  placeholder="Ex: tirar cebola"
-                />
-              </div>
             </div>
           </div>
 
