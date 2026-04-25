@@ -145,9 +145,9 @@
             </svg>
           </div>
           <div class="kpi-body">
-            <div class="kpi-value">{{ formatCurrency(currentPeriodData.revenue || 0) }}</div>
+            <div class="kpi-value">{{ formatCurrency(currentNetRevenue) }}</div>
             <div class="kpi-label">Receita Líquida</div>
-            <div class="kpi-sub">Após descontos</div>
+            <div class="kpi-sub">Após descontos, custos e motoboy</div>
           </div>
         </div>
 
@@ -464,7 +464,7 @@
           </div>
           <div class="sales-item">
             <span class="sales-label">Receita Líquida:</span>
-            <span class="sales-value positive">{{ formatCurrency(currentPeriodData.revenue || 0) }}</span>
+            <span class="sales-value positive">{{ formatCurrency(currentNetRevenue) }}</span>
           </div>
           <div class="sales-item">
             <span class="sales-label">Taxa de Entrega:</span>
@@ -911,6 +911,13 @@ const currentPeriodData = computed(() => {
     return customRangeData.value || { orders: 0, revenue: 0, grossRevenue: 0, discountTotal: 0, deliveryFeeTotal: 0, itemCostTotal: 0, averageTicket: 0 }
   }
   return stats.value.periods[selectedPeriod.value] || stats.value.periods.today
+})
+
+// Receita Líquida = Receita (após descontos) − Custo dos Itens − Taxa de Entrega paga ao motoboy
+const currentNetRevenue = computed(() => {
+  const d = currentPeriodData.value
+  const net = (d.revenue || 0) - (d.itemCostTotal || 0) - (d.deliveryFeeTotal || 0)
+  return Math.max(0, net)
 })
 
 // Dados de pagamento do período atual selecionado
