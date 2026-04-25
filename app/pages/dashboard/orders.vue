@@ -124,8 +124,8 @@
         <p>Os pedidos aparecerão aqui quando forem feitos</p>
       </div>
 
-      <div v-else class="orders-grid">
-        <div v-for="order in [...orders].sort((a, b) => (isOrderLate(b) ? 1 : 0) - (isOrderLate(a) ? 1 : 0))" :key="order.id" :class="['order-card', { 'order-card--late': isOrderLate(order) }]">
+      <div v-else :class="['orders-grid', { 'no-animate': silentRefreshing }]">
+        <div v-for="order in sortedOrders" :key="order.id" :class="['order-card', { 'order-card--late': isOrderLate(order) }]">
           <!-- Banner de atraso -->
           <div v-if="isOrderLate(order)" class="late-banner">
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -764,6 +764,7 @@ const storeName = ref('Queiroz Hamburgueria')
 
 // Estado da página
 const loading = ref(false)
+const silentRefreshing = ref(false) // true durante atualizações silenciosas (desativa animações)
 const orders = ref([])
 const statusFilter = ref('')
 const periodFilter = ref('all')
@@ -1156,6 +1157,11 @@ const printComanda = (order) => {
 }
 
 const lateOrders = computed(() => orders.value.filter(o => isOrderLate(o)))
+
+// Sort estável em computed — evita recriar array a cada render no template
+const sortedOrders = computed(() =>
+  [...orders.value].sort((a, b) => (isOrderLate(b) ? 1 : 0) - (isOrderLate(a) ? 1 : 0))
+)
 const markingLate = ref(false)
 
 const markAllLateAsDelivered = async () => {
@@ -1340,10 +1346,11 @@ const loadOrders = async (showLoading = true, forceRefresh = false) => {
     }
 
     if (showLoading) {
-      // Carga inicial: substitui tudo normalmente
+      // Carga inicial: substitui tudo normalmente (com animações)
       orders.value = ordersData.map(mapOrder)
     } else {
-      // Atualização silenciosa: cirúrgica para não mover o scroll
+      // Atualização silenciosa: desativa animações antes de mexer no DOM
+      silentRefreshing.value = true
       const incoming = ordersData.map(mapOrder)
       const incomingIds = new Set(incoming.map(o => String(o._id)))
 
@@ -1368,6 +1375,11 @@ const loadOrders = async (showLoading = true, forceRefresh = false) => {
     }
 
     console.log('[Orders] Lista atualizada:', orders.value.length, 'pedidos')
+
+    // Reativar animações após o render silencioso estar completo
+    if (!showLoading) {
+      nextTick(() => { silentRefreshing.value = false })
+    }
 
   } catch (error) {
     console.error('Erro ao carregar pedidos:', error)
@@ -2029,6 +2041,14 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
+}
+
+/* Durante atualização silenciosa: zera todas as animações para evitar layout shift */
+.no-animate *,
+.no-animate *::before,
+.no-animate *::after {
+  animation: none !important;
+  transition: none !important;
 }
 
 .order-card--late {
