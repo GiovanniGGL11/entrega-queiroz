@@ -210,8 +210,8 @@
                     :class="['card-ing-tag', isIngRemoved(item, ing) && 'card-ing-removed']"
                   >{{ ing.name }}</span>
                 </div>
-                <div v-if="item.removedIngredients && item.removedIngredients.length > 0" class="order-item-removed">
-                  ✕ Sem: {{ item.removedIngredients.map(r => r.name || r).join(', ') }}
+                <div v-if="getRemovedNames(item).length > 0" class="order-item-removed">
+                  ✕ Sem: {{ getRemovedNames(item).join(', ') }}
                 </div>
               </div>
               <div v-if="order.items.length > 3" class="more-items">
@@ -229,7 +229,13 @@
                   <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                 </svg>
                 <span class="info-label">Pagamento:</span>
-                <span class="info-value">{{ getPaymentMethodText(order.paymentMethod) }}<template v-if="order.troco"> · Troco: {{ order.troco }}</template></span>
+                <span class="info-value">
+                  {{ getPaymentMethodText(order.paymentMethod) }}
+                  <template v-if="order.paymentMethod === 'dinheiro'">
+                    <span v-if="calcTroco(order) > 0" class="troco-badge troco-badge--sim">Troco: {{ formatCurrency(calcTroco(order)) }}</span>
+                    <span v-else class="troco-badge troco-badge--nao">Sem troco</span>
+                  </template>
+                </span>
               </div>
               <div v-if="order.deliveryFee && order.deliveryFee > 0" class="info-item">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -396,9 +402,9 @@
                     :title="isIngRemoved(item, ing) ? 'Removido pelo cliente' : ''"
                   >{{ ing.name }}</span>
                 </div>
-                <div v-if="item.removedIngredients && item.removedIngredients.length > 0" class="removed-ings-comanda">
+                <div v-if="getRemovedNames(item).length > 0" class="removed-ings-comanda">
                   <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  SEM: {{ item.removedIngredients.map(r => r.name || r).join(', ') }}
+                  SEM: {{ getRemovedNames(item).join(', ') }}
                 </div>
               </div>
             </div>
@@ -428,9 +434,11 @@
                 <span class="label">Pagamento:</span>
                 <span class="value">{{ getPaymentMethodText(selectedOrder.paymentMethod) }}</span>
               </div>
-              <div v-if="selectedOrder.troco" class="detail-row">
+              <div v-if="selectedOrder.paymentMethod === 'dinheiro'" class="detail-row">
                 <span class="label">Troco:</span>
-                <span class="value">{{ selectedOrder.troco }}</span>
+                <span class="value" :style="calcTroco(selectedOrder) > 0 ? 'color:#16a34a;font-weight:700' : 'color:#94a3b8'">
+                  {{ calcTroco(selectedOrder) > 0 ? formatCurrency(calcTroco(selectedOrder)) : 'Não precisa de troco' }}
+                </span>
               </div>
             </div>
 
@@ -879,7 +887,33 @@ const testSound = () => {
 
 // Funções
 const isIngRemoved = (item, ing) => {
-  return (item.removedIngredients || []).some(r => (r.inventoryId || r) === ing.inventoryId)
+  return (item.removedIngredients || []).some(r => String(r.inventoryId || r) === String(ing.inventoryId))
+}
+
+// Retorna os nomes dos ingredientes removidos, buscando no recipe quando necessário
+const getRemovedNames = (item) => {
+  const removedIds = (item.removedIngredients || []).map(r => String(r.inventoryId || r))
+  return (item.recipe || [])
+    .filter(ing => removedIds.includes(String(ing.inventoryId)))
+    .map(ing => ing.name)
+    .filter(Boolean)
+}
+
+// Calcula o troco real: valor pago - total do pedido
+const calcTroco = (order) => {
+  if (!order.troco || order.troco === 'sem troco') return null
+  const paid = parseFloat(String(order.troco).replace(/[R$\s]/g, '').replace(',', '.'))
+  if (isNaN(paid) || paid <= 0) return null
+  const change = parseFloat((paid - order.total).toFixed(2))
+  return change > 0 ? change : 0
+}
+
+// Gera HTML do troco para a comanda
+const buildTrocoHtml = (order) => {
+  const t = calcTroco(order)
+  if (t > 0) return '<div class="troco-tag">Troco a devolver: ' + formatCurrency(t) + '</div>'
+  if (order.troco) return '<div class="troco-tag" style="color:#888">Sem troco</div>'
+  return ''
 }
 
 const formatCurrency = (value) => {
@@ -1002,8 +1036,9 @@ const printComanda = (order) => {
             : `<span>${r.name}</span>`
         }).join('<span class="sep"> · </span>')}</div>`
       : ''
-    const removedHtml = item.removedIngredients && item.removedIngredients.length
-      ? `<div class="removed-ings">⚠ SEM: ${item.removedIngredients.map(r => r.name || r).join(', ')}</div>`
+    const removedNames = getRemovedNames(item)
+    const removedHtml = removedNames.length
+      ? `<div class="removed-ings">⚠ SEM: ${removedNames.join(', ')}</div>`
       : ''
     return `
       <div class="item-row">
@@ -1099,7 +1134,7 @@ const printComanda = (order) => {
 
   <div class="label">Pagamento</div>
   <div class="payment-tag">${getPaymentMethodText(order.paymentMethod)}</div>
-  ${order.troco ? `<div class="troco-tag">Troco: ${order.troco}</div>` : ''}
+  ${buildTrocoHtml(order)}
 
   ${order.notes && order.notes.trim() ? `
   <div class="label">Observações</div>
@@ -1285,6 +1320,7 @@ const loadOrders = async (showLoading = true, forceRefresh = false) => {
         coupon: order.coupon ?? null,
         deliveryFee: deliveryInfo.deliveryFee || 0,
         paymentMethod: order.paymentMethod || 'dinheiro',
+        troco: order.troco || null,
         notes: order.notes || '',
         createdAt: order.createdAt || new Date(),
         estimatedTime: deliveryInfo.estimatedTime || '',
@@ -1298,7 +1334,9 @@ const loadOrders = async (showLoading = true, forceRefresh = false) => {
           quantity: item.quantity || 0,
           price: item.price || 0,
           subtotal: item.subtotal || 0,
-          complements: item.complements || []
+          complements: item.complements || [],
+          recipe: item.recipe || [],
+          removedIngredients: item.removedIngredients || []
         }))
       }
     })
@@ -2234,6 +2272,24 @@ onUnmounted(() => {
   color: #b91c1c;
   background: #fef2f2;
   text-decoration: line-through;
+}
+
+.troco-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+.troco-badge--sim {
+  background: #dcfce7;
+  color: #15803d;
+}
+.troco-badge--nao {
+  background: #f1f5f9;
+  color: #94a3b8;
 }
 
 .item-quantity {

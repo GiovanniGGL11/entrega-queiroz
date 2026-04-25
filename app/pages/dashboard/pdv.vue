@@ -116,16 +116,28 @@
             </div>
 
             <div v-for="(item, idx) in cart" :key="idx" class="cart-item">
-              <div class="ci-left">
-                <span class="ci-name">{{ item.name }}</span>
-                <span class="ci-unit">R$ {{ formatPrice(item.price) }} un.</span>
+              <div class="ci-top-row">
+                <div class="ci-left">
+                  <span class="ci-name">{{ item.name }}</span>
+                  <span class="ci-unit">R$ {{ formatPrice(item.price) }} un.</span>
+                </div>
+                <div class="ci-controls">
+                  <button class="ci-btn" @click="decreaseQty(idx)">−</button>
+                  <span class="ci-qty">{{ item.quantity }}</span>
+                  <button class="ci-btn" @click="increaseQty(idx)">+</button>
+                </div>
+                <span class="ci-total">R$ {{ formatPrice(item.price * item.quantity) }}</span>
               </div>
-              <div class="ci-controls">
-                <button class="ci-btn" @click="decreaseQty(idx)">−</button>
-                <span class="ci-qty">{{ item.quantity }}</span>
-                <button class="ci-btn" @click="increaseQty(idx)">+</button>
+              <div v-if="item.recipe && item.recipe.length > 0" class="ci-recipe">
+                <button
+                  v-for="ing in item.recipe"
+                  :key="ing.inventoryId"
+                  class="ci-ing-btn"
+                  :class="{ 'ci-ing-removed': item.removedIngredients.includes(ing.inventoryId) }"
+                  @click="toggleIngredient(idx, ing.inventoryId)"
+                  :title="item.removedIngredients.includes(ing.inventoryId) ? 'Clique para adicionar de volta' : 'Clique para remover'"
+                >{{ ing.name }}</button>
               </div>
-              <span class="ci-total">R$ {{ formatPrice(item.price * item.quantity) }}</span>
             </div>
           </div>
 
@@ -228,6 +240,7 @@ interface Product {
   categoryId?: string
   available?: boolean
   isVisible?: boolean
+  recipe?: RecipeItem[]
 }
 
 interface Category {
@@ -236,11 +249,19 @@ interface Category {
   order?: number
 }
 
+interface RecipeItem {
+  inventoryId: string
+  name: string
+  quantity?: number
+}
+
 interface CartItem {
   productId: string
   name: string
   price: number
   quantity: number
+  recipe: RecipeItem[]
+  removedIngredients: string[]
 }
 
 // Estado
@@ -261,10 +282,10 @@ const lastPayment = ref('')
 const mobileView = ref<'products' | 'cart'>('products')
 
 const paymentOptions = [
-  { value: 'dinheiro', label: 'Dinheiro', icon: '💵' },
-  { value: 'pix', label: 'PIX', icon: '⚡' },
-  { value: 'cartao_debito', label: 'Débito', icon: '💳' },
-  { value: 'cartao_credito', label: 'Crédito', icon: '💳' },
+  { value: 'dinheiro', label: 'Dinheiro', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="6" width="22" height="13" rx="2"/><path d="M12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/><path d="M17 12h2M5 12H3"/></svg>' },
+  { value: 'pix', label: 'PIX', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>' },
+  { value: 'cartao_debito', label: 'Débito', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>' },
+  { value: 'cartao_credito', label: 'Crédito', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>' },
 ]
 
 // Produtos visíveis agrupados por categoria
@@ -320,8 +341,17 @@ function addToCart(product: Product) {
       name: product.name,
       price: parseFloat(String(product.price)),
       quantity: 1,
+      recipe: (product.recipe || []).map(r => ({ inventoryId: String(r.inventoryId), name: r.name, quantity: r.quantity })),
+      removedIngredients: [],
     })
   }
+}
+
+function toggleIngredient(idx: number, inventoryId: string) {
+  const item = cart.value[idx]
+  const pos = item.removedIngredients.indexOf(inventoryId)
+  if (pos === -1) item.removedIngredients.push(inventoryId)
+  else item.removedIngredients.splice(pos, 1)
 }
 
 function increaseQty(idx: number) { cart.value[idx].quantity++ }
@@ -352,7 +382,7 @@ async function finishOrder() {
 
   try {
     const body: any = {
-      items: cart.value.map(i => ({ productId: i.productId, name: i.name, quantity: i.quantity })),
+      items: cart.value.map(i => ({ productId: i.productId, name: i.name, quantity: i.quantity, removedIngredients: i.removedIngredients })),
       paymentMethod: paymentMethod.value,
       customerName: customerName.value || undefined,
       notes: notes.value || undefined,
@@ -751,12 +781,51 @@ onMounted(loadData)
 
 .cart-item {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
   padding: 10px 12px;
   background: var(--color-bg, #f9fafb);
   border-radius: 10px;
   border: 1px solid var(--color-border, #e5e7eb);
+}
+
+.ci-top-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ci-recipe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-top: 2px;
+}
+
+.ci-ing-btn {
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--color-border, #d1d5db);
+  background: var(--color-surface, #fff);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-text-secondary, #555);
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.6;
+}
+
+.ci-ing-btn:hover {
+  border-color: #f87171;
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.ci-ing-removed {
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+  color: #b91c1c !important;
+  text-decoration: line-through;
 }
 
 .ci-left {

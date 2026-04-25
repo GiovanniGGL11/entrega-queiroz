@@ -437,25 +437,6 @@ const totalPrice = computed(() => {
 // Formatação
 const formatPrice = (value) => `R$ ${Number(value).toFixed(2).replace(".", ",")}`;
 
-const getCategoryEmoji = (name) => {
-  if (!name) return '🍽️'
-  const n = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  if (n.includes('combo')) return '🍔'
-  if (n.includes('hamburguer') || n.includes('hamburger') || n.includes('burguer') || n.includes('burger') || n.includes('smash')) return '🍔'
-  if (n.includes('bebida') || n.includes('drink') || n.includes('suco') || n.includes('refrigerante') || n.includes('cerveja') || n.includes('agua')) return '🥤'
-  if (n.includes('sobremesa') || n.includes('doce') || n.includes('sorvete') || n.includes('milk') || n.includes('shake') || n.includes('torta') || n.includes('bolo')) return '🍰'
-  if (n.includes('pizza')) return '🍕'
-  if (n.includes('frango') || n.includes('chicken') || n.includes('galinha')) return '🍗'
-  if (n.includes('porcao') || n.includes('porcoes') || n.includes('porcão') || n.includes('acompanhamento') || n.includes('batata') || n.includes('frita')) return '🍟'
-  if (n.includes('salada') || n.includes('vegano') || n.includes('vegetariano') || n.includes('fit')) return '🥗'
-  if (n.includes('pastel') || n.includes('salgado') || n.includes('coxinha') || n.includes('empanado')) return '🥟'
-  if (n.includes('lanche') || n.includes('sanduiche') || n.includes('hot dog') || n.includes('cachorro')) return '🌭'
-  if (n.includes('massa') || n.includes('macarrao') || n.includes('lasanha') || n.includes('espaguete')) return '🍝'
-  if (n.includes('churrasco') || n.includes('espeto') || n.includes('carne') || n.includes('steak') || n.includes('picanha')) return '🥩'
-  if (n.includes('cafe') || n.includes('cappuccino') || n.includes('expresso')) return '☕'
-  if (n.includes('peixe') || n.includes('frutos do mar') || n.includes('camarao') || n.includes('peixada')) return '🐟'
-  return '🍽️'
-}
 
 const getPromoAtiva = (item) => {
   const p = item.promotion

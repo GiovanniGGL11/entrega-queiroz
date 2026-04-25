@@ -93,6 +93,18 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // Snapshot da receita para exibição histórica
+    const recipeSnapshot = Array.isArray(realProduct.recipe)
+      ? realProduct.recipe.map((r: any) => ({ inventoryId: String(r.inventoryId), name: r.name, quantity: r.quantity }))
+      : [];
+
+    // IDs dos ingredientes removidos (validados contra a receita)
+    const removedIngredients = Array.isArray(item.removedIngredients)
+      ? item.removedIngredients
+          .map((id: any) => String(id))
+          .filter((id: string) => recipeSnapshot.some((r: any) => r.inventoryId === id))
+      : [];
+
     validatedItems.push({
       productId: realProduct._id,
       name: realProduct.name,
@@ -100,6 +112,8 @@ export default defineEventHandler(async (event) => {
       price: realPrice,
       subtotal: realSubtotal,
       complements: validatedComplements,
+      recipe: recipeSnapshot,
+      removedIngredients,
     });
 
     calculatedTotal += realSubtotal;

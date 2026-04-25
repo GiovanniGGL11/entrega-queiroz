@@ -73,149 +73,197 @@
         </div>
       </div>
 
-      <!-- Estatísticas — linha 1: hoje -->
-      <div class="stats-section-label">Hoje</div>
-      <div class="stats-grid stats-grid-today">
-        <div class="stat-card stat-green">
-          <div class="stat-icon stat-icon-green">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+      <!-- Seletor de Período Global -->
+      <div class="filter-bar">
+        <div class="global-period-bar">
+          <button v-for="p in periodOptions" :key="p.value"
+            @click="setGlobalPeriod(p.value)"
+            :class="['gp-btn', { active: selectedPeriod === p.value }]">
+            {{ p.label }}
+          </button>
+          <button
+            @click="setGlobalPeriod('custom')"
+            :class="['gp-btn gp-btn-custom', { active: selectedPeriod === 'custom' }]">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
-          </div>
-          <div class="stat-content">
-            <h3>{{ formatCurrency(stats.periods?.today?.revenue || 0) }}</h3>
-            <p>Receita Hoje</p>
-            <small>{{ stats.periods?.today?.orders || 0 }} pedido{{ (stats.periods?.today?.orders || 0) !== 1 ? 's' : '' }}</small>
-          </div>
+            Personalizado
+          </button>
         </div>
 
-        <div class="stat-card stat-orange">
-          <div class="stat-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle><polyline points="12,6 12,12 16,14"></polyline>
-            </svg>
+        <!-- Painel de range personalizado -->
+        <div v-if="selectedPeriod === 'custom'" class="custom-range-panel">
+          <div class="range-mode-tabs">
+            <button v-for="m in rangeModes" :key="m.value"
+              @click="rangeMode = m.value; resetRangeInputs()"
+              :class="['range-mode-btn', { active: rangeMode === m.value }]">
+              {{ m.label }}
+            </button>
           </div>
-          <div class="stat-content">
-            <h3>{{ stats.activeOrders || 0 }}</h3>
-            <p>Em Andamento</p>
-            <small>{{ stats.basic?.pendingOrders || 0 }} pendente{{ (stats.basic?.pendingOrders || 0) !== 1 ? 's' : '' }}</small>
+          <div class="range-inputs">
+            <div class="range-field">
+              <label>De</label>
+              <input v-if="rangeMode === 'day'"   v-model="rangeStart" type="date"   class="range-input" />
+              <input v-if="rangeMode === 'month'" v-model="rangeStart" type="month"  class="range-input" />
+              <input v-if="rangeMode === 'year'"  v-model="rangeStart" type="number" class="range-input" placeholder="2024" min="2020" max="2100" />
+            </div>
+            <div class="range-sep">→</div>
+            <div class="range-field">
+              <label>Até</label>
+              <input v-if="rangeMode === 'day'"   v-model="rangeEnd" type="date"   class="range-input" />
+              <input v-if="rangeMode === 'month'" v-model="rangeEnd" type="month"  class="range-input" />
+              <input v-if="rangeMode === 'year'"  v-model="rangeEnd" type="number" class="range-input" placeholder="2025" min="2020" max="2100" />
+            </div>
+            <button @click="applyCustomRange" class="range-apply-btn" :disabled="loadingCustomRange">
+              <svg v-if="loadingCustomRange" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+              {{ loadingCustomRange ? 'Buscando...' : 'Aplicar' }}
+            </button>
           </div>
-        </div>
-
-        <div class="stat-card stat-blue">
-          <div class="stat-icon stat-icon-blue">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8L2 7h20l-6-4z"/>
-            </svg>
-          </div>
-          <div class="stat-content">
-            <h3>{{ formatCurrency(stats.periods?.today?.averageTicket || 0) }}</h3>
-            <p>Ticket Médio Hoje</p>
-            <small>por pedido</small>
-          </div>
-        </div>
-
-        <div class="stat-card stat-red">
-          <div class="stat-icon stat-icon-red">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
-            </svg>
-          </div>
-          <div class="stat-content">
-            <h3>{{ stats.statusCounts?.cancelled || 0 }}</h3>
-            <p>Cancelados (total)</p>
-            <small>de {{ stats.basic?.totalOrders || 0 }} pedidos</small>
-          </div>
+          <div v-if="customRangeError" class="range-error">{{ customRangeError }}</div>
         </div>
       </div>
 
-      <!-- Estatísticas — linha 2: geral -->
-      <div class="stats-section-label" style="margin-top:8px">Geral</div>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <!-- KPIs principais (reactive ao período) -->
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-green">
+          <div class="kpi-icon kpi-icon-green">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
             </svg>
           </div>
-          <div class="stat-content">
-            <h3>{{ formatCurrency(stats.basic?.totalRevenue || 0) }}</h3>
-            <p>Receita Total</p>
-            <small>{{ stats.basic?.totalOrders || 0 }} pedidos</small>
+          <div class="kpi-body">
+            <div class="kpi-value">{{ formatCurrency(currentPeriodData.grossRevenue || currentPeriodData.revenue || 0) }}</div>
+            <div class="kpi-label">Receita Bruta</div>
+            <div class="kpi-sub">Antes dos descontos</div>
           </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <div class="kpi-card kpi-emerald">
+          <div class="kpi-icon kpi-icon-emerald">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+            </svg>
+          </div>
+          <div class="kpi-body">
+            <div class="kpi-value">{{ formatCurrency(currentPeriodData.revenue || 0) }}</div>
+            <div class="kpi-label">Receita Líquida</div>
+            <div class="kpi-sub">Após descontos</div>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-red">
+          <div class="kpi-icon kpi-icon-red">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle>
+            </svg>
+          </div>
+          <div class="kpi-body">
+            <div class="kpi-value">{{ formatCurrency(currentPeriodData.discountTotal || 0) }}</div>
+            <div class="kpi-label">Descontos</div>
+            <div class="kpi-sub">Cupons aplicados</div>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-blue">
+          <div class="kpi-icon kpi-icon-blue">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
             </svg>
           </div>
-          <div class="stat-content">
-            <h3>{{ formatCurrency(stats.periods?.month?.revenue || 0) }}</h3>
-            <p>Receita do Mês</p>
-            <small>{{ stats.periods?.month?.orders || 0 }} pedidos</small>
+          <div class="kpi-body">
+            <div class="kpi-value">{{ formatCurrency(currentPeriodData.deliveryFeeTotal || 0) }}</div>
+            <div class="kpi-label">Taxa de Entrega</div>
+            <div class="kpi-sub">Total arrecadado</div>
           </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 19c-5 0-9-4-9-9s4-9 9-9 9 4 9 9-4 9-9 9z"></path><path d="M9 9l3 3 3-3"></path>
+        <div class="kpi-card kpi-orange">
+          <div class="kpi-icon kpi-icon-orange">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path>
             </svg>
           </div>
-          <div class="stat-content">
-            <h3>{{ formatCurrency(stats.basic?.averageTicket || 0) }}</h3>
-            <p>Ticket Médio</p>
-            <small>por pedido (geral)</small>
+          <div class="kpi-body">
+            <div class="kpi-value">{{ currentPeriodData.orders || 0 }}</div>
+            <div class="kpi-label">Pedidos</div>
+            <div class="kpi-sub">Ticket: {{ formatCurrency(currentPeriodData.averageTicket || 0) }}</div>
           </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <div class="kpi-card kpi-slate">
+          <div class="kpi-icon kpi-icon-slate">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 3h18l-2 14H5L3 3z"></path><path d="M8 21h8"></path>
             </svg>
           </div>
-          <div class="stat-content">
-            <h3>{{ stats.basic?.totalProducts || 0 }}</h3>
-            <p>Produtos Ativos</p>
-            <small>{{ stats.basic?.totalCategories || 0 }} categorias</small>
+          <div class="kpi-body">
+            <div class="kpi-value">{{ formatCurrency(currentPeriodData.itemCostTotal || 0) }}</div>
+            <div class="kpi-label">Custo dos Itens</div>
+            <div class="kpi-sub">Ingredientes usados</div>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-amber">
+          <div class="kpi-icon kpi-icon-amber">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle><polyline points="12,6 12,12 16,14"></polyline>
+            </svg>
+          </div>
+          <div class="kpi-body">
+            <div class="kpi-value">{{ stats.activeOrders || 0 }}</div>
+            <div class="kpi-label">Em Andamento</div>
+            <div class="kpi-sub">{{ stats.basic?.pendingOrders || 0 }} pendentes agora</div>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-rose">
+          <div class="kpi-icon kpi-icon-rose">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          </div>
+          <div class="kpi-body">
+            <div class="kpi-value">{{ currentStatusByPeriod.cancelled || 0 }}</div>
+            <div class="kpi-label">Cancelados</div>
+            <div class="kpi-sub">No período selecionado</div>
           </div>
         </div>
       </div>
 
-      <!-- Pipeline de status -->
+      <!-- Pipeline de status (filtrado pelo período) -->
       <div class="status-pipeline">
-        <div class="pipeline-title">Pedidos por Status</div>
+        <div class="pipeline-header">
+          <div class="pipeline-title">Funil de Pedidos</div>
+          <div class="pipeline-period-label">{{ getPeriodLabel(selectedPeriod) }}</div>
+        </div>
         <div class="pipeline-items">
           <div class="pipeline-item pipeline-pending">
-            <span class="pipeline-count">{{ stats.statusCounts?.pending || 0 }}</span>
+            <span class="pipeline-count">{{ currentStatusByPeriod.pending || 0 }}</span>
             <span class="pipeline-label">Pendentes</span>
           </div>
           <div class="pipeline-arrow">›</div>
           <div class="pipeline-item pipeline-confirmed">
-            <span class="pipeline-count">{{ stats.statusCounts?.confirmed || 0 }}</span>
+            <span class="pipeline-count">{{ currentStatusByPeriod.confirmed || 0 }}</span>
             <span class="pipeline-label">Confirmados</span>
           </div>
           <div class="pipeline-arrow">›</div>
           <div class="pipeline-item pipeline-preparing">
-            <span class="pipeline-count">{{ stats.statusCounts?.preparing || 0 }}</span>
+            <span class="pipeline-count">{{ currentStatusByPeriod.preparing || 0 }}</span>
             <span class="pipeline-label">Preparando</span>
           </div>
           <div class="pipeline-arrow">›</div>
           <div class="pipeline-item pipeline-ready">
-            <span class="pipeline-count">{{ stats.statusCounts?.ready || 0 }}</span>
+            <span class="pipeline-count">{{ currentStatusByPeriod.ready || 0 }}</span>
             <span class="pipeline-label">Prontos</span>
           </div>
           <div class="pipeline-arrow">›</div>
           <div class="pipeline-item pipeline-delivery">
-            <span class="pipeline-count">{{ stats.statusCounts?.out_for_delivery || 0 }}</span>
+            <span class="pipeline-count">{{ currentStatusByPeriod.out_for_delivery || 0 }}</span>
             <span class="pipeline-label">Na rua</span>
           </div>
           <div class="pipeline-arrow">›</div>
           <div class="pipeline-item pipeline-delivered">
-            <span class="pipeline-count">{{ stats.statusCounts?.delivered || 0 }}</span>
+            <span class="pipeline-count">{{ currentStatusByPeriod.delivered || 0 }}</span>
             <span class="pipeline-label">Entregues</span>
           </div>
         </div>
@@ -224,7 +272,11 @@
       <!-- Pedidos por Tipo (este mês) -->
       <div class="type-cards">
         <div class="type-card type-delivery">
-          <div class="type-icon">🛵</div>
+          <div class="type-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+            </svg>
+          </div>
           <div class="type-info">
             <span class="type-count">{{ stats.ordersByType?.delivery?.count || 0 }}</span>
             <span class="type-label">Delivery</span>
@@ -232,7 +284,11 @@
           </div>
         </div>
         <div class="type-card type-retirada">
-          <div class="type-icon">🏠</div>
+          <div class="type-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+          </div>
           <div class="type-info">
             <span class="type-count">{{ stats.ordersByType?.retirada?.count || 0 }}</span>
             <span class="type-label">Retirada</span>
@@ -240,7 +296,11 @@
           </div>
         </div>
         <div class="type-card type-balcao">
-          <div class="type-icon">🖥️</div>
+          <div class="type-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+          </div>
           <div class="type-info">
             <span class="type-count">{{ stats.ordersByType?.balcao?.count || 0 }}</span>
             <span class="type-label">Balcão</span>
@@ -391,36 +451,36 @@
       <div class="content-card">
         <div class="card-header">
           <h2>Resumo de Vendas</h2>
-        <div class="period-selector">
-          <button 
-            v-for="period in ['today', 'week', 'month', 'year']" 
-            :key="period"
-            @click="selectedPeriod = period"
-            :class="['period-btn', { active: selectedPeriod === period }]"
-            :title="`Ver dados de ${getPeriodLabel(period).toLowerCase()}`"
-          >
-            {{ getPeriodLabel(period) }}
-          </button>
-        </div>
+          <span class="card-period-badge">{{ getPeriodLabel(selectedPeriod) }}</span>
         </div>
         <div class="sales-summary">
           <div class="sales-item">
-            <span class="sales-label">Vendas:</span>
-            <span class="sales-value">{{ formatCurrency(currentPeriodData.revenue) }}</span>
+            <span class="sales-label">Receita Bruta:</span>
+            <span class="sales-value">{{ formatCurrency(currentPeriodData.grossRevenue || currentPeriodData.revenue || 0) }}</span>
+          </div>
+          <div class="sales-item">
+            <span class="sales-label">Descontos:</span>
+            <span class="sales-value negative">− {{ formatCurrency(currentPeriodData.discountTotal || 0) }}</span>
+          </div>
+          <div class="sales-item">
+            <span class="sales-label">Receita Líquida:</span>
+            <span class="sales-value positive">{{ formatCurrency(currentPeriodData.revenue || 0) }}</span>
+          </div>
+          <div class="sales-item">
+            <span class="sales-label">Taxa de Entrega:</span>
+            <span class="sales-value">{{ formatCurrency(currentPeriodData.deliveryFeeTotal || 0) }}</span>
+          </div>
+          <div class="sales-item">
+            <span class="sales-label">Custo dos Itens:</span>
+            <span class="sales-value">{{ formatCurrency(currentPeriodData.itemCostTotal || 0) }}</span>
           </div>
           <div class="sales-item">
             <span class="sales-label">Pedidos:</span>
-            <span class="sales-value">{{ currentPeriodData.orders }}</span>
+            <span class="sales-value">{{ currentPeriodData.orders || 0 }}</span>
           </div>
           <div class="sales-item">
             <span class="sales-label">Ticket Médio:</span>
-            <span class="sales-value">{{ formatCurrency(currentPeriodData.averageTicket) }}</span>
-          </div>
-          <div v-if="currentPeriodData.growth !== undefined" class="sales-item">
-            <span class="sales-label">Crescimento:</span>
-            <span class="sales-value" :class="currentPeriodData.growth >= 0 ? 'positive' : 'negative'">
-              {{ currentPeriodData.growth >= 0 ? '+' : '' }}{{ currentPeriodData.growth.toFixed(1) }}%
-            </span>
+            <span class="sales-value">{{ formatCurrency(currentPeriodData.averageTicket || 0) }}</span>
           </div>
         </div>
         
@@ -451,17 +511,7 @@
       <div class="content-card">
         <div class="card-header">
           <h2>Vendas por Forma de Pagamento</h2>
-          <div class="period-selector">
-            <button 
-              v-for="period in ['today', 'week', 'month', 'year']" 
-              :key="period"
-              @click="selectedPaymentPeriod = period"
-              :class="['period-btn', { active: selectedPaymentPeriod === period }]"
-              :title="`Ver dados de ${getPeriodLabel(period).toLowerCase()}`"
-            >
-              {{ getPeriodLabel(period) }}
-            </button>
-          </div>
+          <span class="card-period-badge">{{ getPeriodLabel(selectedPeriod) }}</span>
         </div>
         <div class="payment-methods-grid">
           <div class="payment-method-card pix">
@@ -721,6 +771,87 @@ const selectedPaymentPeriod = ref('today')
 const selectedChartPeriod = ref('today')
 const selectedOrder = ref(null)
 
+const periodOptions = [
+  { value: 'today', label: 'Hoje' },
+  { value: 'week', label: 'Semana' },
+  { value: 'month', label: 'Mês' },
+  { value: 'year', label: 'Ano' }
+]
+
+const rangeModes = [
+  { value: 'day',   label: 'Por Dia' },
+  { value: 'month', label: 'Por Mês' },
+  { value: 'year',  label: 'Por Ano' }
+]
+
+// Estado do range customizado
+const rangeMode  = ref('day')
+const rangeStart = ref('')
+const rangeEnd   = ref('')
+const loadingCustomRange = ref(false)
+const customRangeError   = ref('')
+const customRangeData    = ref(null)
+
+const resetRangeInputs = () => {
+  rangeStart.value = ''
+  rangeEnd.value   = ''
+  customRangeError.value = ''
+}
+
+const setGlobalPeriod = (period) => {
+  selectedPeriod.value = period
+  selectedPaymentPeriod.value = period
+  if (period !== 'custom') customRangeData.value = null
+}
+
+const applyCustomRange = async () => {
+  customRangeError.value = ''
+  if (!rangeStart.value || !rangeEnd.value) {
+    customRangeError.value = 'Preencha as duas datas.'
+    return
+  }
+
+  // Converter para ISO de acordo com o modo
+  let start, end
+  if (rangeMode.value === 'day') {
+    start = rangeStart.value                   // "2025-04-01"
+    end   = rangeEnd.value                     // "2025-04-25"
+  } else if (rangeMode.value === 'month') {
+    start = rangeStart.value + '-01'           // "2025-01-01"
+    const [ey, em] = rangeEnd.value.split('-')
+    const lastDay = new Date(Number(ey), Number(em), 0).getDate()
+    end   = `${rangeEnd.value}-${lastDay}`     // "2025-04-30"
+  } else {
+    // year
+    const sy = parseInt(rangeStart.value)
+    const ey = parseInt(rangeEnd.value)
+    if (isNaN(sy) || isNaN(ey)) { customRangeError.value = 'Ano inválido.'; return }
+    start = `${sy}-01-01`
+    end   = `${ey}-12-31`
+  }
+
+  if (new Date(start) > new Date(end)) {
+    customRangeError.value = 'A data inicial deve ser anterior à final.'
+    return
+  }
+
+  loadingCustomRange.value = true
+  try {
+    const token = localStorage.getItem('auth_token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    const res = await fetch(`/api/dashboard/stats-range?start=${start}&end=${end}`, { headers })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.statusMessage || 'Erro ao buscar dados')
+    }
+    customRangeData.value = await res.json()
+  } catch (e) {
+    customRangeError.value = e.message || 'Erro ao buscar dados do período.'
+  } finally {
+    loadingCustomRange.value = false
+  }
+}
+
 // Estatísticas reais
 const stats = ref({
   basic: {
@@ -740,16 +871,22 @@ const stats = ref({
     delivered: 0,
     cancelled: 0
   },
+  statusByPeriod: {
+    today: { pending: 0, confirmed: 0, preparing: 0, ready: 0, out_for_delivery: 0, delivered: 0, cancelled: 0 },
+    week: { pending: 0, confirmed: 0, preparing: 0, ready: 0, out_for_delivery: 0, delivered: 0, cancelled: 0 },
+    month: { pending: 0, confirmed: 0, preparing: 0, ready: 0, out_for_delivery: 0, delivered: 0, cancelled: 0 },
+    year: { pending: 0, confirmed: 0, preparing: 0, ready: 0, out_for_delivery: 0, delivered: 0, cancelled: 0 }
+  },
   ordersByType: {
     delivery: { count: 0, revenue: 0 },
     retirada: { count: 0, revenue: 0 },
     balcao: { count: 0, revenue: 0 }
   },
   periods: {
-    today: { orders: 0, revenue: 0, averageTicket: 0 },
-    week: { orders: 0, revenue: 0, averageTicket: 0, growth: 0 },
-    month: { orders: 0, revenue: 0, averageTicket: 0, growth: 0 },
-    year: { orders: 0, revenue: 0, averageTicket: 0 }
+    today: { orders: 0, revenue: 0, grossRevenue: 0, discountTotal: 0, deliveryFeeTotal: 0, itemCostTotal: 0, averageTicket: 0 },
+    week: { orders: 0, revenue: 0, grossRevenue: 0, discountTotal: 0, deliveryFeeTotal: 0, itemCostTotal: 0, averageTicket: 0, growth: 0 },
+    month: { orders: 0, revenue: 0, grossRevenue: 0, discountTotal: 0, deliveryFeeTotal: 0, itemCostTotal: 0, averageTicket: 0, growth: 0 },
+    year: { orders: 0, revenue: 0, grossRevenue: 0, discountTotal: 0, deliveryFeeTotal: 0, itemCostTotal: 0, averageTicket: 0 }
   },
   insights: {
     mostSoldItem: { name: 'Nenhum', quantity: 0 },
@@ -770,12 +907,23 @@ const stats = ref({
 
 // Dados do período atual selecionado
 const currentPeriodData = computed(() => {
+  if (selectedPeriod.value === 'custom') {
+    return customRangeData.value || { orders: 0, revenue: 0, grossRevenue: 0, discountTotal: 0, deliveryFeeTotal: 0, itemCostTotal: 0, averageTicket: 0 }
+  }
   return stats.value.periods[selectedPeriod.value] || stats.value.periods.today
 })
 
 // Dados de pagamento do período atual selecionado
 const currentPaymentData = computed(() => {
   return stats.value.paymentMethodsByPeriod[selectedPaymentPeriod.value] || stats.value.paymentMethodsByPeriod.today
+})
+
+// Status por período atual selecionado
+const currentStatusByPeriod = computed(() => {
+  if (selectedPeriod.value === 'custom') {
+    return customRangeData.value?.statusCounts || {}
+  }
+  return stats.value.statusByPeriod?.[selectedPeriod.value] || {}
 })
 
 // Dados para gráficos
@@ -889,6 +1037,14 @@ const recentOrders = ref([])
 
 // Funções
 const getPeriodLabel = (period) => {
+  if (period === 'custom') {
+    if (rangeStart.value && rangeEnd.value) {
+      if (rangeMode.value === 'year')  return `${rangeStart.value} – ${rangeEnd.value}`
+      if (rangeMode.value === 'month') return `${rangeStart.value} – ${rangeEnd.value}`
+      return `${rangeStart.value} – ${rangeEnd.value}`
+    }
+    return 'Período Personalizado'
+  }
   const labels = {
     today: 'Hoje',
     week: 'Esta Semana',
@@ -981,6 +1137,9 @@ const loadStats = async () => {
     Object.assign(stats.value, response)
     if (response.statusCounts) {
       Object.assign(stats.value.statusCounts, response.statusCounts)
+    }
+    if (response.statusByPeriod) {
+      Object.assign(stats.value.statusByPeriod, response.statusByPeriod)
     }
     if (response.ordersByType) {
       Object.assign(stats.value.ordersByType, response.ordersByType)
@@ -1353,7 +1512,19 @@ onUnmounted(() => {
 
 .type-card:hover { transform: translateY(-2px); }
 
-.type-icon { font-size: 1.8rem; flex-shrink: 0; }
+.type-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.type-delivery .type-icon  { background: #eff6ff; color: #2563eb; }
+.type-retirada .type-icon  { background: #f0fdf4; color: #16a34a; }
+.type-balcao .type-icon    { background: #fff7ed; color: #ea580c; }
 
 .type-info {
   display: flex;
@@ -2704,5 +2875,309 @@ onUnmounted(() => {
   font-size: 0.7rem;
   font-weight: 400;
   color: #94a3b8;
+}
+
+/* ===== Seletor de Período Global ===== */
+.filter-bar {
+  margin-bottom: 20px;
+}
+
+.global-period-bar {
+  display: flex;
+  gap: 6px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 5px;
+  width: fit-content;
+}
+
+.gp-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #64748b;
+  background: transparent;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.gp-btn:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.gp-btn.active {
+  background: #ff8e24;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(255, 142, 36, 0.35);
+}
+
+.gp-btn-custom {
+  display: flex;
+  align-items: center;
+  border-left: 1px solid #e2e8f0;
+  margin-left: 2px;
+  padding-left: 14px;
+}
+
+/* Painel de range customizado */
+.custom-range-panel {
+  margin-top: 10px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.range-mode-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.range-mode-btn {
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.range-mode-btn:hover { background: #e2e8f0; }
+
+.range-mode-btn.active {
+  background: #ff8e24;
+  color: #fff;
+  border-color: #ff8e24;
+}
+
+.range-inputs {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.range-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.range-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.range-input {
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #1e293b;
+  background: #f8fafc;
+  outline: none;
+  transition: border-color 0.15s;
+  min-width: 140px;
+}
+
+.range-input:focus { border-color: #ff8e24; background: #fff; }
+
+.range-sep {
+  font-size: 1rem;
+  color: #94a3b8;
+  padding-bottom: 8px;
+  font-weight: 600;
+}
+
+.range-apply-btn {
+  height: 38px;
+  padding: 0 20px;
+  background: #ff8e24;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s, transform 0.15s;
+  margin-bottom: 0;
+}
+
+.range-apply-btn:hover:not(:disabled) { background: #e67e22; transform: translateY(-1px); }
+.range-apply-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.range-error {
+  font-size: 0.8rem;
+  color: #dc2626;
+  background: #fee2e2;
+  border-radius: 6px;
+  padding: 6px 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spin { animation: spin 0.8s linear infinite; }
+
+@media (max-width: 768px) {
+  .range-inputs { flex-direction: column; align-items: stretch; }
+  .range-sep { display: none; }
+  .range-apply-btn { width: 100%; justify-content: center; }
+}
+
+/* ===== KPI Grid ===== */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.kpi-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+
+.kpi-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.kpi-icon-green   { background: linear-gradient(135deg, #16a34a, #22c55e); }
+.kpi-icon-emerald { background: linear-gradient(135deg, #059669, #10b981); }
+.kpi-icon-red     { background: linear-gradient(135deg, #dc2626, #ef4444); }
+.kpi-icon-blue    { background: linear-gradient(135deg, #2563eb, #3b82f6); }
+.kpi-icon-orange  { background: linear-gradient(135deg, #ea580c, #f97316); }
+.kpi-icon-slate   { background: linear-gradient(135deg, #475569, #64748b); }
+.kpi-icon-amber   { background: linear-gradient(135deg, #d97706, #f59e0b); }
+.kpi-icon-rose    { background: linear-gradient(135deg, #be123c, #f43f5e); }
+
+.kpi-body {
+  min-width: 0;
+}
+
+.kpi-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1.1;
+  word-break: break-word;
+}
+
+.kpi-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  margin-top: 4px;
+}
+
+.kpi-sub {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* Pipeline header com badge de período */
+.pipeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.pipeline-period-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #ff8e24;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+/* Card period badge */
+.card-period-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #ff8e24;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+/* Responsividade KPI */
+@media (max-width: 1024px) {
+  .kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .global-period-bar {
+    width: 100%;
+  }
+
+  .gp-btn {
+    flex: 1;
+    text-align: center;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .kpi-value {
+    font-size: 1.1rem;
+  }
 }
 </style>

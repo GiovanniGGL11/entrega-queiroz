@@ -961,7 +961,7 @@
                     v-model="form.enabledPaymentMethods.dinheiro"
                   />
                   <span class="payment-method-label">
-                    <span class="payment-method-icon">💵</span>
+                    <svg class="payment-method-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="6" width="22" height="13" rx="2"/><path d="M12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/><path d="M17 12h2M5 12H3"/></svg>
                     <span>Dinheiro</span>
                   </span>
                 </label>
@@ -971,7 +971,7 @@
                     v-model="form.enabledPaymentMethods.cartao"
                   />
                   <span class="payment-method-label">
-                    <span class="payment-method-icon">💳</span>
+                    <svg class="payment-method-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                     <span>Cartão</span>
                   </span>
                 </label>
