@@ -1757,14 +1757,15 @@ useHead({
       <div v-if="selectedItem" class="modal-overlay" @click="closeModal">
         <div class="modal-card" @click.stop>
           <div class="scrollable-content">
-            <div class="image-container">
+            <div class="image-container" :class="{ 'no-image': !selectedItem.image }">
               <img
+                v-if="selectedItem.image"
                 :src="selectedItem.image"
                 :alt="selectedItem.name"
                 class="modal-image"
                 @click="openImageOverlay(selectedItem.image)"
               />
-              <button class="close-btn" @click="closeModal" aria-label="Fechar">
+              <button class="close-btn" :class="{ 'close-btn-no-img': !selectedItem.image }" @click="closeModal" aria-label="Fechar">
                 ×
               </button>
             </div>
@@ -1800,7 +1801,7 @@ useHead({
                 </div>
               </div>
 
-              <div class="complements-section">
+              <div v-if="selectedItem.complements && selectedItem.complements.length > 0" class="complements-section">
                 <h5>Complementos (Opcional)</h5>
                 <div
                   v-for="comp in selectedItem.complements"
@@ -3607,6 +3608,22 @@ body {
   cursor: zoom-in;
 }
 
+.image-container.no-image {
+  cursor: default;
+  min-height: 0;
+}
+
+.close-btn-no-img {
+  position: static !important;
+  width: 36px !important;
+  height: 36px !important;
+  margin: 0.75rem 0.75rem 0 auto !important;
+  display: flex !important;
+  background: #f3f4f6 !important;
+  color: #374151 !important;
+  font-size: 1.5rem !important;
+}
+
 .modal-image {
   width: 100%;
   height: 400px;
@@ -4549,14 +4566,14 @@ body {
 
   .modal-card {
     width: 100%;
-    height: 100%;
+    height: 100dvh;
     max-width: none;
     max-height: none;
     border-radius: 0;
   }
 
   .modal-image {
-    height: 250px;
+    height: 200px;
   }
   
   .close-btn {
@@ -4846,6 +4863,7 @@ body {
 
   .modal-footer {
     padding: 0.75rem;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   }
 
   .observation textarea {
