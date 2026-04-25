@@ -878,50 +878,36 @@ useHead({
                 
                 <div class="payment-options">
                   <label v-if="storeSettings.enabledPaymentMethods?.pix" class="payment-option">
-                    <input
-                      v-model="paymentMethod"
-                      type="radio"
-                      value="pix"
-                      name="payment"
-                    />
+                    <input v-model="paymentMethod" type="radio" value="pix" name="payment" />
                     <div class="payment-card">
-                      <div class="payment-icon">PIX</div>
-                      <div class="payment-info">
-                        <span class="payment-name">PIX</span>
-                        <span class="payment-desc">Pagamento instantâneo</span>
-                      </div>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 512 512" fill="currentColor">
+                        <path d="M242.4 292.5C247.8 287.1 255.1 284.1 262.5 284.1C269.9 284.1 277.2 287.1 282.6 292.5L358.4 368.3C373.5 383.4 393.1 391.6 413.1 391.6C433.2 391.6 452.7 383.4 467.8 368.3L508.2 327.9C513.5 322.6 513.5 314.1 508.2 308.8L472.7 273.3C467.4 268 458.9 268 453.6 273.3L413.1 313.8C406.7 320.2 396.7 320.2 390.3 313.8L314.5 238C309.1 232.6 306.1 225.3 306.1 217.9C306.1 210.5 309.1 203.2 314.5 197.8L390.3 122C396.7 115.6 406.7 115.6 413.1 122L453.6 162.5C458.9 167.8 467.4 167.8 472.7 162.5L508.2 127C513.5 121.7 513.5 113.2 508.2 107.9L467.8 67.5C452.7 52.4 433.2 44.2 413.1 44.2C393.1 44.2 373.5 52.4 358.4 67.5L282.6 143.3C277.2 148.7 269.9 151.7 262.5 151.7C255.1 151.7 247.8 148.7 242.4 143.3L166.6 67.5C151.5 52.4 131.9 44.2 111.9 44.2C91.9 44.2 72.3 52.4 57.2 67.5L16.8 107.9C11.5 113.2 11.5 121.7 16.8 127L52.3 162.5C57.6 167.8 66.1 167.8 71.4 162.5L111.9 122C118.3 115.6 128.3 115.6 134.7 122L210.5 197.8C215.9 203.2 218.9 210.5 218.9 217.9C218.9 225.3 215.9 232.6 210.5 238L134.7 313.8C128.3 320.2 118.3 320.2 111.9 313.8L71.4 273.3C66.1 268 57.6 268 52.3 273.3L16.8 308.8C11.5 314.1 11.5 322.6 16.8 327.9L57.2 368.3C72.3 383.4 91.9 391.6 111.9 391.6C131.9 391.6 151.5 383.4 166.6 368.3L242.4 292.5z"/>
+                      </svg>
+                      <span class="payment-name">PIX</span>
                     </div>
                   </label>
-                  
+
                   <label v-if="storeSettings.enabledPaymentMethods?.dinheiro" class="payment-option">
-                    <input
-                      v-model="paymentMethod"
-                      type="radio"
-                      value="dinheiro"
-                      name="payment"
-                    />
+                    <input v-model="paymentMethod" type="radio" value="dinheiro" name="payment" />
                     <div class="payment-card">
-                      <div class="payment-icon">💵</div>
-                      <div class="payment-info">
-                        <span class="payment-name">Dinheiro</span>
-                        <span class="payment-desc">Pagamento na entrega</span>
-                      </div>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <rect x="2" y="6" width="20" height="12" rx="2"/>
+                        <circle cx="12" cy="12" r="2"/>
+                        <path d="M6 12h.01M18 12h.01"/>
+                      </svg>
+                      <span class="payment-name">Dinheiro</span>
                     </div>
                   </label>
-                  
+
                   <label v-if="storeSettings.enabledPaymentMethods?.cartao" class="payment-option">
-                    <input
-                      v-model="paymentMethod"
-                      type="radio"
-                      value="cartao"
-                      name="payment"
-                    />
+                    <input v-model="paymentMethod" type="radio" value="cartao" name="payment" />
                     <div class="payment-card">
-                      <div class="payment-icon">💳</div>
-                      <div class="payment-info">
-                        <span class="payment-name">Cartão</span>
-                        <span class="payment-desc">Crédito/Débito na entrega</span>
-                      </div>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <rect x="2" y="5" width="20" height="14" rx="2"/>
+                        <line x1="2" y1="10" x2="22" y2="10"/>
+                        <line x1="6" y1="15" x2="10" y2="15"/>
+                      </svg>
+                      <span class="payment-name">Cartão</span>
                     </div>
                   </label>
                 </div>
@@ -1668,16 +1654,22 @@ useHead({
 .payment-card {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
   padding: 0.5rem 1rem;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid #d1d5db;
   border-radius: 99px;
   transition: all 0.18s;
   background: white;
   white-space: nowrap;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: #4b5563;
+  user-select: none;
+}
+
+.payment-card svg {
+  flex-shrink: 0;
+  opacity: 0.7;
 }
 
 .payment-option input[type="radio"]:checked + .payment-card {
@@ -1686,20 +1678,17 @@ useHead({
   color: white;
 }
 
-.payment-icon {
-  font-size: 1rem;
-  line-height: 1;
-}
-
-.payment-info {
-  display: flex;
-  align-items: center;
+.payment-option input[type="radio"]:checked + .payment-card svg {
+  opacity: 1;
 }
 
 .payment-name {
   font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
+.payment-icon,
+.payment-info,
 .payment-desc {
   display: none;
 }
