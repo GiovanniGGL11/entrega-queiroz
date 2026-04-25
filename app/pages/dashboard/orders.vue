@@ -229,7 +229,7 @@
                   <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                 </svg>
                 <span class="info-label">Pagamento:</span>
-                <span class="info-value">{{ getPaymentMethodText(order.paymentMethod) }}</span>
+                <span class="info-value">{{ getPaymentMethodText(order.paymentMethod) }}<template v-if="order.troco"> · Troco: {{ order.troco }}</template></span>
               </div>
               <div v-if="order.deliveryFee && order.deliveryFee > 0" class="info-item">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -424,8 +424,16 @@
                 <span class="label">Total:</span>
                 <span class="value total">{{ formatCurrency(selectedOrder.total) }}</span>
               </div>
+              <div class="detail-row">
+                <span class="label">Pagamento:</span>
+                <span class="value">{{ getPaymentMethodText(selectedOrder.paymentMethod) }}</span>
+              </div>
+              <div v-if="selectedOrder.troco" class="detail-row">
+                <span class="label">Troco:</span>
+                <span class="value">{{ selectedOrder.troco }}</span>
+              </div>
             </div>
-            
+
             <div v-if="selectedOrder.notes && selectedOrder.notes.trim()" class="detail-section">
               <h4>Observações</h4>
               <p class="notes-content">{{ selectedOrder.notes }}</p>
@@ -1047,6 +1055,7 @@ const printComanda = (order) => {
     .total { font-size: 16px; font-weight: bold; }
     .notes-box { border: 1px dashed #000; padding: 4px 6px; margin-top: 4px; font-size: 12px; }
     .payment-tag { display: inline-block; border: 1px solid #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; margin-top: 2px; }
+    .troco-tag { font-size: 12px; font-weight: bold; margin-top: 3px; }
     @media print {
       .toolbar { display: none; }
       body { background: white; }
@@ -1090,6 +1099,7 @@ const printComanda = (order) => {
 
   <div class="label">Pagamento</div>
   <div class="payment-tag">${getPaymentMethodText(order.paymentMethod)}</div>
+  ${order.troco ? `<div class="troco-tag">Troco: ${order.troco}</div>` : ''}
 
   ${order.notes && order.notes.trim() ? `
   <div class="label">Observações</div>

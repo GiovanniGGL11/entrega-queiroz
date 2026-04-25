@@ -32,6 +32,7 @@ const deliveryInfo = ref({
 })
 
 const paymentMethod = ref('pix')
+const trocoValue = ref('')   // valor informado pelo cliente para troco
 const notes = ref('')
 const deliveryMode = ref('delivery') // 'delivery' | 'retirada'
 
@@ -377,6 +378,9 @@ const submitOrder = async () => {
         removedIngredients: item.removedIngredients || []
       })),
       paymentMethod: paymentMethod.value,
+      troco: paymentMethod.value === 'dinheiro'
+        ? (trocoValue.value === 'nao' ? 'sem troco' : trocoValue.value ? `R$ ${parseFloat(trocoValue.value).toFixed(2)}` : null)
+        : null,
       notes: notes.value.trim(),
       couponCode: appliedCoupon.value?.code || null
     }
@@ -910,6 +914,40 @@ useHead({
                       <span class="payment-name">Cartão</span>
                     </div>
                   </label>
+                </div>
+
+                <!-- Troco (apenas para dinheiro) -->
+                <div v-if="paymentMethod === 'dinheiro'" class="troco-section">
+                  <label class="troco-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                    Precisa de troco?
+                  </label>
+                  <div class="troco-options">
+                    <button
+                      type="button"
+                      :class="['troco-btn', trocoValue === 'nao' && 'active-no']"
+                      @click="trocoValue = 'nao'"
+                    >Não preciso</button>
+                    <button
+                      type="button"
+                      :class="['troco-btn', trocoValue !== '' && trocoValue !== 'nao' && 'active-yes']"
+                      @click="trocoValue = trocoValue === 'nao' || trocoValue === '' ? totalAmount.toFixed(2) : trocoValue"
+                    >Preciso de troco</button>
+                  </div>
+                  <div v-if="trocoValue !== '' && trocoValue !== 'nao'" class="troco-input-wrap">
+                    <span class="troco-prefix">R$</span>
+                    <input
+                      v-model="trocoValue"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Valor que vai pagar"
+                      class="troco-input"
+                    />
+                  </div>
+                  <p v-if="trocoValue !== '' && trocoValue !== 'nao' && parseFloat(trocoValue) > 0" class="troco-hint">
+                    Troco: <strong>{{ formatPrice(Math.max(0, parseFloat(trocoValue) - totalAmount)) }}</strong>
+                  </p>
                 </div>
               </div>
 
@@ -1942,6 +1980,89 @@ useHead({
 @media (max-width: 480px) {
   .container { padding: 0.5rem 0.5rem 0; }
   .checkout-form, .order-items-section { padding: 0.875rem; }
+}
+
+/* Troco */
+.troco-section {
+  margin-top: 0.875rem;
+  padding: 0.875rem;
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+}
+
+.troco-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.6rem;
+}
+
+.troco-options {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.troco-btn {
+  flex: 1;
+  padding: 0.4rem 0.75rem;
+  border: 1.5px solid #d1d5db;
+  border-radius: 99px;
+  background: white;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.troco-btn.active-no {
+  border-color: #6b7280;
+  background: #6b7280;
+  color: white;
+}
+
+.troco-btn.active-yes {
+  border-color: var(--color-primary, #ff8e24);
+  background: var(--color-primary, #ff8e24);
+  color: white;
+}
+
+.troco-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.troco-prefix {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.troco-input {
+  flex: 1;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.4rem;
+  font-size: 0.9rem;
+  color: #1f2937;
+  background: white;
+}
+
+.troco-input:focus {
+  outline: none;
+  border-color: var(--color-primary, #ff8e24);
+}
+
+.troco-hint {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  color: #6b7280;
 }
 
 /* Modal de Alerta */

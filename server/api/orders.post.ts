@@ -27,6 +27,7 @@ export default defineEventHandler(async (event) => {
     deliveryInfo,
     deliveryMode,
     paymentMethod,
+    troco,
     notes,
     couponCode
   } = body;
@@ -420,6 +421,7 @@ export default defineEventHandler(async (event) => {
         estimatedTime: estimatedTime
       },
       paymentMethod: paymentMethod || 'dinheiro',
+      troco: paymentMethod === 'dinheiro' ? (sanitizeString(troco || '').slice(0, 50) || null) : null,
       totalAmount: calculatedTotal,
       discount: discountAmount,
       coupon: appliedCoupon,
