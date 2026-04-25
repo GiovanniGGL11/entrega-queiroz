@@ -98,11 +98,15 @@ export default defineEventHandler(async (event) => {
       ? realProduct.recipe.map((r: any) => ({ inventoryId: String(r.inventoryId), name: r.name, quantity: r.quantity }))
       : [];
 
-    // IDs dos ingredientes removidos (validados contra a receita)
+    // Ingredientes removidos: salvar {inventoryId, name} para exibição futura
     const removedIngredients = Array.isArray(item.removedIngredients)
       ? item.removedIngredients
-          .map((id: any) => String(id))
-          .filter((id: string) => recipeSnapshot.some((r: any) => r.inventoryId === id))
+          .map((id: any) => {
+            const strId = String(id)
+            const found = recipeSnapshot.find((r: any) => r.inventoryId === strId)
+            return found ? { inventoryId: strId, name: found.name } : null
+          })
+          .filter(Boolean)
       : [];
 
     validatedItems.push({

@@ -890,13 +890,16 @@ const isIngRemoved = (item, ing) => {
   return (item.removedIngredients || []).some(r => String(r.inventoryId || r) === String(ing.inventoryId))
 }
 
-// Retorna os nomes dos ingredientes removidos, buscando no recipe quando necessário
+// Retorna os nomes dos ingredientes removidos
 const getRemovedNames = (item) => {
-  const removedIds = (item.removedIngredients || []).map(r => String(r.inventoryId || r))
-  return (item.recipe || [])
-    .filter(ing => removedIds.includes(String(ing.inventoryId)))
-    .map(ing => ing.name)
-    .filter(Boolean)
+  return (item.removedIngredients || []).map(r => {
+    // Novo formato: {inventoryId, name}
+    if (r && typeof r === 'object' && r.name) return r.name
+    // Fallback: buscar nome no snapshot recipe
+    const id = String(r.inventoryId || r)
+    const found = (item.recipe || []).find(ing => String(ing.inventoryId) === id)
+    return found ? found.name : null
+  }).filter(Boolean)
 }
 
 // Calcula o troco real: valor pago - total do pedido

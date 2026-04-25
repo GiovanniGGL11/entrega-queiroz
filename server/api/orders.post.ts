@@ -184,10 +184,14 @@ export default defineEventHandler(async (event) => {
         }
       }
       
-      // Normalizar removedIngredients vindos do frontend: aceita string[] ou {inventoryId}[]
-      const removedIngredients: string[] = (item.removedIngredients || []).map((r: any) =>
-        typeof r === 'string' ? r : (r.inventoryId || '')
-      ).filter(Boolean)
+      // Normalizar removedIngredients: salvar {inventoryId, name} para exibição futura
+      const recipeForLookup: any[] = Array.isArray(realProduct.recipe) ? realProduct.recipe : []
+      const removedIngredients = (item.removedIngredients || []).map((r: any) => {
+        const id = typeof r === 'string' ? r : String(r.inventoryId || '')
+        if (!id) return null
+        const found = recipeForLookup.find((ri: any) => String(ri.inventoryId) === id)
+        return { inventoryId: id, name: found?.name || (typeof r === 'object' ? r.name : '') || id }
+      }).filter(Boolean)
 
       // Usar dados reais do banco de dados
       validatedItems.push({
@@ -375,7 +379,7 @@ export default defineEventHandler(async (event) => {
     for (const item of validatedItems) {
       for (const ingredient of (item.recipe || [])) {
         if (!ingredient.inventoryId) continue;
-        if ((item.removedIngredients || []).includes(ingredient.inventoryId)) continue;
+        if ((item.removedIngredients || []).some((r: any) => String(r.inventoryId || r) === String(ingredient.inventoryId))) continue;
         let invId: ObjectId;
         try { invId = new ObjectId(ingredient.inventoryId) } catch { continue }
         const invItem = await inventory.findOne({ _id: invId });
@@ -469,7 +473,7 @@ export default defineEventHandler(async (event) => {
       for (const ingredient of (item.recipe || [])) {
         if (!ingredient.inventoryId) continue;
         // Não debitar ingredientes que o cliente removeu do pedido
-        if ((item.removedIngredients || []).includes(ingredient.inventoryId)) continue;
+        if ((item.removedIngredients || []).some((r: any) => String(r.inventoryId || r) === String(ingredient.inventoryId))) continue;
         try {
           let invId: ObjectId;
           try { invId = new ObjectId(ingredient.inventoryId) } catch { continue }
