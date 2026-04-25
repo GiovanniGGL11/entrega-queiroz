@@ -1252,6 +1252,9 @@ const clearFilters = () => {
 }
 
 const loadOrders = async (showLoading = true, forceRefresh = false) => {
+  // Salvar posição do scroll para não pular a tela em atualizações silenciosas
+  const savedScrollY = !showLoading ? window.scrollY : 0
+
   try {
     if (showLoading) {
       loading.value = true
@@ -1345,7 +1348,12 @@ const loadOrders = async (showLoading = true, forceRefresh = false) => {
     })
     
     console.log('[Orders] Lista atualizada:', orders.value.length, 'pedidos')
-    
+
+    // Restaurar scroll após re-render para evitar pulo de tela
+    if (!showLoading) {
+      nextTick(() => { window.scrollTo({ top: savedScrollY, behavior: 'instant' }) })
+    }
+
   } catch (error) {
     console.error('Erro ao carregar pedidos:', error)
     const errorMessage = error.data?.message || error.message || 'Erro ao carregar pedidos'
