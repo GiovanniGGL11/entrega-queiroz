@@ -4581,15 +4581,26 @@ body {
   }
 
   .complement-item {
-    padding: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.375rem 0;
   }
 
   .comp-name {
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
+    flex: 1 1 100%;
+    margin-bottom: 0.125rem;
+  }
+
+  .comp-controls {
+    margin: 0;
+    flex-shrink: 0;
   }
 
   .comp-price {
-    font-size: 0.8rem;
+    font-size: 0.875rem;
+    margin-left: auto;
+    align-self: center;
   }
 
   .observation {
@@ -4598,7 +4609,7 @@ body {
 
   .observation textarea {
     /* padding: 0.5rem; */
-    font-size: 0.875rem;
+    font-size: 1rem; /* Mínimo 16px para evitar zoom automático no iOS */
     /* min-height: 80px; */
     /* max-height: 120px; */
   }
@@ -4839,7 +4850,7 @@ body {
 
   .observation textarea {
     /* padding: 0.4rem; */
-    font-size: 0.8rem;
+    font-size: 1rem; /* Mínimo 16px para evitar zoom automático no iOS */
     /* min-height: 60px; */
     /* max-height: 100px; */
   }

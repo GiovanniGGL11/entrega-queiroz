@@ -1073,7 +1073,7 @@ useHead({
   padding: 0.5rem 0.75rem;
   border: 1.5px solid #e2e8f0;
   border-radius: 0.5rem;
-  font-size: 0.875rem;
+  font-size: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   transition: border-color 0.2s;
@@ -1543,7 +1543,7 @@ useHead({
   padding: 0.6rem 0.75rem;
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
-  font-size: 0.9rem;
+  font-size: 1rem; /* Mínimo 16px para evitar zoom automático no iOS */
   transition: border-color 0.2s;
   background: white;
   color: #1f2937;
@@ -2049,7 +2049,7 @@ useHead({
   padding: 0.5rem 0.6rem;
   border: 1px solid #e5e7eb;
   border-radius: 0.4rem;
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: #1f2937;
   background: white;
 }
