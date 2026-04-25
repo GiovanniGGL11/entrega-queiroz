@@ -1253,7 +1253,11 @@ const clearFilters = () => {
 
 const loadOrders = async (showLoading = true, forceRefresh = false) => {
   // Salvar posição do scroll para não pular a tela em atualizações silenciosas
-  const savedScrollY = !showLoading ? window.scrollY : 0
+  // O container real de scroll é .dashboard-content (overflow-y: auto no layout)
+  const scrollContainer = !showLoading
+    ? (document.querySelector('.dashboard-content') || document.documentElement)
+    : null
+  const savedScrollTop = scrollContainer ? scrollContainer.scrollTop : 0
 
   try {
     if (showLoading) {
@@ -1350,8 +1354,8 @@ const loadOrders = async (showLoading = true, forceRefresh = false) => {
     console.log('[Orders] Lista atualizada:', orders.value.length, 'pedidos')
 
     // Restaurar scroll após re-render para evitar pulo de tela
-    if (!showLoading) {
-      nextTick(() => { window.scrollTo({ top: savedScrollY, behavior: 'instant' }) })
+    if (!showLoading && scrollContainer) {
+      nextTick(() => { scrollContainer.scrollTop = savedScrollTop })
     }
 
   } catch (error) {
