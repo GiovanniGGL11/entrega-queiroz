@@ -1251,34 +1251,72 @@ const clearFilters = () => {
   loadOrders()
 }
 
-const loadOrders = async (showLoading = true, forceRefresh = false) => {
-  // Salvar posição do scroll para não pular a tela em atualizações silenciosas
-  // O container real de scroll é .dashboard-content (overflow-y: auto no layout)
-  const scrollContainer = !showLoading
-    ? (document.querySelector('.dashboard-content') || document.documentElement)
-    : null
-  const savedScrollTop = scrollContainer ? scrollContainer.scrollTop : 0
+// Mapeia um pedido bruto da API para o formato interno
+const mapOrder = (order) => {
+  const customerInfo = order.customerInfo || {}
+  const deliveryInfo = order.deliveryInfo || {}
+  const items = order.items || []
+  return {
+    id: order.orderNumber || order._id?.toString() || 'N/A',
+    _id: order._id,
+    customer: customerInfo.name || 'Cliente não informado',
+    phone: customerInfo.phone || '',
+    email: customerInfo.email || '',
+    address: deliveryInfo.address || '',
+    number: deliveryInfo.number || '',
+    neighborhood: deliveryInfo.neighborhood || '',
+    city: deliveryInfo.city || '',
+    zipCode: deliveryInfo.zipCode || '',
+    complement: deliveryInfo.complement || '',
+    status: order.status || 'pending',
+    total: order.totalAmount || 0,
+    subtotal: (order.items || []).reduce((s, i) => s + (i.subtotal ?? i.price * i.quantity ?? 0), 0),
+    discount: order.discount ?? 0,
+    coupon: order.coupon ?? null,
+    deliveryFee: deliveryInfo.deliveryFee || 0,
+    paymentMethod: order.paymentMethod || 'dinheiro',
+    troco: order.troco || null,
+    notes: order.notes || '',
+    createdAt: order.createdAt || new Date(),
+    estimatedTime: deliveryInfo.estimatedTime || '',
+    motoboyNome: order.motoboyNome || '',
+    motoboyId: order.motoboyId || '',
+    type: order.type || 'delivery',
+    attendant: order.attendant || '',
+    items: items.map(item => ({
+      id: item.productId || item._id?.toString() || '',
+      name: item.name || 'Produto sem nome',
+      quantity: item.quantity || 0,
+      price: item.price || 0,
+      subtotal: item.subtotal || 0,
+      complements: item.complements || [],
+      recipe: item.recipe || [],
+      removedIngredients: item.removedIngredients || []
+    }))
+  }
+}
 
+const loadOrders = async (showLoading = true, forceRefresh = false) => {
   try {
     if (showLoading) {
       loading.value = true
     }
-    
+
     // Limpar cache se for refresh forçado (quando nova notificação chega)
     if (forceRefresh) {
       clearCache('/api/orders')
     }
-    
+
     // Construir URL com filtros
     const params = new URLSearchParams()
     params.append('page', '1')
     params.append('limit', '100')
     params.append('_t', Date.now().toString())
-    
+
     if (statusFilter.value) {
       params.append('status', statusFilter.value)
     }
-    
+
     // Adicionar filtros de data
     const dateRange = getDateRange()
     if (dateRange.start) {
@@ -1287,76 +1325,49 @@ const loadOrders = async (showLoading = true, forceRefresh = false) => {
     if (dateRange.end && periodFilter.value !== 'all') {
       params.append('endDate', dateRange.end.toISOString())
     }
-    
+
     const url = `/api/orders?${params.toString()}`
-    
-    // Forçar busca sem cache usando query param único
+
     const response = await authenticatedFetch(url, {
-      headers: {
-        'Cache-Control': 'no-cache'
-      }
+      headers: { 'Cache-Control': 'no-cache' }
     })
-    
-    // Adaptar para nova estrutura de resposta com paginação
+
     const ordersData = response.orders || response
-    
+
     if (!Array.isArray(ordersData)) {
       console.error('[Orders] Resposta inválida:', response)
       return
     }
-    
-    orders.value = ordersData.map(order => {
-      // Validação e tratamento seguro dos dados
-      const customerInfo = order.customerInfo || {}
-      const deliveryInfo = order.deliveryInfo || {}
-      const items = order.items || []
-      
-      return {
-        id: order.orderNumber || order._id?.toString() || 'N/A',
-        _id: order._id,
-        customer: customerInfo.name || 'Cliente não informado',
-        phone: customerInfo.phone || '',
-        email: customerInfo.email || '',
-        address: deliveryInfo.address || '',
-        number: deliveryInfo.number || '',
-        neighborhood: deliveryInfo.neighborhood || '',
-        city: deliveryInfo.city || '',
-        zipCode: deliveryInfo.zipCode || '',
-        complement: deliveryInfo.complement || '',
-        status: order.status || 'pending',
-        total: order.totalAmount || 0,
-        subtotal: (order.items || []).reduce((s, i) => s + (i.subtotal ?? i.price * i.quantity ?? 0), 0),
-        discount: order.discount ?? 0,
-        coupon: order.coupon ?? null,
-        deliveryFee: deliveryInfo.deliveryFee || 0,
-        paymentMethod: order.paymentMethod || 'dinheiro',
-        troco: order.troco || null,
-        notes: order.notes || '',
-        createdAt: order.createdAt || new Date(),
-        estimatedTime: deliveryInfo.estimatedTime || '',
-        motoboyNome: order.motoboyNome || '',
-        motoboyId: order.motoboyId || '',
-        type: order.type || 'delivery', // 'delivery' | 'retirada' | 'balcao'
-        attendant: order.attendant || '',
-        items: items.map(item => ({
-          id: item.productId || item._id?.toString() || '',
-          name: item.name || 'Produto sem nome',
-          quantity: item.quantity || 0,
-          price: item.price || 0,
-          subtotal: item.subtotal || 0,
-          complements: item.complements || [],
-          recipe: item.recipe || [],
-          removedIngredients: item.removedIngredients || []
-        }))
-      }
-    })
-    
-    console.log('[Orders] Lista atualizada:', orders.value.length, 'pedidos')
 
-    // Restaurar scroll após re-render para evitar pulo de tela
-    if (!showLoading && scrollContainer) {
-      nextTick(() => { scrollContainer.scrollTop = savedScrollTop })
+    if (showLoading) {
+      // Carga inicial: substitui tudo normalmente
+      orders.value = ordersData.map(mapOrder)
+    } else {
+      // Atualização silenciosa: cirúrgica para não mover o scroll
+      const incoming = ordersData.map(mapOrder)
+      const incomingIds = new Set(incoming.map(o => String(o._id)))
+
+      // Remover pedidos que sumiram
+      for (let i = orders.value.length - 1; i >= 0; i--) {
+        if (!incomingIds.has(String(orders.value[i]._id))) {
+          orders.value.splice(i, 1)
+        }
+      }
+
+      // Atualizar existentes e inserir novos no topo
+      const existingIds = new Map(orders.value.map((o, i) => [String(o._id), i]))
+      for (const newOrder of incoming) {
+        const key = String(newOrder._id)
+        if (existingIds.has(key)) {
+          // Atualiza campos sem recriar o objeto (evita re-render do elemento inteiro)
+          Object.assign(orders.value[existingIds.get(key)], newOrder)
+        } else {
+          orders.value.unshift(newOrder)
+        }
+      }
     }
+
+    console.log('[Orders] Lista atualizada:', orders.value.length, 'pedidos')
 
   } catch (error) {
     console.error('Erro ao carregar pedidos:', error)
