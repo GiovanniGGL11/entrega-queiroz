@@ -1292,13 +1292,6 @@ onMounted(async () => {
       startNotifications()
     }, 500)
 
-    // Polling a cada 5s (Vercel serverless não mantém estado SSE entre funções)
-    lastUpdated.value = new Date().toLocaleTimeString('pt-BR')
-    statsPollingInterval = setInterval(async () => {
-      await Promise.all([loadStats(), loadOrders()])
-      lastUpdated.value = new Date().toLocaleTimeString('pt-BR')
-    }, 5000)
-
     // Atualizar imediatamente ao voltar para a aba
     document.addEventListener('visibilitychange', async () => {
       if (!document.hidden) await Promise.all([loadStats(), loadOrders()])
@@ -1308,15 +1301,8 @@ onMounted(async () => {
   }
 })
 
-// Polling automático das stats a cada 15 segundos (necessário no Vercel serverless)
-let statsPollingInterval = null
-
 onUnmounted(() => {
   stopNotifications()
-  if (statsPollingInterval) {
-    clearInterval(statsPollingInterval)
-    statsPollingInterval = null
-  }
 })
 </script>
 
