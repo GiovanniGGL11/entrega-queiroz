@@ -154,14 +154,19 @@ export default defineEventHandler(async (event) => {
         { $group: { _id: "$status", count: { $sum: 1 } } }
       ]).toArray(),
 
-      // Pedidos por tipo (delivery/retirada/balcao) — mês atual
+      // Pedidos por tipo (delivery/retirada/balcao) × período
       db.collection("orders").aggregate([
-        { $match: { createdAt: { $gte: new Date(now.getFullYear(), now.getMonth(), 1) } } },
         {
           $group: {
             _id: { $ifNull: ["$type", "delivery"] },
-            count: { $sum: 1 },
-            revenue: { $sum: "$totalAmount" }
+            countToday:   { $sum: { $cond: [{ $gte: ["$createdAt", today] },     1, 0] } },
+            countWeek:    { $sum: { $cond: [{ $gte: ["$createdAt", thisWeek] },  1, 0] } },
+            countMonth:   { $sum: { $cond: [{ $gte: ["$createdAt", thisMonth] }, 1, 0] } },
+            countYear:    { $sum: { $cond: [{ $gte: ["$createdAt", thisYear] },  1, 0] } },
+            revToday:     { $sum: { $cond: [{ $gte: ["$createdAt", today] },     "$totalAmount", 0] } },
+            revWeek:      { $sum: { $cond: [{ $gte: ["$createdAt", thisWeek] },  "$totalAmount", 0] } },
+            revMonth:     { $sum: { $cond: [{ $gte: ["$createdAt", thisMonth] }, "$totalAmount", 0] } },
+            revYear:      { $sum: { $cond: [{ $gte: ["$createdAt", thisYear] },  "$totalAmount", 0] } }
           }
         }
       ]).toArray(),
@@ -275,15 +280,22 @@ export default defineEventHandler(async (event) => {
     const activeOrders = (statusCounts['pending'] || 0) + (statusCounts['confirmed'] || 0) +
       (statusCounts['preparing'] || 0) + (statusCounts['ready'] || 0) + (statusCounts['out_for_delivery'] || 0)
 
-    // Processar pedidos por tipo
-    const typeMap: Record<string, { count: number, revenue: number }> = {
+    // Processar pedidos por tipo × período
+    const emptyTypeMap = () => ({
       delivery: { count: 0, revenue: 0 },
       retirada: { count: 0, revenue: 0 },
-      balcao: { count: 0, revenue: 0 }
+      balcao:   { count: 0, revenue: 0 }
+    })
+    const ordersByType: Record<string, Record<string, { count: number, revenue: number }>> = {
+      today: emptyTypeMap(), week: emptyTypeMap(), month: emptyTypeMap(), year: emptyTypeMap()
     }
     orderTypeStats.forEach((t: any) => {
-      const key = t._id || 'delivery'
-      if (typeMap[key]) { typeMap[key].count = t.count; typeMap[key].revenue = t.revenue }
+      const key = (t._id || 'delivery') as string
+      if (!ordersByType.today[key]) return
+      ordersByType.today[key]  = { count: t.countToday  || 0, revenue: t.revToday  || 0 }
+      ordersByType.week[key]   = { count: t.countWeek   || 0, revenue: t.revWeek   || 0 }
+      ordersByType.month[key]  = { count: t.countMonth  || 0, revenue: t.revMonth  || 0 }
+      ordersByType.year[key]   = { count: t.countYear   || 0, revenue: t.revYear   || 0 }
     })
 
     const weekData = weekStats[0] || { orders: 0, revenue: 0 };
@@ -342,7 +354,8 @@ export default defineEventHandler(async (event) => {
           discountTotal: periodData.discountToday,
           deliveryFeeTotal: periodData.deliveryFeeToday,
           itemCostTotal: costData.costToday,
-          averageTicket: todayAverageTicket
+          averageTicket: todayAverageTicket,
+          ordersByType: ordersByType.today
         },
         week: {
           orders: weekData.orders,
@@ -352,7 +365,8 @@ export default defineEventHandler(async (event) => {
           deliveryFeeTotal: periodData.deliveryFeeThisWeek,
           itemCostTotal: costData.costThisWeek,
           averageTicket: weekAverageTicket,
-          growth: 0
+          growth: 0,
+          ordersByType: ordersByType.week
         },
         month: {
           orders: monthData.orders,
@@ -362,7 +376,8 @@ export default defineEventHandler(async (event) => {
           deliveryFeeTotal: periodData.deliveryFeeThisMonth,
           itemCostTotal: costData.costThisMonth,
           averageTicket: monthAverageTicket,
-          growth: 0
+          growth: 0,
+          ordersByType: ordersByType.month
         },
         year: {
           orders: yearData.orders,
@@ -371,7 +386,8 @@ export default defineEventHandler(async (event) => {
           discountTotal: periodData.discountThisYear,
           deliveryFeeTotal: periodData.deliveryFeeThisYear,
           itemCostTotal: costData.costThisYear,
-          averageTicket: yearAverageTicket
+          averageTicket: yearAverageTicket,
+          ordersByType: ordersByType.year
         }
       },
       insights: {
@@ -391,8 +407,7 @@ export default defineEventHandler(async (event) => {
       paymentMethodsByPeriod: paymentMethodsByPeriod,
       activeOrders,
       statusCounts,
-      statusByPeriod,
-      ordersByType: typeMap
+      statusByPeriod
     };
 
   } catch (error) {

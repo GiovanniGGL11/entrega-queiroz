@@ -269,7 +269,7 @@
         </div>
       </div>
 
-      <!-- Pedidos por Tipo (este mês) -->
+      <!-- Pedidos por Tipo — filtrado pelo período selecionado -->
       <div class="type-cards">
         <div class="type-card type-delivery">
           <div class="type-icon">
@@ -278,9 +278,9 @@
             </svg>
           </div>
           <div class="type-info">
-            <span class="type-count">{{ stats.ordersByType?.delivery?.count || 0 }}</span>
+            <span class="type-count">{{ currentOrdersByType.delivery.count }}</span>
             <span class="type-label">Delivery</span>
-            <span class="type-revenue">{{ formatCurrency(stats.ordersByType?.delivery?.revenue || 0) }}</span>
+            <span class="type-revenue">{{ formatCurrency(currentOrdersByType.delivery.revenue) }}</span>
           </div>
         </div>
         <div class="type-card type-retirada">
@@ -290,9 +290,9 @@
             </svg>
           </div>
           <div class="type-info">
-            <span class="type-count">{{ stats.ordersByType?.retirada?.count || 0 }}</span>
+            <span class="type-count">{{ currentOrdersByType.retirada.count }}</span>
             <span class="type-label">Retirada</span>
-            <span class="type-revenue">{{ formatCurrency(stats.ordersByType?.retirada?.revenue || 0) }}</span>
+            <span class="type-revenue">{{ formatCurrency(currentOrdersByType.retirada.revenue) }}</span>
           </div>
         </div>
         <div class="type-card type-balcao">
@@ -302,9 +302,9 @@
             </svg>
           </div>
           <div class="type-info">
-            <span class="type-count">{{ stats.ordersByType?.balcao?.count || 0 }}</span>
+            <span class="type-count">{{ currentOrdersByType.balcao.count }}</span>
             <span class="type-label">Balcão</span>
-            <span class="type-revenue">{{ formatCurrency(stats.ordersByType?.balcao?.revenue || 0) }}</span>
+            <span class="type-revenue">{{ formatCurrency(currentOrdersByType.balcao.revenue) }}</span>
           </div>
         </div>
       </div>
@@ -883,10 +883,10 @@ const stats = ref({
     balcao: { count: 0, revenue: 0 }
   },
   periods: {
-    today: { orders: 0, revenue: 0, grossRevenue: 0, discountTotal: 0, deliveryFeeTotal: 0, itemCostTotal: 0, averageTicket: 0 },
-    week: { orders: 0, revenue: 0, grossRevenue: 0, discountTotal: 0, deliveryFeeTotal: 0, itemCostTotal: 0, averageTicket: 0, growth: 0 },
-    month: { orders: 0, revenue: 0, grossRevenue: 0, discountTotal: 0, deliveryFeeTotal: 0, itemCostTotal: 0, averageTicket: 0, growth: 0 },
-    year: { orders: 0, revenue: 0, grossRevenue: 0, discountTotal: 0, deliveryFeeTotal: 0, itemCostTotal: 0, averageTicket: 0 }
+    today: { orders: 0, revenue: 0, grossRevenue: 0, discountTotal: 0, deliveryFeeTotal: 0, itemCostTotal: 0, averageTicket: 0, ordersByType: { delivery: { count: 0, revenue: 0 }, retirada: { count: 0, revenue: 0 }, balcao: { count: 0, revenue: 0 } } },
+    week:  { orders: 0, revenue: 0, grossRevenue: 0, discountTotal: 0, deliveryFeeTotal: 0, itemCostTotal: 0, averageTicket: 0, growth: 0, ordersByType: { delivery: { count: 0, revenue: 0 }, retirada: { count: 0, revenue: 0 }, balcao: { count: 0, revenue: 0 } } },
+    month: { orders: 0, revenue: 0, grossRevenue: 0, discountTotal: 0, deliveryFeeTotal: 0, itemCostTotal: 0, averageTicket: 0, growth: 0, ordersByType: { delivery: { count: 0, revenue: 0 }, retirada: { count: 0, revenue: 0 }, balcao: { count: 0, revenue: 0 } } },
+    year:  { orders: 0, revenue: 0, grossRevenue: 0, discountTotal: 0, deliveryFeeTotal: 0, itemCostTotal: 0, averageTicket: 0, ordersByType: { delivery: { count: 0, revenue: 0 }, retirada: { count: 0, revenue: 0 }, balcao: { count: 0, revenue: 0 } } }
   },
   insights: {
     mostSoldItem: { name: 'Nenhum', quantity: 0 },
@@ -911,6 +911,13 @@ const currentPeriodData = computed(() => {
     return customRangeData.value || { orders: 0, revenue: 0, grossRevenue: 0, discountTotal: 0, deliveryFeeTotal: 0, itemCostTotal: 0, averageTicket: 0 }
   }
   return stats.value.periods[selectedPeriod.value] || stats.value.periods.today
+})
+
+// Pedidos por tipo do período selecionado
+const emptyTypeData = () => ({ delivery: { count: 0, revenue: 0 }, retirada: { count: 0, revenue: 0 }, balcao: { count: 0, revenue: 0 } })
+const currentOrdersByType = computed(() => {
+  const d = currentPeriodData.value
+  return d.ordersByType || emptyTypeData()
 })
 
 // Receita Líquida = Receita (após descontos) − Custo dos Itens − Taxa de Entrega paga ao motoboy

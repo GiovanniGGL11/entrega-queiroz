@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
     const db = await getDB()
     const match = { createdAt: { $gte: start, $lte: end } }
 
-    const [rangeStats, statusStats, paymentStats, itemStats, costStats] = await Promise.all([
+    const [rangeStats, statusStats, paymentStats, itemStats, costStats, typeStats] = await Promise.all([
       // Receita, desconto, taxa de entrega
       db.collection("orders").aggregate([
         { $match: match },
@@ -92,6 +92,12 @@ export default defineEventHandler(async (event) => {
             }
           }
         }
+      ]).toArray(),
+
+      // Pedidos por tipo (delivery/retirada/balcao)
+      db.collection("orders").aggregate([
+        { $match: match },
+        { $group: { _id: { $ifNull: ["$type", "delivery"] }, count: { $sum: 1 }, revenue: { $sum: "$totalAmount" } } }
       ]).toArray()
     ])
 
@@ -115,6 +121,16 @@ export default defineEventHandler(async (event) => {
       .filter((i: any) => i._id && i._id.trim())
       .map((i: any) => ({ name: i._id, quantity: i.quantity, revenue: i.revenue }))
 
+    const ordersByType: Record<string, { count: number, revenue: number }> = {
+      delivery: { count: 0, revenue: 0 },
+      retirada: { count: 0, revenue: 0 },
+      balcao:   { count: 0, revenue: 0 }
+    }
+    typeStats.forEach((t: any) => {
+      const key = t._id || 'delivery'
+      if (ordersByType[key]) { ordersByType[key].count = t.count; ordersByType[key].revenue = t.revenue }
+    })
+
     return {
       orders: r.orders,
       revenue: r.revenue,
@@ -125,7 +141,8 @@ export default defineEventHandler(async (event) => {
       averageTicket: r.orders > 0 ? r.revenue / r.orders : 0,
       statusCounts,
       paymentMethods,
-      topSellingItems
+      topSellingItems,
+      ordersByType
     }
 
   } catch (error) {
