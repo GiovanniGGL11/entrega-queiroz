@@ -819,12 +819,19 @@ const {
 
 const syncEnabled = ref(true)
 
-// Atualizar lista quando chegar nova notificação via SSE
+// Guard para evitar dupla requisição quando callback e watch disparam juntos
+let _refreshPending = false
+const triggerRefresh = () => {
+  if (_refreshPending) return
+  _refreshPending = true
+  loadOrders(false, true).finally(() => {
+    setTimeout(() => { _refreshPending = false }, 3000)
+  })
+}
+
+// Watch como fallback — dispara quando notificações chegam
 watch(notifications, (newNotifs, oldNotifs) => {
-  const hasNewNotifications = newNotifs.length > (oldNotifs?.length || 0)
-  if (hasNewNotifications) {
-    loadOrders(false, true)
-  }
+  if (newNotifs.length > (oldNotifs?.length || 0)) triggerRefresh()
 }, { deep: true, immediate: false })
 
 
@@ -1640,18 +1647,18 @@ onMounted(async () => {
     const settings = await $fetch('/api/public/settings')
     if (settings?.storeName) storeName.value = settings.storeName
   } catch {}
+  // Registrar callback direto — dispara imediatamente ao receber SSE, antes mesmo do watch
+  setOnNewOrderCallback(() => triggerRefresh())
   // Iniciar notificações em tempo real automaticamente
   if (process.client) {
-    // Aguardar um pouco para garantir que a página está completamente carregada
     setTimeout(() => {
-      console.log('[Orders Page] Iniciando notificações...')
       startNotifications()
     }, 500)
   }
 })
 
 onUnmounted(() => {
-  // Parar notificações quando componente for desmontado
+  setOnNewOrderCallback(null)
   stopNotifications()
 })
 </script>
