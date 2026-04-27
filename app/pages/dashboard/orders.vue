@@ -1640,6 +1640,8 @@ const showAlert = (message, type = 'success') => {
 }
 
 // Lifecycle
+let _pollInterval = null
+
 onMounted(async () => {
   loadOrders()
   // Carregar nome da loja para comanda
@@ -1647,19 +1649,27 @@ onMounted(async () => {
     const settings = await $fetch('/api/public/settings')
     if (settings?.storeName) storeName.value = settings.storeName
   } catch {}
-  // Registrar callback direto — dispara imediatamente ao receber SSE, antes mesmo do watch
+  // Registrar callback direto — dispara imediatamente ao receber SSE
   setOnNewOrderCallback(() => triggerRefresh())
-  // Iniciar notificações em tempo real automaticamente
+  // Iniciar SSE
   if (process.client) {
-    setTimeout(() => {
-      startNotifications()
-    }, 500)
+    setTimeout(() => startNotifications(), 500)
+    // Poll silencioso a cada 15s como garantia (SSE pode cair no Vercel)
+    _pollInterval = setInterval(() => triggerRefresh(), 15000)
+    // Recarregar ao voltar para a aba
+    document.addEventListener('visibilitychange', _onVisibility)
   }
 })
+
+const _onVisibility = () => {
+  if (!document.hidden) triggerRefresh()
+}
 
 onUnmounted(() => {
   setOnNewOrderCallback(null)
   stopNotifications()
+  if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null }
+  document.removeEventListener('visibilitychange', _onVisibility)
 })
 </script>
 
