@@ -432,7 +432,7 @@ onMounted(loadData)
 * { box-sizing: border-box; }
 
 .pdv-wrap {
-  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--color-bg, #f3f4f6);
@@ -526,7 +526,8 @@ onMounted(loadData)
 .cat-jumps::-webkit-scrollbar { display: none; }
 
 .cat-jump-btn {
-  padding: 5px 14px;
+  padding: 8px 14px;
+  min-height: 36px;
   border-radius: 20px;
   border: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-surface, #fff);

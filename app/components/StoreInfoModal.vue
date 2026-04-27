@@ -591,10 +591,12 @@ watch(() => props.show, (newShow) => {
 @media (max-width: 768px) {
   .modal-card {
     width: 100%;
-    height: 100%;
+    height: 100dvh;
     max-width: none;
     max-height: none;
     border-radius: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .image-container {
@@ -605,7 +607,7 @@ watch(() => props.show, (newShow) => {
     width: 44px;
     height: 44px;
     font-size: 1.75rem;
-    top: 0.75rem;
+    top: calc(0.75rem + env(safe-area-inset-top, 0px));
     right: 0.75rem;
   }
 
@@ -638,6 +640,25 @@ watch(() => props.show, (newShow) => {
 
   .payment-item {
     justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-content h4 {
+    font-size: 1.1rem;
+  }
+
+  .info-section {
+    padding: 0.625rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .section-header h3 {
+    font-size: 0.9rem;
+  }
+
+  .image-container {
+    height: 120px;
   }
 }
 </style>

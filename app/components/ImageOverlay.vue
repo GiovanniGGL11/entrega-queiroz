@@ -71,8 +71,10 @@ const onClose = () => {
 }
 
 .overlay-image {
-  width: 800px;
-  height: 800px;
+  max-width: 90vw;
+  max-height: 85vh;
+  width: auto;
+  height: auto;
   object-fit: contain;
   border-radius: 8px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
@@ -80,10 +82,11 @@ const onClose = () => {
 
 .image-close-btn {
   position: absolute;
-  top: 2rem;
-  right: 2rem;
-  background: none;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(0,0,0,0.4);
   border: none;
+  border-radius: 50%;
   font-size: 2rem;
   cursor: pointer;
   color: #fff;
@@ -91,8 +94,8 @@ const onClose = () => {
   align-items: center;
   justify-content: center;
   z-index: 10001;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   line-height: 1;
   padding: 0;
 }
@@ -121,21 +124,13 @@ const onClose = () => {
 /* Responsive */
 @media (max-width: 768px) {
   .image-overlay {
-    padding: 1rem;
+    padding: 0.75rem;
+    padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   }
-  
+
   .overlay-image {
-    width: 100%;
-    height: auto;
-    max-height: 70vh;
-  }
-  
-  .image-close-btn {
-    top: 1rem;
-    right: 1rem;
-    font-size: 1.75rem;
-    width: 36px;
-    height: 36px;
+    max-height: 80dvh;
   }
 }
 </style>

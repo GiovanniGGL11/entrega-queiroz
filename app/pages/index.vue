@@ -2444,6 +2444,7 @@ body {
   gap: 1rem;
   overflow-x: auto;
   padding: 1rem 2rem;
+  padding-top: calc(1rem + env(safe-area-inset-top, 0px));
   background: rgba(248, 250, 252, 0.95);
   backdrop-filter: blur(10px);
   scrollbar-width: none;
@@ -2530,6 +2531,13 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1.5rem;
+}
+
+@media (max-width: 480px) {
+  .items {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
 }
 
 .item {
@@ -2982,8 +2990,8 @@ body {
   background: var(--color-primary);
   border: none;
   border-radius: 8px;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3026,6 +3034,8 @@ body {
   display: flex;
   flex-direction: column;
   box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .drawer-header {
@@ -3047,8 +3057,8 @@ body {
   background: #f5f5f5;
   border: none;
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   font-size: 1.4rem;
   line-height: 1;
   cursor: pointer;
@@ -3128,7 +3138,8 @@ body {
   border-radius: 18px;
   width: 100%;
   max-width: 400px;
-  overflow: hidden;
+  max-height: 90dvh;
+  overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
 }
 .track-modal-header {
@@ -3215,7 +3226,7 @@ body {
 /* Floating Cart Button - Esconder quando navbar estiver visível */
 .floating-cart-btn {
   position: fixed;
-  bottom: 80px; /* Acima da navbar */
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   background: var(--color-primary, #ff8e24);
@@ -3448,6 +3459,7 @@ body {
 
 .sidebar-footer {
   padding: 1rem;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid #efefef;
   background: #f9f9f9;
   flex-shrink: 0;
@@ -4926,24 +4938,24 @@ body {
   }
 
   .qty-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 0.8rem;
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
   }
 
   .qty-value {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     min-width: 22px;
   }
 
   .coupon-section input {
     padding: 0.4rem;
-    font-size: 0.75rem;
+    font-size: 1rem;
   }
 
   .apply-coupon-btn {
     padding: 0.4rem 0.6rem;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
   }
 
   .total {
