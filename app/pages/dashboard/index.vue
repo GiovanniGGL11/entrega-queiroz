@@ -2894,6 +2894,7 @@ onUnmounted(() => {
 /* ===== Seletor de Período Global ===== */
 .filter-bar {
   margin-bottom: 20px;
+  overflow-x: auto;
 }
 
 .global-period-bar {

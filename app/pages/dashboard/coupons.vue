@@ -494,8 +494,10 @@ onMounted(loadCoupons)
   border-radius: 1rem;
   width: 100%;
   max-width: 520px;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-height: 90dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
 }
 
@@ -505,6 +507,7 @@ onMounted(loadCoupons)
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--color-border, #e2e8f0);
+  flex-shrink: 0;
 }
 
 .modal-header h2 { font-size: 1.25rem; font-weight: 700; margin: 0; }
@@ -520,6 +523,8 @@ onMounted(loadCoupons)
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .modal-footer {
@@ -528,6 +533,7 @@ onMounted(loadCoupons)
   gap: 0.75rem;
   padding: 1.25rem 1.5rem;
   border-top: 1px solid var(--color-border, #e2e8f0);
+  flex-shrink: 0;
 }
 
 .form-group { display: flex; flex-direction: column; gap: 0.375rem; flex: 1; }
