@@ -1,9 +1,4 @@
 {
   "installCommand": "npm install",
-  "buildCommand": "npm run build",
-  "functions": {
-    "server/api/orders/notifications.get.js": {
-      "maxDuration": 300
-    }
-  }
+  "buildCommand": "npm run build"
 }
