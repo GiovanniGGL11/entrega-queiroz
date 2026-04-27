@@ -819,13 +819,11 @@ const {
 
 const syncEnabled = ref(true)
 
-// Callback para atualizar lista imediatamente quando novo pedido chegar
-setOnNewOrderCallback((order) => {
-  console.log('[Orders] Callback executado - recarregando lista imediatamente...', order?.orderNumber || order?._id)
-  // Usar nextTick para garantir que a atualização aconteça após o Vue processar a notificação
-  nextTick(() => {
+// Atualizar lista automaticamente quando chegar nova notificação
+watch(() => notifications.value.length, (newLen, oldLen) => {
+  if (newLen > (oldLen ?? 0)) {
     loadOrders(false, true)
-  })
+  }
 })
 
 
