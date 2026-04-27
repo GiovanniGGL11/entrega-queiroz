@@ -1291,9 +1291,7 @@ const mapOrder = (order) => {
 
 const loadOrders = async (showLoading = true, forceRefresh = false) => {
   try {
-    if (showLoading) {
-      loading.value = true
-    }
+    if (showLoading) loading.value = true
 
     // Limpar cache se for refresh forçado (quando nova notificação chega)
     if (forceRefresh) {
@@ -1332,33 +1330,8 @@ const loadOrders = async (showLoading = true, forceRefresh = false) => {
       return
     }
 
-    if (showLoading) {
-      // Carga inicial: substitui tudo normalmente (com animações)
-      orders.value = ordersData.map(mapOrder)
-    } else {
-      // Atualização silenciosa: cirúrgica para não mover o scroll
-      const incoming = ordersData.map(mapOrder)
-      const incomingIds = new Set(incoming.map(o => String(o._id)))
-
-      // Remover pedidos que sumiram
-      for (let i = orders.value.length - 1; i >= 0; i--) {
-        if (!incomingIds.has(String(orders.value[i]._id))) {
-          orders.value.splice(i, 1)
-        }
-      }
-
-      // Atualizar existentes e inserir novos no topo
-      const existingIds = new Map(orders.value.map((o, i) => [String(o._id), i]))
-      for (const newOrder of incoming) {
-        const key = String(newOrder._id)
-        if (existingIds.has(key)) {
-          // Atualiza campos sem recriar o objeto (evita re-render do elemento inteiro)
-          Object.assign(orders.value[existingIds.get(key)], newOrder)
-        } else {
-          orders.value.unshift(newOrder)
-        }
-      }
-    }
+    // Substituir array direto (funciona para carga inicial e atualizações via SSE)
+    orders.value = ordersData.map(mapOrder)
 
     console.log('[Orders] Lista atualizada:', orders.value.length, 'pedidos')
 
@@ -1367,9 +1340,7 @@ const loadOrders = async (showLoading = true, forceRefresh = false) => {
     const errorMessage = error.data?.message || error.message || 'Erro ao carregar pedidos'
     showAlert(errorMessage, 'error')
   } finally {
-    if (showLoading) {
-      loading.value = false
-    }
+    loading.value = false
   }
 }
 
