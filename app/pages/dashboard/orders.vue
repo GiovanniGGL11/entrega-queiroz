@@ -819,12 +819,13 @@ const {
 
 const syncEnabled = ref(true)
 
-// Atualizar lista automaticamente quando chegar nova notificação
-watch(() => notifications.value.length, (newLen, oldLen) => {
-  if (newLen > (oldLen ?? 0)) {
+// Atualizar lista quando chegar nova notificação via SSE
+watch(notifications, (newNotifs, oldNotifs) => {
+  const hasNewNotifications = newNotifs.length > (oldNotifs?.length || 0)
+  if (hasNewNotifications) {
     loadOrders(false, true)
   }
-})
+}, { deep: true, immediate: false })
 
 
 // Função para ver pedido da notificação
