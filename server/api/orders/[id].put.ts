@@ -77,7 +77,10 @@ export default defineEventHandler(async (event) => {
     }
     const result = await orders.updateOne(
       { _id: new ObjectId(id) },
-      { $set: updateData }
+      {
+        $set: updateData,
+        $push: { statusHistory: { status, changedAt: new Date() } } as any
+      }
     );
     if (result.matchedCount === 0) {
       throw createError({

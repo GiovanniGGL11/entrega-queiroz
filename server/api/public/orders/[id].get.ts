@@ -49,6 +49,10 @@ export default defineEventHandler(async (event) => {
     subtotal: (order.items || []).reduce((sum: number, item: any) => sum + (item.subtotal ?? item.price * item.quantity ?? 0), 0),
     discount: order.discount ?? 0,
     coupon: order.coupon ?? null,
-    notes: order.notes || ''
+    notes: order.notes || '',
+    statusHistory: (order.statusHistory || []).map((h: any) => ({
+      status: h.status,
+      changedAt: h.changedAt
+    }))
   }
 })

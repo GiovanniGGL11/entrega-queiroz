@@ -106,8 +106,11 @@
             </div>
             <div class="step-line" v-if="idx < timeline.length - 1"></div>
             <div class="step-info">
-              <span class="step-label">{{ step.label }}</span>
-              <span v-if="step.current && pedido.status !== 'delivered'" class="step-current-badge">Agora</span>
+              <div class="step-label-row">
+                <span class="step-label">{{ step.label }}</span>
+                <span v-if="step.current && pedido.status !== 'delivered'" class="step-current-badge">Agora</span>
+              </div>
+              <span v-if="step.done && step.time" class="step-time">{{ step.time }}</span>
             </div>
           </div>
         </div>
@@ -263,6 +266,16 @@ const shareToast = ref('')
 let pollingInterval = null
 let eventSource = null
 let shareToastTimer = null
+let audioCtx = null
+
+// Desbloquear AudioContext na primeira interação do usuário
+const desbloquearAudio = () => {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume()
+}
+
 
 const isRetirada = computed(() => pedido.value?.type === 'retirada')
 
@@ -306,16 +319,31 @@ const statusClass = computed(() => {
   return 'hero-active'
 })
 
+const formatTime = (dateStr) => {
+  if (!dateStr) return null
+  const d = new Date(dateStr)
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
 const timeline = computed(() => {
   if (!pedido.value) return []
   const order = statusOrder.value
   const map = statusMap.value
   const currentIdx = order.indexOf(pedido.value.status)
+  const history = pedido.value.statusHistory || []
+
+  // Mapear status → horário a partir do histórico
+  const timeMap = {}
+  history.forEach(h => { timeMap[h.status] = h.changedAt })
+  // O status inicial (pending) usa createdAt
+  timeMap['pending'] = pedido.value.createdAt
+
   return order.map((s, idx) => ({
     status: s,
     label: map[s],
     done: idx <= currentIdx,
-    current: idx === currentIdx
+    current: idx === currentIdx,
+    time: idx <= currentIdx ? formatTime(timeMap[s]) : null
   }))
 })
 
@@ -342,19 +370,20 @@ const notificarMudancaStatus = (novoStatus) => {
     navigator.vibrate([200, 100, 200])
   }
 
-  // Som simples via Web Audio API
+  // Som via Web Audio API (AudioContext já desbloqueado pela interação do usuário)
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+    if (audioCtx.state === 'suspended') await audioCtx.resume()
+    const osc = audioCtx.createOscillator()
+    const gain = audioCtx.createGain()
     osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.frequency.setValueAtTime(880, ctx.currentTime)
-    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1)
-    gain.gain.setValueAtTime(0.3, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
-    osc.start(ctx.currentTime)
-    osc.stop(ctx.currentTime + 0.5)
+    gain.connect(audioCtx.destination)
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime)
+    osc.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.15)
+    gain.gain.setValueAtTime(0.35, audioCtx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6)
+    osc.start(audioCtx.currentTime)
+    osc.stop(audioCtx.currentTime + 0.6)
   } catch {}
 
   // Notificação do browser (se permitida)
@@ -471,6 +500,10 @@ const solicitarPermissaoNotificacao = () => {
 }
 
 onMounted(async () => {
+  // Desbloquear AudioContext na primeira interação
+  document.addEventListener('click', desbloquearAudio, { once: true })
+  document.addEventListener('touchstart', desbloquearAudio, { once: true })
+
   await Promise.all([buscarPedido(true), carregarLoja()])
 
   if (pedido.value && pedido.value.status !== 'delivered' && pedido.value.status !== 'cancelled') {
@@ -489,6 +522,9 @@ onUnmounted(() => {
   clearInterval(pollingInterval)
   clearTimeout(shareToastTimer)
   if (eventSource) { eventSource.close(); eventSource = null }
+  if (audioCtx) { audioCtx.close(); audioCtx = null }
+  document.removeEventListener('click', desbloquearAudio)
+  document.removeEventListener('touchstart', desbloquearAudio)
 })
 </script>
 
@@ -728,9 +764,14 @@ onUnmounted(() => {
 
 .step-info {
   display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-top: 4px;
+}
+.step-label-row {
+  display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding-top: 4px;
 }
 .step-label {
   font-size: 0.9rem;
@@ -739,6 +780,13 @@ onUnmounted(() => {
 .timeline-step.done .step-label, .timeline-step.current .step-label {
   color: #111;
   font-weight: 500;
+}
+.step-time {
+  font-size: 0.75rem;
+  color: #aaa;
+}
+.timeline-step.done .step-time {
+  color: #16a34a;
 }
 .step-current-badge {
   font-size: 0.72rem;
