@@ -372,7 +372,11 @@ const buscarPedido = async (showLoading = false, detectarMudanca = false) => {
   else atualizando.value = true
   try {
     const res = await fetch(`/api/public/orders/${id}`)
-    if (!res.ok) { erro.value = true; return }
+    if (!res.ok) {
+      // Só mostra erro na tela se for o carregamento inicial
+      if (showLoading) erro.value = true
+      return
+    }
     const data = await res.json()
 
     // Detectar mudança de status (usado pelo polling)
@@ -388,7 +392,8 @@ const buscarPedido = async (showLoading = false, detectarMudanca = false) => {
       if (eventSource) { eventSource.close(); eventSource = null; sseConectado.value = false }
     }
   } catch {
-    erro.value = true
+    // Falha no polling — ignorar silenciosamente e tentar de novo no próximo ciclo
+    if (showLoading) erro.value = true
   } finally {
     loading.value = false
     atualizando.value = false
