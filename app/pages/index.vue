@@ -1452,25 +1452,6 @@ useHead({
     </div>
   </div>
 
-  <!-- Floating Cart Button - Escondido quando navbar está visível -->
-  <button v-if="cart.length > 0 && !isMobile" class="floating-cart-btn" @click="openSidebar">
-    <div class="left-side">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-      >
-        <path
-          fill="currentColor"
-          d="M17 18c-1.11 0-2 .89-2 2a2 2 0 0 0 2 2a2 2 0 0 0 2-2a2 2 0 0 0-2-2M1 2v2h2l3.6 7.59l-1.36 2.45c-.15.28-.24.61-.24.96a2 2 0 0 0 2 2h12v-2H7.42a.25.25 0 0 1-.25-.25q0-.075.03-.12L8.1 13h7.45c.75 0 1.41-.42 1.75-1.03l3.58-6.47c.07-.16.12-.33.12-.5a1 1 0 0 0-1-1H5.21l-.94-2M7 18c-1.11 0-2 .89-2 2a2 2 0 0 0 2 2a2 2 0 0 0 2-2a2 2 0 0 0-2-2"
-        />
-      </svg>
-      <span class="cart-price">{{ formatPrice(cartTotal) }}</span>
-    </div>
-    <span v-if="!isMobile" class="cart-text">VER CARRINHO</span>
-  </button>
-
   <!-- Footer Melhorado -->
   <footer class="footer" :class="{ 'has-cart': cart.length > 0 }">
     <div class="footer-bottom">
@@ -1492,22 +1473,14 @@ useHead({
   <div class="bottom-stack">
     <Transition name="finalize-bar">
       <button v-if="cart.length > 0" class="finalize-bar" @click="openSidebar">
-        <div class="finalize-bar-main">
-          <div class="finalize-bar-top">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-            </svg>
-            <span class="finalize-bar-label">VER PEDIDO</span>
-          </div>
-          <div class="finalize-bar-divider"></div>
-          <div class="finalize-bar-bottom">
-            <span>Itens: {{ cartCount }}</span>
-            <span class="finalize-bar-dot">•</span>
-            <span>Total: {{ formatPrice(cartTotal) }}</span>
-          </div>
+        <div class="finalize-bar-left">
+          <div class="finalize-bar-badge">{{ cartCount }}</div>
+          <span class="finalize-bar-label">Ver carrinho</span>
         </div>
-        <span class="finalize-bar-arrow">›</span>
+        <span class="finalize-bar-total">{{ formatPrice(cartTotal) }}</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="finalize-bar-arrow-icon">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
       </button>
     </Transition>
 
@@ -2902,15 +2875,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 0 0.75rem 0.3rem;
-  padding: 0.6rem 0.75rem 0.6rem 0.75rem;
-  min-height: 56px;
+  margin: 0 auto 0.5rem;
+  padding: 0.75rem 1.25rem;
+  min-height: 60px;
+  width: calc(100% - 1.5rem);
+  max-width: 480px;
   background: var(--color-primary);
-  border-radius: 12px;
+  border-radius: 14px;
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  transition: transform 0.15s ease, background 0.15s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
   text-align: left;
 }
 
@@ -2922,53 +2897,43 @@ body {
   background: var(--color-primary-hover);
 }
 
-.finalize-bar-main {
+.finalize-bar-left {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.6rem;
   flex: 1;
 }
 
-.finalize-bar-top {
+.finalize-bar-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: white;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .finalize-bar-label {
   color: white;
-  font-size: 0.875rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
+  font-size: 1rem;
+  font-weight: 700;
 }
 
-.finalize-bar-divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.3);
+.finalize-bar-total {
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-right: 0.5rem;
 }
 
-.finalize-bar-bottom {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.finalize-bar-dot {
-  font-size: 0.4rem;
-  opacity: 0.7;
-}
-
-.finalize-bar-arrow {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 2rem;
-  line-height: 1;
+.finalize-bar-arrow-icon {
+  color: rgba(255, 255, 255, 0.8);
   flex-shrink: 0;
-  margin-left: 0.5rem;
-  font-weight: 300;
 }
 
 .finalize-bar-enter-active,
@@ -3224,46 +3189,6 @@ body {
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
 /* Floating Cart Button - Esconder quando navbar estiver visível */
-.floating-cart-btn {
-  position: fixed;
-  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--color-primary, #ff8e24);
-  color: #fff;
-  border: none;
-  border-radius: 0.5rem;
-  padding: 12px 24px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(255, 142, 36, 0.3);
-  z-index: 99;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 300px;
-  transition: background 0.2s;
-}
-
-.floating-cart-btn:hover {
-  background: var(--color-primary-hover, #e67e22);
-}
-
-.left-side {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.cart-price {
-  font-weight: 600;
-}
-
-.cart-text {
-  text-transform: uppercase;
-  font-weight: 500;
-}
 
 /* Sidebar */
 .sidebar-overlay {
@@ -4666,11 +4591,6 @@ body {
   }
 
 
-  .floating-cart-btn {
-    bottom: 75px; /* Ajustar para telas pequenas */
-    width: calc(100% - 2rem);
-    max-width: 300px;
-  }
 
   .footer-section h4 {
     font-size: 1rem;
@@ -4788,21 +4708,6 @@ body {
     gap: 6px;
   }
 
-  .floating-cart-btn {
-    bottom: 10px;
-    padding: 10px 16px;
-    font-size: 0.875rem;
-    gap: 6px;
-    width: 90%;
-  }
-
-  .left-side {
-    gap: 6px;
-  }
-
-  .cart-price {
-    font-size: 0.875rem;
-  }
 
   .image-close-btn {
     top: 0.75rem;
@@ -4908,12 +4813,6 @@ body {
     font-size: 0.75rem;
   }
 
-  .floating-cart-btn {
-    padding: 8px 12px;
-    font-size: 0.75rem;
-    gap: 4px;
-    width: 95%;
-  }
 
   .cart-item-image {
     width: 45px;
