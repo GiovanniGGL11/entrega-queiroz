@@ -163,6 +163,29 @@ const loadStoreSettings = async () => {
   }
 }
 
+// Validação e formatação de telefone brasileiro
+const formatPhone = (value) => {
+  const numbers = value.replace(/\D/g, '').substring(0, 11)
+  if (numbers.length <= 2) return numbers
+  if (numbers.length <= 6) return `(${numbers.slice(0,2)}) ${numbers.slice(2)}`
+  if (numbers.length <= 10) return `(${numbers.slice(0,2)}) ${numbers.slice(2,6)}-${numbers.slice(6)}`
+  return `(${numbers.slice(0,2)}) ${numbers.slice(2,7)}-${numbers.slice(7)}`
+}
+
+const isPhoneValid = computed(() => {
+  const digits = customerInfo.value.phone.replace(/\D/g, '')
+  return digits.length === 10 || digits.length === 11
+})
+
+const phoneError = computed(() => {
+  const phone = customerInfo.value.phone
+  if (!phone) return ''
+  const digits = phone.replace(/\D/g, '')
+  if (digits.length > 0 && digits.length < 10) return 'Telefone incompleto'
+  if (digits.length > 11) return 'Telefone inválido'
+  return ''
+})
+
 // Função para formatar CEP automaticamente
 const formatZipCode = (value) => {
   const numbers = value.replace(/\D/g, '')
@@ -331,11 +354,57 @@ const isFormValid = computed(() => {
       })
     : allRequiredFieldsFilled
 
+  // Validar formato do telefone se preenchido e obrigatório
+  const phoneOk = !(fields.customerPhone.enabled && fields.customerPhone.required) || isPhoneValid.value
+
   return fieldsOk &&
          addressOk &&
+         phoneOk &&
          cart.value.length > 0 &&
          storeSettings.value.isOpen
 })
+
+// Lista de campos faltando para exibir ao usuário
+const missingFields = computed(() => {
+  const fields = storeSettings.value.checkoutFields
+  const missing = []
+
+  const check = (enabled, required, value, label) => {
+    if (enabled && required && (!value || !value.trim())) missing.push(label)
+  }
+
+  check(fields.customerName.enabled, fields.customerName.required, customerInfo.value.name, 'Nome')
+  if (fields.customerPhone.enabled && fields.customerPhone.required) {
+    const digits = customerInfo.value.phone.replace(/\D/g, '')
+    if (!digits) missing.push('Telefone')
+    else if (digits.length < 10) missing.push('Telefone incompleto (mínimo 10 dígitos)')
+  }
+  check(fields.customerEmail.enabled, fields.customerEmail.required, customerInfo.value.email, 'E-mail')
+
+  if (!isRetirada.value) {
+    check(fields.deliveryAddress.enabled, fields.deliveryAddress.required, deliveryInfo.value.address, 'Endereço')
+    check(true, true, deliveryInfo.value.number, 'Número')
+    check(fields.deliveryNeighborhood.enabled, fields.deliveryNeighborhood.required, deliveryInfo.value.neighborhood, 'Bairro')
+    check(fields.deliveryCity.enabled, fields.deliveryCity.required, deliveryInfo.value.city, 'Cidade')
+    check(fields.deliveryZipCode.enabled, fields.deliveryZipCode.required, deliveryInfo.value.zipCode, 'CEP')
+    if (!deliveryInfo.value.canDeliver) missing.push('Endereço fora da área de entrega ou CEP inválido')
+  }
+
+  if (!paymentMethod.value) missing.push('Forma de pagamento')
+  if (cart.value.length === 0) missing.push('Carrinho vazio')
+
+  return missing
+})
+
+// Ao clicar no botão: se inválido, mostrar o que falta; se válido, submeter
+const handleSubmitClick = () => {
+  if (!isFormValid.value) {
+    const list = missingFields.value.join('\n• ')
+    showAlert('Campos obrigatórios', `Preencha os seguintes campos:\n\n• ${list}`, 'warning')
+    return
+  }
+  submitOrder()
+}
 
 // Submeter pedido
 const submitOrder = async () => {
@@ -696,11 +765,14 @@ useHead({
                     <label for="phone">Telefone {{ storeSettings.checkoutFields.customerPhone.required ? '*' : '' }}</label>
                     <input
                       id="phone"
-                      v-model="customerInfo.phone"
+                      :value="customerInfo.phone"
+                      @input="customerInfo.phone = formatPhone($event.target.value)"
                       type="tel"
                       placeholder="(11) 99999-9999"
                       :required="storeSettings.checkoutFields.customerPhone.required"
+                      :class="{ 'input-error': phoneError }"
                     />
+                    <span v-if="phoneError" class="field-error">{{ phoneError }}</span>
                   </div>
                   
                   <div v-if="storeSettings.checkoutFields.customerEmail.enabled" class="form-group">
@@ -979,10 +1051,11 @@ useHead({
               <!-- Botão Finalizar -->
               <div class="submit-section">
                 <button
-                  @click="submitOrder"
-                  :disabled="!isFormValid || isSubmitting || !storeSettings.isOpen"
+                  @click="handleSubmitClick"
+                  :disabled="isSubmitting || !storeSettings.isOpen"
                   class="submit-order-btn"
-                  :title="!storeSettings.isOpen ? 'A loja está fechada. Pedidos não podem ser realizados.' : ''"
+                  :class="{ 'btn-incomplete': !isFormValid && storeSettings.isOpen }"
+                  :title="!storeSettings.isOpen ? 'A loja está fechada' : ''"
                 >
                   <div v-if="isSubmitting" class="loading-spinner-small"></div>
                   <span v-else class="btn-content">
@@ -1041,7 +1114,7 @@ useHead({
               <h3>{{ alertModal.title }}</h3>
             </div>
             <div class="alert-modal-content">
-              <p>{{ alertModal.message }}</p>
+              <p style="white-space: pre-line">{{ alertModal.message }}</p>
             </div>
             <div class="alert-modal-actions">
               <button @click="closeAlert" class="alert-btn-ok">
@@ -1934,6 +2007,28 @@ useHead({
 .submit-order-btn:disabled {
   background: #9ca3af;
   cursor: not-allowed;
+}
+
+/* Botão clicável mas com campos faltando — aparência diferente do disabled real */
+.submit-order-btn.btn-incomplete {
+  background: #f59e0b;
+  cursor: pointer;
+}
+.submit-order-btn.btn-incomplete:hover {
+  background: #d97706;
+}
+
+/* Erro inline no campo */
+.field-error {
+  display: block;
+  font-size: 0.75rem;
+  color: #dc2626;
+  margin-top: 0.25rem;
+}
+
+/* Borda vermelha em input inválido */
+.input-error {
+  border-color: #dc2626 !important;
 }
 
 /* Footer */
