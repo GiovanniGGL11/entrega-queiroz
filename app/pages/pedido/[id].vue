@@ -12,7 +12,21 @@
         <img v-if="storeLogo" :src="storeLogo" class="store-logo" alt="Logo" />
         <span class="store-name">{{ storeName }}</span>
       </div>
+      <button class="btn-share" @click="compartilhar" title="Compartilhar rastreamento">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="18" cy="5" r="3"></circle>
+          <circle cx="6" cy="12" r="3"></circle>
+          <circle cx="18" cy="19" r="3"></circle>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+        </svg>
+      </button>
     </div>
+
+    <!-- Toast compartilhar -->
+    <Teleport to="body">
+      <div v-if="shareToast" class="share-toast">{{ shareToast }}</div>
+    </Teleport>
 
     <!-- Loading -->
     <div v-if="loading" class="loading-wrap">
@@ -208,13 +222,25 @@
             </div>
           </div>
 
-          <!-- Atualização automática -->
+          <!-- Indicador de conexão em tempo real -->
           <div class="auto-update" v-if="pedido.status !== 'delivered' && pedido.status !== 'cancelled'">
-            <div class="update-dot" :class="{ pulsing: atualizando }"></div>
-            <span>Atualizando automaticamente...</span>
+            <div class="update-dot" :class="{ pulsing: sseConectado || atualizando }"></div>
+            <span>{{ sseConectado ? 'Atualizando em tempo real' : 'Atualizando automaticamente...' }}</span>
           </div>
         </div>
       </div>
+
+      <!-- Botão compartilhar inferior (mobile) -->
+      <button class="btn-share-bottom" @click="compartilhar">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="18" cy="5" r="3"></circle>
+          <circle cx="6" cy="12" r="3"></circle>
+          <circle cx="18" cy="19" r="3"></circle>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+        </svg>
+        Compartilhar rastreamento
+      </button>
     </div>
   </div>
 </template>
@@ -231,8 +257,12 @@ const erro = ref(false)
 const atualizando = ref(false)
 const storeName = ref('')
 const storeLogo = ref('')
+const sseConectado = ref(false)
+const shareToast = ref('')
 
 let pollingInterval = null
+let eventSource = null
+let shareToastTimer = null
 
 const isRetirada = computed(() => pedido.value?.type === 'retirada')
 
@@ -305,18 +335,57 @@ const formatCurrency = (val) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0)
 }
 
-const buscarPedido = async (showLoading = false) => {
+// Tocar som e vibrar quando status mudar
+const notificarMudancaStatus = (novoStatus) => {
+  // Vibração (mobile)
+  if (navigator.vibrate) {
+    navigator.vibrate([200, 100, 200])
+  }
+
+  // Som simples via Web Audio API
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.frequency.setValueAtTime(880, ctx.currentTime)
+    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1)
+    gain.gain.setValueAtTime(0.3, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.5)
+  } catch {}
+
+  // Notificação do browser (se permitida)
+  if (Notification.permission === 'granted') {
+    const labels = statusMap.value
+    new Notification('Atualização do seu pedido', {
+      body: labels[novoStatus] || novoStatus,
+      icon: storeLogo.value || '/favicon.ico'
+    })
+  }
+}
+
+const buscarPedido = async (showLoading = false, detectarMudanca = false) => {
   if (showLoading) loading.value = true
   else atualizando.value = true
   try {
     const res = await fetch(`/api/public/orders/${id}`)
     if (!res.ok) { erro.value = true; return }
     const data = await res.json()
-    pedido.value = data
 
-    // Parar polling se pedido finalizado
+    // Detectar mudança de status (usado pelo polling)
+    const statusAnterior = pedido.value?.status
+    pedido.value = data
+    if (detectarMudanca && statusAnterior && data.status !== statusAnterior) {
+      notificarMudancaStatus(data.status)
+    }
+
+    // Parar quando pedido finalizado
     if (data.status === 'delivered' || data.status === 'cancelled') {
       clearInterval(pollingInterval)
+      if (eventSource) { eventSource.close(); eventSource = null; sseConectado.value = false }
     }
   } catch {
     erro.value = true
@@ -335,17 +404,86 @@ const carregarLoja = async () => {
   } catch {}
 }
 
+// Conectar SSE para atualizações em tempo real
+const conectarSSE = () => {
+  if (eventSource) return
+
+  eventSource = new EventSource(`/api/public/track/${id}`)
+
+  eventSource.onopen = () => {
+    sseConectado.value = true
+  }
+
+  eventSource.onmessage = async (e) => {
+    try {
+      const data = JSON.parse(e.data)
+      if (data.type === 'status_change') {
+        // buscarPedido com detectarMudanca=true cuida do som/vibração e da parada
+        await buscarPedido(false, true)
+      }
+    } catch {}
+  }
+
+  eventSource.onerror = () => {
+    // Apenas marca como desconectado — EventSource reconecta automaticamente
+    sseConectado.value = false
+  }
+}
+
+// Compartilhar link de rastreamento
+const compartilhar = async () => {
+  const url = window.location.href
+  const texto = `Acompanhe meu pedido em tempo real:\n${url}`
+
+  // Web Share API (mobile nativo)
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Rastrear pedido', text: texto, url })
+      return
+    } catch {}
+  }
+
+  // Fallback: copiar link
+  try {
+    await navigator.clipboard.writeText(url)
+    mostrarToastCompartilhar('Link copiado!')
+  } catch {
+    mostrarToastCompartilhar('Copie o link da barra de endereços')
+  }
+}
+
+const mostrarToastCompartilhar = (msg) => {
+  shareToast.value = msg
+  clearTimeout(shareToastTimer)
+  shareToastTimer = setTimeout(() => { shareToast.value = '' }, 2500)
+}
+
+// Solicitar permissão de notificação do browser
+const solicitarPermissaoNotificacao = () => {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission()
+  }
+}
+
 onMounted(async () => {
   await Promise.all([buscarPedido(true), carregarLoja()])
 
-  // Atualizar a cada 8 segundos
   if (pedido.value && pedido.value.status !== 'delivered' && pedido.value.status !== 'cancelled') {
-    pollingInterval = setInterval(() => buscarPedido(false), 8000)
+    // SSE em tempo real
+    conectarSSE()
+
+    // Polling a cada 8s como fallback — detecta mudança de status e notifica
+    pollingInterval = setInterval(() => buscarPedido(false, true), 8000)
+
+    // Solicitar permissão de notificação
+    solicitarPermissaoNotificacao()
   }
 })
 
 onUnmounted(() => {
   clearInterval(pollingInterval)
+  clearTimeout(shareToastTimer)
+  if (eventSource) { eventSource.close(); eventSource = null }
 })
 </script>
 
@@ -396,6 +534,41 @@ onUnmounted(() => {
   font-weight: 700;
   font-size: 1rem;
 }
+
+/* Botão compartilhar no header */
+.btn-share {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #f3f4f6;
+  color: #555;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.btn-share:hover { background: #e5e7eb; color: #111; }
+
+/* Toast compartilhar */
+.share-toast {
+  position: fixed;
+  bottom: 5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #111;
+  color: white;
+  padding: 0.6rem 1.25rem;
+  border-radius: 99px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  z-index: 99999;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  animation: toast-in 0.2s ease;
+}
+@keyframes toast-in { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
 /* Loading / Erro */
 .loading-wrap, .erro-wrap {
@@ -699,6 +872,29 @@ onUnmounted(() => {
   animation: blink 1s infinite;
 }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* Botão compartilhar inferior */
+.btn-share-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.9rem 1.5rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: white;
+  color: #555;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.btn-share-bottom:hover {
+  border-color: #f97316;
+  color: #f97316;
+  background: #fff8f5;
+}
 
 .btn-primary {
   display: inline-flex;
