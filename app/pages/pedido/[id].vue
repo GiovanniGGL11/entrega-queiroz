@@ -364,7 +364,7 @@ const formatCurrency = (val) => {
 }
 
 // Tocar som e vibrar quando status mudar
-const notificarMudancaStatus = (novoStatus) => {
+const notificarMudancaStatus = async (novoStatus) => {
   // Vibração (mobile)
   if (navigator.vibrate) {
     navigator.vibrate([200, 100, 200])
