@@ -53,6 +53,7 @@ export default defineEventHandler(async (event) => {
     statusHistory: (order.statusHistory || []).map((h: any) => ({
       status: h.status,
       changedAt: h.changedAt
-    }))
+    })),
+    review: order.review ? { stars: order.review.stars, comment: order.review.comment || '' } : null
   }
 })

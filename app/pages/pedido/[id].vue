@@ -233,6 +233,51 @@
         </div>
       </div>
 
+      <!-- Avaliação do pedido -->
+      <div v-if="pedido.status === 'delivered'" class="review-card">
+        <!-- Já avaliou -->
+        <div v-if="pedido.review || reviewEnviado" class="review-done">
+          <div class="review-done-stars">
+            <span v-for="s in 5" :key="s" class="star" :class="{ filled: s <= (pedido.review?.stars || reviewStars) }">★</span>
+          </div>
+          <p>Obrigado pela avaliação!</p>
+        </div>
+
+        <!-- Formulário -->
+        <div v-else>
+          <h3>Como foi seu pedido?</h3>
+          <div class="stars-input">
+            <button
+              v-for="s in 5"
+              :key="s"
+              class="star-btn"
+              :class="{ filled: s <= reviewStars, hovered: s <= reviewHover }"
+              @mouseenter="reviewHover = s"
+              @mouseleave="reviewHover = 0"
+              @click="reviewStars = s"
+              type="button"
+            >★</button>
+          </div>
+          <p v-if="reviewStars" class="review-label">{{ reviewLabels[reviewStars] }}</p>
+          <textarea
+            v-if="reviewStars"
+            v-model="reviewComment"
+            class="review-textarea"
+            placeholder="Deixe um comentário (opcional)..."
+            rows="3"
+            maxlength="500"
+          ></textarea>
+          <button
+            v-if="reviewStars"
+            class="btn-review-submit"
+            :disabled="reviewEnviando"
+            @click="enviarAvaliacao"
+          >
+            {{ reviewEnviando ? 'Enviando...' : 'Enviar avaliação' }}
+          </button>
+        </div>
+      </div>
+
       <!-- Botão compartilhar inferior (mobile) -->
       <button class="btn-share-bottom" @click="compartilhar">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -262,6 +307,12 @@ const storeName = ref('')
 const storeLogo = ref('')
 const sseConectado = ref(false)
 const shareToast = ref('')
+const reviewStars = ref(0)
+const reviewHover = ref(0)
+const reviewComment = ref('')
+const reviewEnviando = ref(false)
+const reviewEnviado = ref(false)
+const reviewLabels = { 1: 'Muito ruim', 2: 'Ruim', 3: 'Regular', 4: 'Bom', 5: 'Excelente!' }
 
 let pollingInterval = null
 let eventSource = null
@@ -461,6 +512,21 @@ const conectarSSE = () => {
   eventSource.onerror = () => {
     // Apenas marca como desconectado — EventSource reconecta automaticamente
     sseConectado.value = false
+  }
+}
+
+const enviarAvaliacao = async () => {
+  if (!reviewStars.value || reviewEnviando.value) return
+  reviewEnviando.value = true
+  try {
+    const res = await fetch(`/api/public/orders/${id}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stars: reviewStars.value, comment: reviewComment.value })
+    })
+    if (res.ok) reviewEnviado.value = true
+  } catch {} finally {
+    reviewEnviando.value = false
   }
 }
 
@@ -925,6 +991,81 @@ onUnmounted(() => {
   animation: blink 1s infinite;
 }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* Avaliação */
+.review-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  text-align: center;
+}
+.review-card h3 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  color: #111;
+}
+.stars-input {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+.star-btn {
+  background: none;
+  border: none;
+  font-size: 2.2rem;
+  cursor: pointer;
+  color: #e5e7eb;
+  line-height: 1;
+  padding: 0.1rem;
+  transition: color 0.15s, transform 0.1s;
+}
+.star-btn.filled, .star-btn.hovered { color: #f59e0b; }
+.star-btn:hover { transform: scale(1.15); }
+.review-label {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #f59e0b;
+}
+.review-textarea {
+  width: 100%;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  transition: border-color 0.2s;
+  margin-bottom: 0.75rem;
+}
+.review-textarea:focus { border-color: #f97316; }
+.btn-review-submit {
+  width: 100%;
+  padding: 0.8rem;
+  background: #f97316;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-review-submit:hover:not(:disabled) { background: #ea6c0a; }
+.btn-review-submit:disabled { opacity: 0.6; cursor: default; }
+.review-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.review-done p { margin: 0; color: #666; font-size: 0.9rem; }
+.review-done-stars { display: flex; gap: 0.25rem; }
+.star { font-size: 1.8rem; color: #e5e7eb; }
+.star.filled { color: #f59e0b; }
 
 /* Botão compartilhar inferior */
 .btn-share-bottom {
