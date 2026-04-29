@@ -2101,6 +2101,31 @@ const removeCarouselBanner = (index) => {
   allBanners.value = list.length ? list : ['']
 }
 
+// Comprime imagem via canvas — máx 1400px, JPEG 85%
+const compressImage = (file, maxDim = 1400, quality = 0.85) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        let { width, height } = img
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.round(height * maxDim / width); width = maxDim }
+          else { width = Math.round(width * maxDim / height); height = maxDim }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      }
+      img.onerror = reject
+      img.src = e.target.result
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 const handleCarouselUpload = async (event, index) => {
   const file = event.target.files[0]
   if (!file) return
@@ -2108,116 +2133,54 @@ const handleCarouselUpload = async (event, index) => {
     showAlert('Selecione uma imagem válida', 'error')
     return
   }
-  if (file.size > 5 * 1024 * 1024) {
-    showAlert('Imagem muito grande. Máximo 5MB', 'error')
-    return
-  }
   uploadingCarousel.value[index] = true
-  const reader = new FileReader()
-  reader.onload = async (e) => {
-    try {
-      const response = await authenticatedFetch('/api/upload-image', {
-        method: 'POST',
-        body: { image: e.target.result, filename: file.name, type: 'banner' }
-      })
-      const list = [...allBanners.value]
-      list[index] = response.imageUrl
-      allBanners.value = list
-      showAlert('Banner carregado com sucesso!', 'success')
-    } catch (error) {
-      showAlert(error.data?.message || 'Erro ao fazer upload', 'error')
-    } finally {
-      uploadingCarousel.value[index] = false
-    }
+  try {
+    const base64 = await compressImage(file)
+    const response = await authenticatedFetch('/api/upload-image', {
+      method: 'POST',
+      body: { image: base64, filename: file.name, type: 'banner' }
+    })
+    const list = [...allBanners.value]
+    list[index] = response.imageUrl
+    allBanners.value = list
+    showAlert('Banner carregado com sucesso!', 'success')
+  } catch (error) {
+    showAlert(error.data?.message || 'Erro ao fazer upload', 'error')
+  } finally {
+    uploadingCarousel.value[index] = false
   }
-  reader.readAsDataURL(file)
 }
 
 const handleFileUpload = async (event, type) => {
   const file = event.target.files[0]
   if (!file) return
-  
-  // Validar tipo de arquivo
   if (!file.type.startsWith('image/')) {
     showAlert('Por favor, selecione uma imagem válida', 'error')
     return
   }
-  
-  // Validar tamanho (máx 5MB)
-  if (file.size > 5 * 1024 * 1024) {
-    showAlert('Imagem muito grande. Máximo 5MB', 'error')
-    return
-  }
-  
+
+  if (type === 'logo') uploadingLogo.value = true
+  else if (type === 'infoImage') uploadingInfoImage.value = true
+  else uploadingBanner.value = true
+
   try {
-    if (type === 'logo') {
-      uploadingLogo.value = true
-    } else if (type === 'infoImage') {
-      uploadingInfoImage.value = true
-    } else {
-      uploadingBanner.value = true
-    }
+    const base64 = await compressImage(file)
+    const response = await authenticatedFetch('/api/upload-image', {
+      method: 'POST',
+      body: { image: base64, filename: file.name, type }
+    })
 
-    // Converter para base64
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-      try {
-        const base64 = e.target.result
+    if (type === 'logo') form.value.logo = response.imageUrl
+    else if (type === 'infoImage') form.value.infoImage = response.imageUrl
+    else form.value.banner = response.imageUrl
 
-        // Fazer upload
-        const response = await authenticatedFetch('/api/upload-image', {
-          method: 'POST',
-          body: {
-            image: base64,
-            filename: file.name,
-            type: type
-          }
-        })
-
-        // Atualizar formulário com a imagem
-        if (type === 'logo') {
-          form.value.logo = response.imageUrl
-        } else if (type === 'infoImage') {
-          form.value.infoImage = response.imageUrl
-        } else {
-          form.value.banner = response.imageUrl
-        }
-
-        showAlert('Imagem carregada com sucesso!', 'success')
-      } catch (error) {
-        showAlert(error.data?.message || 'Erro ao fazer upload', 'error')
-      } finally {
-        if (type === 'logo') {
-          uploadingLogo.value = false
-        } else if (type === 'infoImage') {
-          uploadingInfoImage.value = false
-        } else {
-          uploadingBanner.value = false
-        }
-      }
-    }
-
-    reader.onerror = () => {
-      showAlert('Erro ao ler o arquivo', 'error')
-      if (type === 'logo') {
-        uploadingLogo.value = false
-      } else if (type === 'infoImage') {
-        uploadingInfoImage.value = false
-      } else {
-        uploadingBanner.value = false
-      }
-    }
-    
-    reader.readAsDataURL(file)
+    showAlert('Imagem carregada com sucesso!', 'success')
   } catch (error) {
-    showAlert('Erro ao processar imagem', 'error')
-    if (type === 'logo') {
-      uploadingLogo.value = false
-    } else if (type === 'infoImage') {
-      uploadingInfoImage.value = false
-    } else {
-      uploadingBanner.value = false
-    }
+    showAlert(error.data?.message || 'Erro ao fazer upload', 'error')
+  } finally {
+    if (type === 'logo') uploadingLogo.value = false
+    else if (type === 'infoImage') uploadingInfoImage.value = false
+    else uploadingBanner.value = false
   }
 }
 

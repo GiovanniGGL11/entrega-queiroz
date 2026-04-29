@@ -60,5 +60,8 @@ export default defineNuxtConfig({
         target: "es2022",
       },
     },
+    routeRules: {
+      '/api/upload-image': { bodySize: '10mb' },
+    },
   },
 });
