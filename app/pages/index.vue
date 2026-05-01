@@ -243,6 +243,7 @@ const loadStoreSettings = async () => {
       logo: settings.logo || "",
       banner: settings.banner || "",
       banners: Array.isArray(settings.banners) ? settings.banners : [],
+      bannerLinks: Array.isArray(settings.bannerLinks) ? settings.bannerLinks : [],
       infoImage: settings.infoImage || "",
       isOpen: settings.isOpen || false,
       deliveryMinTime: settings.deliveryMinTime || 0,
