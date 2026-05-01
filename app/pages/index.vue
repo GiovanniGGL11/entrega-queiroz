@@ -98,6 +98,18 @@ const loadingCategories = ref(false)
 const currentBanner = ref(0)
 const carouselTransition = ref(true)
 let carouselInterval = null
+let touchStartX = 0
+
+const onTouchStart = (e) => {
+  touchStartX = e.touches[0].clientX
+}
+
+const onTouchEnd = (e) => {
+  const dx = e.changedTouches[0].clientX - touchStartX
+  if (Math.abs(dx) < 40) return // swipe muito curto — ignorar
+  if (dx < 0) nextBanner()
+  else prevBanner()
+}
 
 const carouselBanners = computed(() => {
   const items = []
@@ -1266,7 +1278,7 @@ useHead({
     <!-- Hero Section -->
     <div class="hero">
       <!-- Carrossel de banners -->
-      <div class="banner-carousel" v-if="carouselBanners.length > 0" @mouseenter="stopCarousel" @mouseleave="startCarousel">
+      <div class="banner-carousel" v-if="carouselBanners.length > 0" @mouseenter="stopCarousel" @mouseleave="startCarousel" @touchstart.passive="onTouchStart" @touchend.passive="onTouchEnd">
         <div
           class="carousel-track"
           :style="{
