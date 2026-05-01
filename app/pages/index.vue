@@ -189,7 +189,7 @@ const goToBanner = (i) => {
 const startCarousel = () => {
   stopCarousel()
   if (carouselBanners.value.length > 1) {
-    carouselInterval = setInterval(nextBanner, 4000)
+    carouselInterval = setInterval(nextBanner, 2000)
   }
 }
 const stopCarousel = () => {
