@@ -1489,7 +1489,7 @@ useHead({
         &copy; {{ new Date().getFullYear() }} Queiroz Hamburgueria. Desenvolvido
         por
         <a
-          href="https://www.instagram.com/g2genesys/"
+          href="https://g2genesys-main.vercel.app/"
           target="_blank"
           rel="noopener noreferrer"
           >G2 Genesys</a

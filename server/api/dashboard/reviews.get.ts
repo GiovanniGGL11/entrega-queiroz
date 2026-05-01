@@ -17,15 +17,15 @@ export default defineEventHandler(async (event) => {
 
   const total = orders.length
   const average = total > 0
-    ? Math.round((orders.reduce((s, o) => s + o.review.stars, 0) / total) * 10) / 10
+    ? Math.round((orders.reduce((s: number, o: any) => s + o.review.stars, 0) / total) * 10) / 10
     : 0
 
-  const distribution = [5, 4, 3, 2, 1].map(s => ({
+  const distribution = [5, 4, 3, 2, 1].map((s: number) => ({
     stars: s,
-    count: orders.filter(o => o.review.stars === s).length
+    count: orders.filter((o: any) => o.review.stars === s).length
   }))
 
-  const reviews = orders.slice(0, 50).map(o => ({
+  const reviews = orders.slice(0, 50).map((o: any) => ({
     orderId: o._id.toString(),
     orderNumber: o.orderNumber,
     customerName: o.customerInfo?.name || 'Cliente',
