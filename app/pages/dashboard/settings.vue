@@ -328,6 +328,14 @@
                     </svg>
                   </button>
                 </div>
+                <select
+                  class="banner-link-select"
+                  :value="form.bannerLinks[index] || ''"
+                  @change="form.bannerLinks[index] = $event.target.value"
+                >
+                  <option value="">Sem link</option>
+                  <option v-for="p in allProducts" :key="p._id" :value="p._id">{{ p.name }}</option>
+                </select>
               </div>
             </div>
 
@@ -1260,6 +1268,7 @@ const form = ref({
   whatsappApiToken: '',
   whatsappInstanceName: '',
   banners: [],
+  bannerLinks: [],
   location: {
     address: '',
     latitude: -23.550520,
@@ -1686,6 +1695,7 @@ const loadSettings = async () => {
       whatsappApiToken: response.whatsappApiToken || '',
       whatsappInstanceName: response.whatsappInstanceName || '',
       banners: Array.isArray(response.banners) ? response.banners : [],
+      bannerLinks: Array.isArray(response.bannerLinks) ? response.bannerLinks : [],
       location: response.location || form.value.location,
       deliveryZones: response.deliveryZones || form.value.deliveryZones,
       openingHours: response.openingHours || form.value.openingHours,
@@ -2079,7 +2089,7 @@ const allBanners = computed({
   get() {
     const list = []
     if (form.value.banner) list.push(form.value.banner)
-    else list.push('') // sempre pelo menos 1 slot
+    else list.push('')
     if (Array.isArray(form.value.banners)) {
       form.value.banners.forEach(b => list.push(b))
     }
@@ -2091,14 +2101,35 @@ const allBanners = computed({
   }
 })
 
+// Garantir que bannerLinks tenha sempre o mesmo tamanho que allBanners
+const syncBannerLinks = (length) => {
+  const links = [...(form.value.bannerLinks || [])]
+  while (links.length < length) links.push('')
+  form.value.bannerLinks = links.slice(0, length)
+}
+
 const addCarouselBanner = () => {
   const list = [...allBanners.value, '']
   allBanners.value = list
+  syncBannerLinks(list.length)
 }
 
 const removeCarouselBanner = (index) => {
   const list = allBanners.value.filter((_, i) => i !== index)
   allBanners.value = list.length ? list : ['']
+  const links = (form.value.bannerLinks || []).filter((_, i) => i !== index)
+  form.value.bannerLinks = links.length ? links : ['']
+}
+
+// Produtos para o seletor de link do carrossel
+const allProducts = ref([])
+const loadProducts = async () => {
+  try {
+    const res = await authenticatedFetch('/api/products')
+    allProducts.value = (Array.isArray(res) ? res : res.products || [])
+      .filter(p => p.isVisible !== false)
+      .sort((a, b) => a.name.localeCompare(b.name))
+  } catch {}
 }
 
 // Comprime imagem via canvas — máx 1400px, JPEG 85%
@@ -2185,8 +2216,8 @@ const handleFileUpload = async (event, type) => {
 }
 
 onMounted(async () => {
-  await loadSettings()
-  
+  await Promise.all([loadSettings(), loadProducts()])
+
   // Aplicar cor primária após carregar configurações
   applyPrimaryColor()
   
@@ -3570,6 +3601,18 @@ onUnmounted(() => {
   gap: 0.5rem;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.banner-link-select {
+  width: 100%;
+  margin-top: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.82rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  cursor: pointer;
 }
 
 .btn-upload-sm {

@@ -349,7 +349,8 @@ export default defineEventHandler(async (event) => {
         cep: String(item.cep || ''),
         endereco: String(item.endereco || '')
       })) : [],
-      banners: Array.isArray(storeSettings.banners) ? storeSettings.banners.map((b: any) => String(b)).filter((b: string) => b) : []
+      banners: Array.isArray(storeSettings.banners) ? storeSettings.banners.map((b: any) => String(b)).filter((b: string) => b) : [],
+      bannerLinks: Array.isArray(storeSettings.bannerLinks) ? storeSettings.bannerLinks.map((l: any) => String(l || '')) : []
     };
     
     console.log('[public/settings] ✅ Retornando configurações:', {

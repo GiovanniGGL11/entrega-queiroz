@@ -100,12 +100,15 @@ const carouselTransition = ref(true)
 let carouselInterval = null
 
 const carouselBanners = computed(() => {
-  const banners = []
-  if (storeSettings.value.banner) banners.push(storeSettings.value.banner)
+  const items = []
+  const links = storeSettings.value.bannerLinks || []
+  if (storeSettings.value.banner) items.push({ image: storeSettings.value.banner, productId: links[0] || '' })
   if (storeSettings.value.banners && Array.isArray(storeSettings.value.banners)) {
-    storeSettings.value.banners.forEach(b => { if (b && !banners.includes(b)) banners.push(b) })
+    storeSettings.value.banners.forEach((b, i) => {
+      if (b) items.push({ image: b, productId: links[i + 1] || '' })
+    })
   }
-  return banners
+  return items
 })
 
 // Track infinita: clone-último + originais + clone-primeiro
@@ -114,6 +117,18 @@ const infiniteBanners = computed(() => {
   if (list.length <= 1) return list
   return [list[list.length - 1], ...list, list[0]]
 })
+
+const handleBannerClick = (item) => {
+  if (!item?.productId) return
+  // Procurar produto nas categorias carregadas
+  for (const cat of categories.value) {
+    const product = (cat.items || []).find(p => {
+      const pid = p._id || p.id || ''
+      return pid === item.productId || String(pid) === String(item.productId)
+    })
+    if (product) { selectItem(product); return }
+  }
+}
 
 // Posição real no track (offset +1 por causa do clone-do-último no início)
 const trackIndex = computed(() => {
@@ -1259,11 +1274,13 @@ useHead({
           }"
         >
           <img
-            v-for="(src, i) in infiniteBanners"
+            v-for="(item, i) in infiniteBanners"
             :key="i"
-            :src="src"
+            :src="item.image || item"
             alt="Banner da loja"
             class="banner carousel-slide"
+            :class="{ 'banner-clickable': item.productId }"
+            @click="handleBannerClick(item)"
           />
         </div>
         <div v-if="carouselBanners.length > 1" class="carousel-dots">
@@ -2226,6 +2243,9 @@ body {
   height: 328px;
   object-fit: cover;
   border-radius: 1rem;
+}
+.banner-clickable {
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {
