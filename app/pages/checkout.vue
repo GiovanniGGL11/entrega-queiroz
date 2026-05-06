@@ -1078,7 +1078,7 @@ useHead({
             &copy; {{ new Date().getFullYear() }} {{ storeSettings.storeName }}. Desenvolvido
             por
             <a
-              href="https://g2genesys-main.vercel.app/"
+              href="https://g2genesys.com/"
               target="_blank"
               rel="noopener noreferrer"
               >G2 Genesys</a
