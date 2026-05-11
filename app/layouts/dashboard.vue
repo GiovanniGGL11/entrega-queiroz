@@ -969,8 +969,8 @@ onMounted(() => {
 }
 
 .nav-link svg {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 
@@ -1508,8 +1508,8 @@ onMounted(() => {
   }
   
   .nav-link svg {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
   }
   
   .theme-btn, .logout-btn {
